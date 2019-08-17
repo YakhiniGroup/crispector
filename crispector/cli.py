@@ -6,7 +6,7 @@ import click
 import crispector
 import os
 
-
+# TODO - add a config from user + window_size + effective qualification window
 @click.command()
 @click.option('--tx_in1', '-t_r1', type=click.Path(exists=True), required=True,
               help="Treatment read 1 input path (string)")
@@ -30,25 +30,35 @@ import os
               help="Override fastp and require merged fastq files (pre-processing is necessary).\
                     Set paths to merged fastq files at --tx_in1 and --mock_in1.\
                     Can't be used with --fastp_options_string")
+# TODO -delete this option
+@click.option('--override_alignment', is_flag=True, default=False, show_default=True,
+              help="Delete this option. Set paths to alignment fastq files at --tx_in1 and --mock_in1")
 @click.option('--verbose', is_flag=True, default=False, show_default=True, help="Higher verbosity")
 @click.option('--keep_fastp_output', is_flag=True, default=False, show_default=True, help="Keep fastp output directory")
 @click.option("--min_num_of_reads", type=click.INT, default=500, show_default=True,
               help="Minimum number of reads (per site) to evaluate edit events")
 @click.option("--cut_site_position", type=click.INT, default=-3, show_default=True,
               help="Cut-site position relative to PAM (minus sign for upstream)")
-def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, override_fastp, keep_fastp_output,
-         verbose, min_num_of_reads, amplicons_csv, cut_site_position):
+@click.option('--amplicon_min_alignment_score', type=click.FloatRange(min=0, max=100), default=20, show_default=True,
+              help="Minimum alignment score to consider a read alignment to a specific amplicon reference sequence.\
+                   Score is normalized between 0 (not even one bp match) to 100 (the read is identical to \
+                   the reference). Below this alignment threshold, reads are discarded.\
+                   This is useful for filtering erroneous reads that do not align to any target amplicon.")
+def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, override_fastp, override_alignment,
+         keep_fastp_output, verbose, min_num_of_reads, amplicons_csv, cut_site_position, amplicon_min_alignment_score):
     """CRISPECTOR - Console script"""
 
     # Input verification
-    if override_fastp and ((tx_in2 is not None) or (mock_in2 is not None)):
-        raise click.BadOptionUsage(override_fastp,
-                                   "--tx_in2 and --mock_in2 can't be set when override_fastp is used!")
-    if tx_in2 is None:
-        raise click.BadOptionUsage(tx_in2, "--tx_in2 is missing!")
+    if override_fastp:
+        if (tx_in2 is not None) or (mock_in2 is not None):
+            raise click.BadOptionUsage(override_fastp,
+                                       "--tx_in2 and --mock_in2 can't be set when override_fastp is used!")
+    else:
+        if tx_in2 is None:
+            raise click.BadOptionUsage(tx_in2, "--tx_in2 is missing!")
 
-    if mock_in2 is None:
-        raise click.BadOptionUsage(mock_in2, "--mock_in2 is missing!")
+        if mock_in2 is None:
+            raise click.BadOptionUsage(mock_in2, "--mock_in2 is missing!")
 
     # Create output folder
     if not os.path.exists(output):
@@ -56,7 +66,8 @@ def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, overr
 
     # Run crispector
     return crispector.run(tx_in1, tx_in2, mock_in1, mock_in2, output, amplicons_csv, fastp_options_string,
-                          override_fastp, keep_fastp_output, verbose, min_num_of_reads, cut_site_position)
+                          override_fastp, keep_fastp_output, verbose, min_num_of_reads, cut_site_position,
+                          amplicon_min_alignment_score, override_alignment)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,33 @@
+max_indel_size: &max_indel_size 500
+IndelTypes:
+    Deletions:
+        A:
+            min: 1
+            max: 2
+            prior: []
+        B:
+            min: 3
+            max: 4
+            prior: []
+        C:
+            min: 5
+            max: *max_indel_size
+            prior:  []
+    Insertions:
+        A:
+            min: 1
+            max: 2
+            prior: []
+        B:
+            min: 3
+            max: 4
+            prior: []
+        C:
+            min: 5
+            max: *max_indel_size
+            prior:  []
+    Substitutions:
+        A:
+            min: 1
+            max: *max_indel_size
+            prior: []
