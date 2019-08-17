@@ -2,6 +2,7 @@ import logging
 import os
 import yaml # TODO - add to project requirements
 from crispector_exceptions import ConfiguratorIsCalledBeforeInitConfigPath
+from crispector_types import Path
 
 
 class Logger:
@@ -43,7 +44,7 @@ class Logger:
         return logger
 
     @classmethod
-    def set_log_path(cls, path):
+    def set_log_path(cls, path: Path):
         cls._OUTPUT_DIR = path
 
     @classmethod
@@ -60,8 +61,8 @@ class Configurator:
     _CONFIG_PATH = None
 
     @classmethod
-    def set_cfg_path(cls, path):
-        if path == "":
+    def set_cfg_path(cls, path: Path):
+        if path is None:
             path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config/default_config.yml')
         cls._CONFIG_PATH = path
 

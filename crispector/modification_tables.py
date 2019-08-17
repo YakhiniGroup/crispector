@@ -1,6 +1,6 @@
-from crispector_constants import CIGAR, FREQ
+from crispector_constants import CIGAR, FREQ, TX_POS, MOCK_POS
 from crispector_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP
-from input_process_utils import InputProcess
+from input_processing import InputProcessing
 from modification_types import ModificationTypes
 import numpy as np
 from collections import defaultdict
@@ -12,12 +12,30 @@ class ModificationTables:
     """
     def __init__(self, tx_reads: ReadsDf, mock_reads: ReadsDf, modifications: ModificationTypes, amplicon: DNASeq):
         self._tx_reads = tx_reads
-        self._mock_reads = mock_reads  # TODO add setters
+        self._mock_reads = mock_reads
         self._modifications = modifications
         self._amplicon = amplicon
         self._tables: ModTables = dict()
         self._pointers: ModTablesP = dict()
         self._create_modification_tables()
+
+    # Getters
+
+    @property
+    def tx_reads(self) -> ReadsDf:
+        return self._tx_reads
+
+    @property
+    def mock_reads(self) -> ReadsDf:
+        return self._mock_reads
+
+    @property
+    def tables(self) -> ModTables:
+        return self._tables
+
+    @property
+    def pointers(self) -> ModTablesP:
+        return self._pointers
 
     def _create_modification_tables(self):
         """
@@ -26,7 +44,7 @@ class ModificationTables:
         """
         # Create table and pointers
         for idx, indel_type in enumerate(self._modifications.types):
-            # Insertions are between position (so they have an extra item)
+            # Insertions are between positions (so they have an extra item)
             table_size = len(self._amplicon) + 1 if indel_type == IndelType.INS else len(self._amplicon)
             self._tables[idx] = np.zeros((2, table_size))
             self._pointers[idx] = defaultdict(list)
@@ -43,10 +61,10 @@ class ModificationTables:
         :param exp_type: ExpType
         :return:
         """
-        table_row = 0 if exp_type == ExpType.TX else 1
+        table_row = TX_POS if exp_type == ExpType.TX else MOCK_POS
         for row_idx, row in read.iterrows():
             pos_idx = 0  # position index
-            for length, indel_type in InputProcess.parse_cigar(row[CIGAR]):
+            for length, indel_type in InputProcessing.parse_cigar(row[CIGAR]):
                 table_idx = self._modifications.find_index(indel_type, length)
                 # For a match - continue
                 if indel_type == IndelType.MATCH:
@@ -64,3 +82,5 @@ class ModificationTables:
                     self._tables[table_idx][table_row, pos_idx] += row[FREQ]
                     if exp_type == ExpType.TX:
                         self._pointers[table_idx][pos_idx].append(row_idx)
+
+    # TODO - print modification table with results as excel file and plot - input is_edit table...

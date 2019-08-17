@@ -9,6 +9,8 @@ CC    C RR  RR   III       SS PP      EE      CC    C   TTT   OO   OO RR  RR\n\
 \n\
               CRISPR/CAS9 Off-Target Analysis From NGS Data\n\
                             version={}\n".format("0.1.0")
+
+""
 # TODO -  Need to auto import from somewhere -search in online repositories
 
 # fastp constants
@@ -25,7 +27,20 @@ ALIGNMENT_W_INS = "alignment_w_ins"
 ALIGNMENT_W_DEL = "alignment_w_del"
 CIGAR = 'cigar_path'
 FREQ = "frequency"
+IS_EDIT = "is_edited"
+
+# Algorithm constants
+TX_POS = 0
+MOCK_POS = 1
 
 # General constants
 COMPLEMENT = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
 NONE = "NONE"
+
+# AlgResult columns
+TX_READ_NUM = "treatment_number_of_reads"
+MOCK_READ_NUM = "mock_number_of_reads"
+TX_EDIT = "edited_reads"
+EDIT_PERCENT = "editing_activity"
+CI_LOW = "CI_low"
+CI_HIGH = "CI_high"

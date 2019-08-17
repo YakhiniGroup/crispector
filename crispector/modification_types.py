@@ -1,9 +1,8 @@
-from crispector_types import IndelType
+from crispector_exceptions import PriorPositionHasWrongLength
+from crispector_types import IndelType, IsEdit
 from typing import List, Dict
 from collections import defaultdict
 
-
-# TODO - maybe need to add iterator for this class
 
 class ModificationTypes:
     """
@@ -40,10 +39,6 @@ class ModificationTypes:
     def priors(self):
         return self._priors
 
-    @priors.setter
-    def priors(self, value: List[List]):
-        self._priors = value
-
     @property
     def size(self):
         return len(self._type)
@@ -73,6 +68,7 @@ class ModificationTypes:
         :return: ModificationTypes.
         """
         indel_types_cfg = cfg["IndelTypes"]
+        window_size = cfg["window_size"]
         m_list = []
         m_min = []
         m_max = []
@@ -84,8 +80,20 @@ class ModificationTypes:
                 m_list.append(indel_type)
                 m_min.append(indel_dict["min"])
                 m_max.append(indel_dict["max"])
-                m_prior.append(indel_dict["prior"])
+
+                # Extract priors
+                pos_prior = indel_dict["pos_prior"]
+                prior_expected_len = (2*window_size + 1) if indel_type == IndelType.INS else 2*window_size
+                if len(pos_prior) != prior_expected_len:
+                    raise PriorPositionHasWrongLength(prior_expected_len, len(pos_prior), indel_type, m_min[-1],
+                                                      m_max[-1])
+                m_prior.append(pos_prior)
 
         return cls(m_list, m_min, m_max, m_prior, cfg["max_indel_size"])
 
+    # TODO - complete the functions
+    def plot_modification_table(self, is_edit: IsEdit, pos_offset: int):
+        pass
 
+    def modification_table_to_excel(self, is_edit: IsEdit, pos_offset: int):
+        pass

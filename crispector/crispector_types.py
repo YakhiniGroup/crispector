@@ -69,9 +69,16 @@ ModTableP = DefaultDict[int, List]
 # A dict of keys modification table index and value ModTableP
 ModTablesP = Dict[int, ModTableP]
 
+# A dict of keys modification table index and value List of booleans
+IsEdit = Dict[int, List[bool]]
+
 DNASeq = str
 Path = str
+Pr = float
 
+# TODO - change description
+# AlgResult - dictionary with key name_of_property (e.g. 'CI_high') and their value
+AlgResult = Dict[str, float]
 
 
 

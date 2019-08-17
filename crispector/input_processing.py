@@ -11,7 +11,7 @@ import re
 import pandas as pd  # TODO - add to install requirements
 
 
-class InputProcess:
+class InputProcessing:
     """
     A container static class with all relevant function to process crispector input.
     """
