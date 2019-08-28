@@ -1,5 +1,5 @@
-from crispector_exceptions import PriorPositionHasWrongLength
-from crispector_types import IndelType, IsEdit
+from exceptions import PriorPositionHasWrongLength
+from enum_types import IndelType, IsEdit
 from typing import List, Dict
 from collections import defaultdict
 

@@ -1,7 +1,7 @@
-from crispector_constants import FREQ, C_TX, C_MOCK, IS_EDIT, TX_READ_NUM, MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, \
+from constants import FREQ, C_TX, C_MOCK, IS_EDIT, TX_READ_NUM, MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, \
     CI_LOW, CI_HIGH
-from crispector_types import IsEdit, IndelType, AlgResult, Pr, Path
-from crispector_utils import Configurator
+from enum_types import IsEdit, IndelType, AlgResult, Pr, Path
+from utils import Configurator
 from modification_tables import ModificationTables
 from modification_types import ModificationTypes
 from typing import List, Tuple

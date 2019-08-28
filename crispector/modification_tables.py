@@ -1,5 +1,5 @@
-from crispector_constants import CIGAR, FREQ, C_TX, C_MOCK
-from crispector_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, Path, IsEdit
+from constants import CIGAR, FREQ, C_TX, C_MOCK
+from enum_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, Path, IsEdit
 from input_processing import InputProcessing
 from modification_types import ModificationTypes
 import numpy as np

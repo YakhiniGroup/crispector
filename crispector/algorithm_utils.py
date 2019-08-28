@@ -1,6 +1,6 @@
-from crispector_constants import C_MOCK, ON_TARGET, SITE_NAME, C_TX, CUT_SITE
-from crispector_types import Pr, IndelType
-from crispector_utils import Configurator, Logger
+from constants import C_MOCK, ON_TARGET, SITE_NAME, C_TX, CUT_SITE
+from enum_types import Pr, IndelType
+from utils import Configurator, Logger
 from typing import Dict, List
 from modification_tables import ModificationTables
 from modification_types import ModificationTypes

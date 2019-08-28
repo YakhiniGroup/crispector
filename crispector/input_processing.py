@@ -1,10 +1,10 @@
 import os
 import subprocess
-from crispector_constants import REFERENCE, SGRNA, COMPLEMENT, SITE_NAME, CUT_SITE, READ, \
+from constants import REFERENCE, SGRNA, COMPLEMENT, SITE_NAME, CUT_SITE, READ, \
     FREQ, FASTP_DIR, NONE, CIGAR, ALIGNMENT_W_INS, ALIGNMENT_W_DEL
-from crispector_exceptions import FastpRunTimeError, SgRNANotInReferenceSequence, CantOpenMergedFastqFile
-from crispector_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelType, Path, DNASeq
-from crispector_utils import Logger
+from exceptions import FastpRunTimeError, SgRNANotInReferenceSequence, CantOpenMergedFastqFile
+from enum_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelType, Path, DNASeq
+from utils import Logger
 import edlib      # TODO - add to install requirements
 from typing import List, Tuple
 import re

@@ -1,8 +1,8 @@
 import logging
 import os
 import yaml # TODO - add to project requirements
-from crispector_exceptions import ConfiguratorIsCalledBeforeInitConfigPath
-from crispector_types import Path
+from exceptions import ConfiguratorIsCalledBeforeInitConfigPath
+from enum_types import Path
 
 
 class Logger:

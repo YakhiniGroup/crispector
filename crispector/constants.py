@@ -1,4 +1,4 @@
-from crispector_types import ExpType
+from enum_types import ExpType
 
 welcome_msg = "\n\
  CCCCC  RRRRRR  IIIII  SSSSS  PPPPPP  EEEEEEE  CCCCC  TTTTTTT  OOOOO  RRRRRR\n\

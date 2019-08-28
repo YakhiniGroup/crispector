@@ -8,16 +8,16 @@ import logging
 from send2trash import send2trash #TODO - add to poroject requiremnts
 from algorithm_utils import compute_binom_p
 from crispector_algorithm import CrispectorAlgorithm
-from crispector_constants import welcome_msg, FASTP_DIR, FREQ, CUT_SITE, EDIT_PERCENT, TX_READ_NUM, MOCK_READ_NUM
-from crispector_exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInReferenceSequence, \
+from constants import welcome_msg, FASTP_DIR, FREQ, CUT_SITE, EDIT_PERCENT, TX_READ_NUM, MOCK_READ_NUM
+from exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInReferenceSequence, \
     CantOpenMergedFastqFile, ConfiguratorIsCalledBeforeInitConfigPath, PriorPositionHasWrongLength
-from crispector_types import ExpType, Path
+from enum_types import ExpType, Path
 from input_processing import InputProcessing
 import traceback
-from crispector_utils import Logger, Configurator
+from utils import Logger, Configurator
 import os
 import pandas as pd #TODO - add to poroject requiremnts
-from crispector_constants import SITE_NAME, REFERENCE, SGRNA, ON_TARGET
+from constants import SITE_NAME, REFERENCE, SGRNA, ON_TARGET
 from modification_tables import ModificationTables
 from typing import Dict
 
