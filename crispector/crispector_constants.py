@@ -30,8 +30,8 @@ FREQ = "frequency"
 IS_EDIT = "is_edited"
 
 # Algorithm constants
-TX_POS = 0
-MOCK_POS = 1
+C_TX = 0
+C_MOCK = 1
 
 # General constants
 COMPLEMENT = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}

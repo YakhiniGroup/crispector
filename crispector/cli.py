@@ -41,7 +41,7 @@ import os
               help="Cut-site position relative to PAM (minus sign for upstream)")
 @click.option("--config", '-c', type=click.Path(),
               help="Path YAML configuration file. See README on GitHub (####) for more details.")
-@click.option("--override_binomial_p", is_flag=True, default=True, show_default=True,
+@click.option("--override_binomial_p", is_flag=True, default=False, show_default=True,
               help="Override binomial coin estimation with default value from config file. It's advisable to set"
               "this flag for low number of sites (< ############)") # TODO - fix this option, currently True
 @click.option("--confidence_interval", type=click.FloatRange(min=0, max=1), default=0.95, show_default=True,

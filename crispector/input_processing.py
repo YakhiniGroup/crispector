@@ -214,7 +214,8 @@ class InputProcessing:
         return "".join(COMPLEMENT.get(base, base) for base in reversed(seq))
 
     @classmethod
-    def _get_expected_cut_site(cls, reference: DNASeq, sgRNA: DNASeq, cut_site_position: int, site_name: str = ''):
+    def _get_expected_cut_site(cls, reference: DNASeq, sgRNA: DNASeq, cut_site_position: int, site_name: str = '') \
+        -> int:
         """
         Find sgRNA (or the reverse complement) inside the reference and return the expected cut-site.
         The cut-site is LEFT to returned index

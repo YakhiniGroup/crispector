@@ -22,7 +22,7 @@ class ModificationTypes:
         for indel_min, indel_max in zip(min_l, max_l):
             self._range.append(range(indel_min, indel_max+1))
         self._priors = priors
-        self.max_indel_size = max_indel_size
+        self._max_indel_size = max_indel_size
         self._type_d = defaultdict(list)
         for idx, (indel_type, indel_range) in enumerate(zip(self._type, self._range)):
             self._type_d[indel_type].append((indel_range, idx))
@@ -76,7 +76,7 @@ class ModificationTypes:
         for indel_type in IndelType:
             if indel_type == IndelType.MATCH:
                 continue
-            for key, indel_dict in indel_types_cfg[indel_type.name()].items():
+            for key, indel_dict in indel_types_cfg[indel_type.name].items():
                 m_list.append(indel_type)
                 m_min.append(indel_dict["min"])
                 m_max.append(indel_dict["max"])
@@ -97,3 +97,26 @@ class ModificationTypes:
 
     def modification_table_to_excel(self, is_edit: IsEdit, pos_offset: int):
         pass
+
+    def name_at_idx(self, idx: int) -> str:
+        """
+        Return modification name by index
+        :param idx:
+        :return:
+        """
+        max_range = "INF" if self._max_indel_size == max(self._range[idx]) else max(self._range[idx])
+        return "{} ({}-{})".format(self._type[idx].name, min(self._range[idx]), max_range)
+
+    def plot_name_at_idx(self, idx: int) -> str:
+        """
+        Return modification plot name (identical size) by index
+        :param idx:
+        :return:
+        """
+        if self._max_indel_size == max(self._range[idx]):
+            return r"{} $\geq {}$".format(self._type[idx].name[:3], min(self._range[idx]))
+        else:
+            return r"{} ${}:{}$".format(self._type[idx].name[:3], min(self._range[idx]), max(self._range[idx]))
+
+
+

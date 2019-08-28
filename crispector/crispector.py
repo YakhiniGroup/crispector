@@ -2,12 +2,13 @@
 """Main module."""
 
 import sys
+import pickle
 import click
 import logging
 from send2trash import send2trash #TODO - add to poroject requiremnts
 from algorithm_utils import compute_binom_p
 from crispector_algorithm import CrispectorAlgorithm
-from crispector_constants import welcome_msg, FASTP_DIR, FREQ, CUT_SITE, EDIT_PERCENT
+from crispector_constants import welcome_msg, FASTP_DIR, FREQ, CUT_SITE, EDIT_PERCENT, TX_READ_NUM, MOCK_READ_NUM
 from crispector_exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInReferenceSequence, \
     CantOpenMergedFastqFile, ConfiguratorIsCalledBeforeInitConfigPath, PriorPositionHasWrongLength
 from crispector_types import ExpType, Path
@@ -70,36 +71,62 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         modifications = ModificationTypes.init_from_cfg(cfg)
 
         # Convert alignment to modification tables
-        tables_d: Dict[str, ModificationTables] = dict()
         logger.info("Convert alignment tables to algorithm input")
+        tables_d: Dict[str, ModificationTables] = dict()
+        summary_result_d = dict()  # Algorithm result dictionary
 
-        for site, amplicon in zip(ref_df[SITE_NAME].values, ref_df[REFERENCE].values):
-            tx_reads_num = tx_reads_d[site][FREQ].sum()
-            mock_reads_num = mock_reads_d[site][FREQ].sum()
-            if min(tx_reads_num, mock_reads_num) < min_num_of_reads:
-                # TODO - add information in final report?
-                logger.info("Site {} - Discarded from evaluation due to low number of reads (treatment={}, "
-                            "mock={}).".format(site, tx_reads_num, mock_reads_num))
-            else:
-                tables_d[site] = ModificationTables(tx_reads_d[site], mock_reads_d[site], modifications, amplicon)
-                logger.debug("Site {} - Converted. Number of reads (treatment={}, mock={}).".format(site, tx_reads_num,
-                                                                                                    mock_reads_num))
+        # TODO - delete dump to pickle files.
+        if os.path.exists(os.path.join(output, "tables.pkl")):
+            with open(os.path.join(output, "tables.pkl"), "rb") as file:
+                tables_d = pickle.load(file)
+        else:
+            for _, row in ref_df.iterrows():
+                site = row[SITE_NAME]
+                amplicon = row[REFERENCE]
+                tx_reads_num = tx_reads_d[site][FREQ].sum()
+                mock_reads_num = mock_reads_d[site][FREQ].sum()
+                if min(tx_reads_num, mock_reads_num) < min_num_of_reads:
+                    summary_result_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num}
+                    logger.info("Site {} - Discarded from evaluation due to low number of reads (treatment={}, "
+                                "mock={}).".format(site, tx_reads_num, mock_reads_num))
+                else:
+                    tables_d[site] = ModificationTables(tx_reads_d[site], mock_reads_d[site], modifications, amplicon)
+                    logger.debug(
+                        "Site {} - Converted. Number of reads (treatment={}, mock={}).".format(site, tx_reads_num,
+                                                                                               mock_reads_num))
+
+            with open(os.path.join(output, "tables.pkl"), "wb") as file:
+                pickle.dump(tables_d, file)
+
         # Compute binomial coin for all modification types
-        binom_p_l = compute_binom_p(tables_d, modifications, override_binomial_p)
+        # TODO -delete readDF from inputs
+        binom_p_l = compute_binom_p(tables_d, modifications, override_binomial_p, ref_df)
 
         # Run crispector algorithm on all sites
-        result_d = dict()
-        for site, cut_site in zip(ref_df[SITE_NAME].values, ref_df[CUT_SITE].values):
+        for _, row in ref_df.iterrows():
+            site = row[SITE_NAME]
+            cut_site = row[CUT_SITE]
             # Continue if site was discarded
             if site not in tables_d:
                 continue
-            # TODO - create output directory and send it....
-            logger.info("Site {} - Evaluate editing activity".format(site))
-            algorithm = CrispectorAlgorithm(site, cut_site, modifications, binom_p_l, confidence_interval)
-            result_d[site] = algorithm.evaluate(tables_d[site])
-            logger.debug("Site {} - Done! Editing activity is {:.2f}".format(site, result_d[site][EDIT_PERCENT]))
+            # Create output folder
+            site_output = os.path.join(output, site)
+            if not os.path.exists(site_output):
+                os.makedirs(site_output)
 
-        # TODO - Dump result_d as a PDF file.
+            logger.info("Site {} - Evaluate editing activity".format(site))
+            algorithm = CrispectorAlgorithm(site, cut_site, modifications, binom_p_l, confidence_interval, site_output)
+            summary_result_d[site] = algorithm.evaluate(tables_d[site])
+            logger.debug("Site {} - Done! Editing activity is {:.2f}".format(site,
+                                                                             summary_result_d[site][EDIT_PERCENT]))
+
+        # Dump summary results TODO - create function and reorder columns
+        summary_result_df = pd.DataFrame.from_dict(summary_result_d, orient='index')
+        summary_result_df[SITE_NAME] = summary_result_df.index
+        summary_result_df.sort_values(by=EDIT_PERCENT, ascending=False)
+        summary_result_df.to_csv(os.path.join(output,"summary_results.csv"),
+                                            index=False, float_format='%.4f')
+
         # TODO - Create final bar plot.
         # TODO - Add final report with numbers.
 
@@ -139,7 +166,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         if verbose:
             traceback.print_exc(file=sys.stdout)
         logger.error("Configuration for modification type=({} size {}-{}) has a bad pos_prior length {} (expected={})."
-                     .format(e.indel_type.name(), e.indel_min, e.indel_max, e.actual_len, e.expected_len))
+                     .format(e.indel_type.name, e.indel_min, e.indel_max, e.actual_len, e.expected_len))
         return 6
     except Exception:
         if verbose:

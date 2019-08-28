@@ -23,6 +23,7 @@ class IndelType(Enum):
     SUB = 2
     MATCH = -1
 
+    @property
     def name(self):
         if self._name_ == "DEL":
             return "Deletions"

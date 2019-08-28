@@ -25,9 +25,10 @@ class Logger:
 
             # Create handlers
             c_handler = logging.StreamHandler()
-            if os.path.exists(cls._OUTPUT_DIR + 'crispector_main.log'):
-                os.remove(cls._OUTPUT_DIR + 'crispector_main.log')
-            f_handler = logging.FileHandler(os.path.join(cls._OUTPUT_DIR, 'crispector_main.log'))
+            logger_path = os.path.join(cls._OUTPUT_DIR, 'crispector_main.log')
+            if os.path.exists(logger_path):
+                os.remove(logger_path)
+            f_handler = logging.FileHandler(logger_path)
 
             f_handler.setLevel(cls._logger_level)
             c_handler.setLevel(cls._logger_level)
