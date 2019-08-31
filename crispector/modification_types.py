@@ -1,5 +1,5 @@
 from exceptions import PriorPositionHasWrongLength
-from enum_types import IndelType, IsEdit
+from constants_and_types import IndelType, IsEdit
 from typing import List, Dict
 from collections import defaultdict
 

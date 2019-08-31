@@ -1,5 +1,5 @@
-from constants import CIGAR, FREQ, C_TX, C_MOCK
-from enum_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, Path, IsEdit
+from constants_and_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, Path, IsEdit, CIGAR, FREQ, \
+    C_TX, C_MOCK
 from input_processing import InputProcessing
 from modification_types import ModificationTypes
 import numpy as np
@@ -49,6 +49,11 @@ class ModificationTables:
     @property
     def pointers(self) -> ModTablesP:
         return self._pointers
+
+    @property
+    def amplicon(self) -> DNASeq:
+        return self._amplicon
+
 
     def _create_modification_tables(self):
         """
@@ -106,6 +111,7 @@ class ModificationTables:
         :return:
         """
         # Set font
+        mpl.rcParams.update(mpl.rcParamsDefault)
         mpl.rcParams['font.size'] = 22
         mpl.rcParams['ytick.labelsize'] = 12
         indel_size = 12
@@ -132,7 +138,7 @@ class ModificationTables:
             # Set green color for Edit events
             for pos_idx, pos in enumerate(positions):
                 if edit[pos_idx]:
-                    axes[table_idx].axvspan(pos, pos + 1, facecolor='green', alpha=0.3)
+                    axes[table_idx].axvspan(pos, pos + 1, facecolor='forestgreen', alpha=0.3)
 
             # Set bp "grid"
             grid_positions = positions if is_ins else np.arange(len(edit) + 1)
@@ -146,7 +152,7 @@ class ModificationTables:
                 axes[table_idx].axvline(cut_site, ymin=0, ymax=y_max, color='red', lw=2)
 
             # Create bar plot
-            axes[table_idx].bar(bar_ind - bar_width/2, tx, width=bar_width, color='darkorange',
+            axes[table_idx].bar(bar_ind - bar_width/2, tx, width=bar_width, color='deepskyblue',
                                 label="Tx ({} Reads)".format(self._n_reads_tx))
             axes[table_idx].bar(bar_ind + bar_width/2, mock, width=bar_width, color='darkgrey',
                                 label="Mock ({} Reads)".format(self._n_reads_mock))
@@ -164,7 +170,7 @@ class ModificationTables:
 
             # Create legend in the middle of the plot
             if table_idx == 2:
-                axes[table_idx].bar([0], [0], color='green', alpha=0.3, label="Edit event")
+                axes[table_idx].bar([0], [0], color='forestgreen', alpha=0.3, label="Edit event")
                 axes[table_idx].plot([], [], color='r', label="Cut-Site")
                 handles, labels = axes[table_idx].get_legend_handles_labels()
                 order = [1, 2, 3, 0]

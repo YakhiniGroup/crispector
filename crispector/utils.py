@@ -2,7 +2,7 @@ import logging
 import os
 import yaml # TODO - add to project requirements
 from exceptions import ConfiguratorIsCalledBeforeInitConfigPath
-from enum_types import Path
+from constants_and_types import Path
 
 
 class Logger:

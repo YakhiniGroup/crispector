@@ -1,10 +1,10 @@
 import os
 import subprocess
-from constants import REFERENCE, SGRNA, COMPLEMENT, SITE_NAME, CUT_SITE, READ, \
-    FREQ, CIGAR, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, INDEL_COLS, DEL_LEN, DEL_START, DEL_END, SUB_POS, \
-    SUB_CNT, INS_LEN, INS_POS, CIGAR_D, CIGAR_I, CIGAR_S, CIGAR_M, SCORE, ALIGN_SCORE
 from exceptions import FastpRunTimeError, SgRNANotInReferenceSequence, CantOpenMergedFastqFile
-from enum_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelType, Path, DNASeq, CigarPath, FASTP_DIR
+from constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelType, Path, DNASeq, CigarPath, FASTP_DIR, \
+    READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, SCORE, ALIGN_SCORE, FREQ, INS_LEN, INS_POS, DEL_LEN, DEL_START, \
+    DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, COMPLEMENT, REFERENCE, SGRNA, SITE_NAME, CUT_SITE, CIGAR_D, CIGAR_I, \
+    CIGAR_S, CIGAR_M
 from utils import Logger, Configurator
 import edlib      # TODO - add to install requirements
 from typing import List, Tuple, Dict
@@ -13,6 +13,7 @@ import pandas as pd  # TODO - add to install requirements
 from Bio import Align  # TODO - add to install requirements
 from Bio.SubsMat import MatrixInfo
 from collections import defaultdict
+
 
 class InputProcessing:
     """

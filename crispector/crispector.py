@@ -8,16 +8,15 @@ import logging
 from send2trash import send2trash #TODO - add to poroject requiremnts
 from algorithm_utils import compute_binom_p
 from crispector_algorithm import CrispectorAlgorithm
-from constants import welcome_msg, FREQ, CUT_SITE, EDIT_PERCENT, TX_READ_NUM, MOCK_READ_NUM
 from exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInReferenceSequence, \
     CantOpenMergedFastqFile, ConfiguratorIsCalledBeforeInitConfigPath, PriorPositionHasWrongLength
-from enum_types import ExpType, Path, FASTP_DIR
+from constants_and_types import ExpType, Path, FASTP_DIR, welcome_msg, FREQ, TX_READ_NUM, MOCK_READ_NUM, EDIT_PERCENT, \
+    SUMMARY_RESULTS_TITLES, SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE
 from input_processing import InputProcessing
 import traceback
 from utils import Logger, Configurator
 import os
 import pandas as pd #TODO - add to poroject requiremnts
-from constants import SITE_NAME, REFERENCE, SGRNA, ON_TARGET
 from modification_tables import ModificationTables
 from typing import Dict
 
@@ -122,12 +121,11 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
             logger.debug("Site {} - Done! Editing activity is {:.2f}".format(site,
                                                                              summary_result_d[site][EDIT_PERCENT]))
 
-        # Dump summary results TODO - create function and reorder columns
+        # Dump summary results
         summary_result_df = pd.DataFrame.from_dict(summary_result_d, orient='index')
         summary_result_df[SITE_NAME] = summary_result_df.index
-        summary_result_df.sort_values(by=EDIT_PERCENT, ascending=False)
-        summary_result_df.to_csv(os.path.join(output,"summary_results.csv"),
-                                            index=False, float_format='%.4f')
+        summary_result_df = summary_result_df.reindex(ref_df.index, columns=SUMMARY_RESULTS_TITLES)
+        summary_result_df.to_csv(os.path.join(output, "results_summary.csv"), index=False, float_format='%.4f')
 
         # TODO - Create final bar plot.
         # TODO - Add final report with numbers.

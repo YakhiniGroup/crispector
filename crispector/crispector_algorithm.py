@@ -1,6 +1,6 @@
-from constants import FREQ, C_TX, C_MOCK, IS_EDIT, TX_READ_NUM, MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, \
-    CI_LOW, CI_HIGH
-from enum_types import IsEdit, IndelType, AlgResult, Pr, Path
+from constants_and_types import IsEdit, IndelType, AlgResult, Pr, Path, CIGAR, FREQ, IS_EDIT, C_TX, C_MOCK, TX_READ_NUM, \
+    MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH
+from input_processing import InputProcessing
 from utils import Configurator, Logger
 from modification_tables import ModificationTables
 from modification_types import ModificationTypes
@@ -8,6 +8,10 @@ from typing import List, Tuple
 from scipy.stats import norm, binom, hypergeom  # TODO - add to package requirements
 import numpy as np
 import os
+import matplotlib as mpl
+from matplotlib import pyplot as plt
+import warnings
+
 
 class CrispectorAlgorithm:
     """
@@ -77,12 +81,14 @@ class CrispectorAlgorithm:
         # Site output
         # plot modification table
         tables.plot_tables(self._edit, self._tables_offset, self._output)
+        # TODO - dump modification table in a simplt .csv file.
         # Dump .csv file with all reads # TODO - add gzip, remove site_name & cigar_path?
         self._tx_df.to_csv(os.path.join(self._output, "treatment_aggregated_reads.csv"), index=False)
         self._mock_df.to_csv(os.path.join(self._output, "mock_aggregated_reads.csv"), index=False)
+        # Plot mutation distribution
+        self._plot_modification_distribution(tables)
 
         # TODO - Add bar plot for editing activity
-        # TODO - Mutation histogram plot using cigar path.
 
         return result_dict
 
@@ -158,4 +164,60 @@ class CrispectorAlgorithm:
         confidence_inv = norm.ppf(self._confidence + (1-self._confidence)/2)
         half_len_CI = confidence_inv * np.sqrt((editing_activity*(1-editing_activity))/self._n_reads_tx)
         return max(0, editing_activity - half_len_CI), editing_activity + half_len_CI
+
+    def _plot_modification_distribution(self, tables: ModificationTables):
+        dist_d = dict()
+        amplicon_length = len(tables.amplicon)
+        for indel_type in [IndelType.DEL, IndelType.SUB, IndelType.INS]:
+            dist_d[indel_type] = np.zeros(amplicon_length + 1, dtype=np.int)
+
+        # Aggregate modifications
+        edit_reads = self._tx_df.loc[self._tx_df[IS_EDIT]]
+        for row_idx, row in edit_reads.iterrows():
+            pos_idx = 0  # position index
+            for length, indel_type in InputProcessing.parse_cigar(row[CIGAR]):
+                # For a match - continue
+                if indel_type == IndelType.MATCH:
+                    pos_idx += length
+                # Mismatch or deletions
+                elif indel_type in [IndelType.DEL, IndelType.SUB]:
+                    dist_d[indel_type][pos_idx:pos_idx+length] += row[FREQ]
+                    pos_idx += length
+                # Insertions
+                elif indel_type == IndelType.INS:
+                    dist_d[indel_type][pos_idx] += row[FREQ]
+
+        # Set font
+        mpl.rcParams.update(mpl.rcParamsDefault)
+        mpl.rcParams['font.size'] = 22
+
+        # Create axes
+        fig = plt.figure(figsize=(16, 9))
+        ax = fig.add_axes([0, 0, 1, 1])
+
+        positions = list(range(amplicon_length + 1))
+        ax.axvline(x=self._cut_site, linestyle='-', color='r', label='Expected cut-site', linewidth=2)
+        ax.axvline(x=self._cut_site - self._win_size, linestyle='--', color='k',
+                   label='Quantification window', linewidth=1.5)
+        ax.axvline(x=self._cut_site + self._win_size, linestyle='--', color='k', linewidth=1.5)
+        ax.plot(positions, dist_d[IndelType.INS], color='g', label="Insertions", linewidth=3, alpha=0.7)
+        ax.plot(positions, dist_d[IndelType.SUB], color='b', label="Substitutions", linewidth=3, alpha=0.7)
+        ax.plot(positions, dist_d[IndelType.DEL], color='darkviolet', label="Deletions", linewidth=3, alpha=0.7)
+
+        # Create legend, axes limit and labels
+        ax.legend()
+        ax.set_title("Edited Reads Modification Distribution")
+        max_indels = np.array([dist_d[IndelType.INS], dist_d[IndelType.DEL], dist_d[IndelType.SUB]]).max()
+        ax.set_ylim(bottom=0, top=max(int(1.05*max_indels), 10))
+        ax.set_xlim(left=0, right=amplicon_length)
+        ax.set_xlabel("Position")
+        ax.set_ylabel("Indel count")
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            fig.savefig(os.path.join(self._output, 'edited_reads_modification_distribution.png'),
+                        bbox_inches='tight', dpi=100)
+            plt.close(fig)
+
+
 
