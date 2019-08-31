@@ -46,7 +46,8 @@ import os
               "this flag for low number of sites (< ############)") # TODO - fix this option, currently True
 @click.option("--confidence_interval", type=click.FloatRange(min=0, max=1), default=0.95, show_default=True,
               help="Confidence interval for the evaluted editing activity")
-@click.option('--amplicon_min_alignment_score', type=click.FloatRange(min=0, max=100), default=20, show_default=True,
+# TODO - this values and description should be changed.
+@click.option('--amplicon_min_alignment_score', type=click.FloatRange(min=0, max=100), default=30, show_default=True,
               help="Minimum alignment score to consider a read alignment to a specific amplicon reference sequence."
                    "Score is normalized between 0 (not even one bp match) to 100 (the read is identical to"
                    "the reference). Below this alignment threshold, reads are discarded."

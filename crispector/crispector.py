@@ -8,10 +8,10 @@ import logging
 from send2trash import send2trash #TODO - add to poroject requiremnts
 from algorithm_utils import compute_binom_p
 from crispector_algorithm import CrispectorAlgorithm
-from constants import welcome_msg, FASTP_DIR, FREQ, CUT_SITE, EDIT_PERCENT, TX_READ_NUM, MOCK_READ_NUM
+from constants import welcome_msg, FREQ, CUT_SITE, EDIT_PERCENT, TX_READ_NUM, MOCK_READ_NUM
 from exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInReferenceSequence, \
     CantOpenMergedFastqFile, ConfiguratorIsCalledBeforeInitConfigPath, PriorPositionHasWrongLength
-from enum_types import ExpType, Path
+from enum_types import ExpType, Path, FASTP_DIR
 from input_processing import InputProcessing
 import traceback
 from utils import Logger, Configurator
@@ -23,6 +23,8 @@ from typing import Dict
 
 from modification_types import ModificationTypes
 
+# TODO - Add code that check amplicon have only correct bases (and make everything upper).
+# TODO - Same for guides.
 
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path, amplicons_csv: Path,
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,

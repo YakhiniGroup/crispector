@@ -5,6 +5,8 @@ import numpy as np
 
 
 # Enums
+from constants import CIGAR_I, CIGAR_D, CIGAR_S
+
 
 class ExpType(Enum):
     TX = 0
@@ -36,15 +38,14 @@ class IndelType(Enum):
 
     @classmethod
     def from_cigar(cls, indel_type: str):
-        if indel_type == "I":
+        if indel_type == CIGAR_I:
             return cls.INS
-        elif indel_type == "D":
+        elif indel_type == CIGAR_D:
             return cls.DEL
-        elif indel_type == "X":
+        elif indel_type == CIGAR_S:
             return cls.SUB
         else:
             return cls.MATCH
-
 
 # Pandas DataFrames
 
@@ -76,11 +77,17 @@ IsEdit = Dict[int, List[bool]]
 DNASeq = str
 Path = str
 Pr = float
+CigarPath = str
 
 # TODO - change description
 # AlgResult - dictionary with key name_of_property (e.g. 'CI_high') and their value
 AlgResult = Dict[str, float]
 
 
+# fastp constants
+FASTP_DIR = dict()
+FASTP_DIR[ExpType.TX] = "treatment_fastp"
+FASTP_DIR[ExpType.MOCK] = "mock_fastp"
 
+# TODO - delete types and create constants_and_types
 

@@ -40,3 +40,13 @@ IndelTypes:
             max: *max_indel_size
             pos_prior: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.01,
                         0.01, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
+alignment:
+    # Default is no substitution_matrix, can use any substitution_matrix from (from Bio.SubsMat import MatrixInfo)
+    # e.g. substitution_matrix: "blosum62"
+    substitution_matrix: ""
+    match_score: 5 # match score. 5 is EMBOSS needle default
+    mismatch_score: -4 # mismatch score. -4 is EMBOSS needle default
+    open_gap_score: -10 # open_gap_score score. -10 is EMBOSS needle default
+    extend_gap_score: -0.5 # extend_gap_score score. -0.5 is EMBOSS needle default
+
+

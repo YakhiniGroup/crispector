@@ -1,13 +1,13 @@
 from constants import FREQ, C_TX, C_MOCK, IS_EDIT, TX_READ_NUM, MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, \
     CI_LOW, CI_HIGH
 from enum_types import IsEdit, IndelType, AlgResult, Pr, Path
-from utils import Configurator
+from utils import Configurator, Logger
 from modification_tables import ModificationTables
 from modification_types import ModificationTypes
 from typing import List, Tuple
 from scipy.stats import norm, binom, hypergeom  # TODO - add to package requirements
 import numpy as np
-
+import os
 
 class CrispectorAlgorithm:
     """
@@ -37,6 +37,7 @@ class CrispectorAlgorithm:
         self._output = output
         self._tx_df = None
         self._mock_df = None
+        self._logger = Logger.get_logger()
 
     def evaluate(self, tables: ModificationTables) -> AlgResult:
         """
@@ -68,15 +69,20 @@ class CrispectorAlgorithm:
                 if is_edit:
                     edited_indexes += pointers[self._tables_offset + pos_idx]
 
-        # TODO - Add bar plot for editing activity
-        # TODO - Mutation histogram plot using cigar path.
-        # TODO - Dump both tx and mock read  tables, with n_deleted, mutated and so on, only in the 10 windows base.
-        # maybe do it with 40+45 in range(130,150).
-        # TODO - Add most frequent allels plot . Tx up (10) and Mock down (10).
-        tables.plot_tables(self._edit, self._tables_offset, self._output)
-
         # Compute editing activity.
         result_dict = self._compute_editing_activity(edited_indexes)
+
+        self._logger.debug("Site {} - Start creating plots and tables".format(self._name))
+
+        # Site output
+        # plot modification table
+        tables.plot_tables(self._edit, self._tables_offset, self._output)
+        # Dump .csv file with all reads # TODO - add gzip, remove site_name & cigar_path?
+        self._tx_df.to_csv(os.path.join(self._output, "treatment_aggregated_reads.csv"), index=False)
+        self._mock_df.to_csv(os.path.join(self._output, "mock_aggregated_reads.csv"), index=False)
+
+        # TODO - Add bar plot for editing activity
+        # TODO - Mutation histogram plot using cigar path.
 
         return result_dict
 
