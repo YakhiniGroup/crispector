@@ -46,6 +46,9 @@ import os
               "this flag for low number of sites (< ############)") # TODO - fix this option, currently True
 @click.option("--confidence_interval", type=click.FloatRange(min=0, max=1), default=0.95, show_default=True,
               help="Confidence interval for the evaluted editing activity")
+@click.option("--editing_threshold", type=click.FloatRange(), default=0.1, show_default=True,
+              help="The editing activity threshold (%). Below this threshold, activity won't be reported at the "
+                   "final bar plot XXXXXXXX") # TODO - change description
 # TODO - this values and description should be changed.
 @click.option('--amplicon_min_alignment_score', type=click.FloatRange(min=0, max=100), default=30, show_default=True,
               help="Minimum alignment score to consider a read alignment to a specific amplicon reference sequence."
@@ -54,7 +57,7 @@ import os
                    "This is useful for filtering erroneous reads that do not align to any target amplicon.")
 def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, override_fastp, override_alignment,
          keep_fastp_output, verbose, min_num_of_reads, amplicons_csv, cut_site_position, amplicon_min_alignment_score,
-         config, override_binomial_p, confidence_interval):
+         config, override_binomial_p, confidence_interval, editing_threshold):
     """CRISPECTOR - Console script"""
 
     # Input verification
@@ -77,7 +80,7 @@ def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, overr
     return crispector.run(tx_in1, tx_in2, mock_in1, mock_in2, output, amplicons_csv, fastp_options_string,
                           override_fastp, keep_fastp_output, verbose, min_num_of_reads, cut_site_position,
                           amplicon_min_alignment_score, override_alignment, config, override_binomial_p,
-                          confidence_interval)
+                          confidence_interval, editing_threshold)
 
 
 if __name__ == "__main__":

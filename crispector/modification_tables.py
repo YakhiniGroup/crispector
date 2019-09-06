@@ -8,6 +8,8 @@ from matplotlib import pyplot as plt  # TODO - add to package requirements
 import matplotlib as mpl
 import os
 import warnings
+import pandas as pd
+from utils import Configurator
 
 
 class ModificationTables:
@@ -196,3 +198,40 @@ class ModificationTables:
             warnings.simplefilter("ignore", UserWarning)
             fig.savefig(os.path.join(output, 'modification_tables.png'), bbox_inches='tight', dpi=300)
             plt.close(fig)
+
+    def dump_tables(self, edit_table: IsEdit, table_offset: int, output: Path):
+        """
+        Dump all modification tables around cut-site to a csv.
+        Also display edit events.
+        :param edit_table: edit as marked by crispector algorithm
+        :param table_offset: reference offset (in bp) to the start of the qualification window
+        :param output: output path
+        :return:
+        """
+        cfg = Configurator.get_cfg()
+        win_size = cfg["window_size"]
+        ref = self._amplicon[table_offset:table_offset + 2*win_size]
+        tables_dict = dict()
+
+        for table_idx in range(self._modifications.size):
+            # Gather data
+            is_ins = self._modifications.types[table_idx] == IndelType.INS
+            edit = edit_table[table_idx]
+            pos_len = len(edit)  # length of positions
+            tx = self._tables[table_idx][C_TX, table_offset:table_offset + pos_len]
+            mock = self._tables[table_idx][C_MOCK, table_offset:table_offset + pos_len]
+            cut_site = np.zeros(pos_len, dtype=np.int)
+            cut_site[(pos_len // 2) - 1 * (not is_ins):(pos_len // 2) + 1] = 1
+
+            # Insert to dictionary
+            table_name = self._modifications.name_at_idx(table_idx)
+            tables_dict[table_name + " Tx"] = np.insert(tx, 0, self._n_reads_tx)
+            tables_dict[table_name + " Mock"] = np.insert(mock, 0, self._n_reads_mock)
+            tables_dict[table_name + " Is edited"] = [None] + edit
+            tables_dict[table_name + " Is cut site"] = [None] + list(cut_site)
+
+            tables_df = pd.DataFrame.from_dict(tables_dict, orient='index')
+            new_cols = ['number of reads'] + [c for c in ref] + ['insertion at the end']
+
+        tables_df.set_axis(new_cols, axis=1, inplace=True)
+        tables_df.to_csv(os.path.join(output, "modification_tables.csv"))

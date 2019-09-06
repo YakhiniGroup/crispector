@@ -91,13 +91,6 @@ class ModificationTypes:
 
         return cls(m_list, m_min, m_max, m_prior, cfg["max_indel_size"])
 
-    # TODO - complete the functions
-    def plot_modification_table(self, is_edit: IsEdit, pos_offset: int):
-        pass
-
-    def modification_table_to_excel(self, is_edit: IsEdit, pos_offset: int):
-        pass
-
     def name_at_idx(self, idx: int) -> str:
         """
         Return modification name by index

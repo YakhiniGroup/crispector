@@ -14,9 +14,9 @@ from constants_and_types import ExpType, Path, FASTP_DIR, welcome_msg, FREQ, TX_
     SUMMARY_RESULTS_TITLES, SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE
 from input_processing import InputProcessing
 import traceback
-from utils import Logger, Configurator
+from utils import Logger, Configurator, plot_editing_activity
 import os
-import pandas as pd #TODO - add to poroject requiremnts
+import pandas as pd #TODO - add to project requiremnts
 from modification_tables import ModificationTables
 from typing import Dict
 
@@ -28,7 +28,7 @@ from modification_types import ModificationTypes
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path, amplicons_csv: Path,
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,
         cut_site_position: int, amplicon_min_alignment_score: float, override_alignment: bool, config: Path,
-        override_binomial_p: bool, confidence_interval: float):
+        override_binomial_p: bool, confidence_interval: float, editing_threshold: float):
 
     # Init the logger
     Logger.set_log_path(output)
@@ -74,7 +74,6 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         # Convert alignment to modification tables
         logger.info("Convert alignment tables to algorithm input")
         tables_d: Dict[str, ModificationTables] = dict()
-        summary_result_d = dict()  # Algorithm result dictionary
 
         # TODO - delete dump to pickle files.
         if os.path.exists(os.path.join(output, "tables.pkl")):
@@ -87,7 +86,6 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                 tx_reads_num = tx_reads_d[site][FREQ].sum()
                 mock_reads_num = mock_reads_d[site][FREQ].sum()
                 if min(tx_reads_num, mock_reads_num) < min_num_of_reads:
-                    summary_result_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num}
                     logger.info("Site {} - Discarded from evaluation due to low number of reads (treatment={}, "
                                 "mock={}).".format(site, tx_reads_num, mock_reads_num))
                 else:
@@ -96,20 +94,25 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                         "Site {} - Converted. Number of reads (treatment={}, mock={}).".format(site, tx_reads_num,
                                                                                                mock_reads_num))
 
-            with open(os.path.join(output, "tables.pkl"), "wb") as file:
-                pickle.dump(tables_d, file)
-
         # Compute binomial coin for all modification types
         # TODO -delete readDF from inputs
         binom_p_l = compute_binom_p(tables_d, modifications, override_binomial_p, ref_df)
 
+        result_summary_d = dict()  # Algorithm result dictionary
         # Run crispector algorithm on all sites
         for _, row in ref_df.iterrows():
             site = row[SITE_NAME]
             cut_site = row[CUT_SITE]
+
             # Continue if site was discarded
             if site not in tables_d:
+                # Log the following in the result dict
+                tx_reads_num = tx_reads_d[site][FREQ].sum()
+                mock_reads_num = mock_reads_d[site][FREQ].sum()
+                result_summary_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num,
+                                          ON_TARGET: row[ON_TARGET]}
                 continue
+
             # Create output folder
             site_output = os.path.join(output, site)
             if not os.path.exists(site_output):
@@ -117,17 +120,25 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
 
             logger.info("Site {} - Evaluate editing activity".format(site))
             algorithm = CrispectorAlgorithm(site, cut_site, modifications, binom_p_l, confidence_interval, site_output)
-            summary_result_d[site] = algorithm.evaluate(tables_d[site])
+            result_summary_d[site] = algorithm.evaluate(tables_d[site])
+            result_summary_d[site][ON_TARGET] = row[ON_TARGET]
             logger.debug("Site {} - Done! Editing activity is {:.2f}".format(site,
-                                                                             summary_result_d[site][EDIT_PERCENT]))
+                                                                             result_summary_d[site][EDIT_PERCENT]))
+
+        # TODO - delete off course
+        with open(os.path.join(output, "tables.pkl"), "wb") as file:
+            pickle.dump(tables_d, file)
 
         # Dump summary results
-        summary_result_df = pd.DataFrame.from_dict(summary_result_d, orient='index')
+        summary_result_df = pd.DataFrame.from_dict(result_summary_d, orient='index')
         summary_result_df[SITE_NAME] = summary_result_df.index
-        summary_result_df = summary_result_df.reindex(ref_df.index, columns=SUMMARY_RESULTS_TITLES)
+        summary_result_df[SITE_NAME] = summary_result_df.index
+        summary_result_df = summary_result_df.reindex(ref_df[SITE_NAME], columns=SUMMARY_RESULTS_TITLES)
         summary_result_df.to_csv(os.path.join(output, "results_summary.csv"), index=False, float_format='%.4f')
 
-        # TODO - Create final bar plot.
+        # Create bar plot for editing activity
+        plot_editing_activity(summary_result_df, confidence_interval, editing_threshold, output)
+
         # TODO - Add final report with numbers.
 
         # Remove fastp files

@@ -11,7 +11,7 @@ import os
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 import warnings
-
+import seaborn as sns # TODO - add to package requirements
 
 class CrispectorAlgorithm:
     """
@@ -45,9 +45,8 @@ class CrispectorAlgorithm:
 
     def evaluate(self, tables: ModificationTables) -> AlgResult:
         """
-        Evaluate editing activity from ModificationTables, and:
-        TODO - Add description
-        :param tables:
+        Evaluate editing activity from ModificationTables and create a folder with results graphs and tables
+        :param tables: ModificationTables
         :return: Dict with results
         """
         # set algorithm properties
@@ -81,14 +80,15 @@ class CrispectorAlgorithm:
         # Site output
         # plot modification table
         tables.plot_tables(self._edit, self._tables_offset, self._output)
-        # TODO - dump modification table in a simplt .csv file.
-        # Dump .csv file with all reads # TODO - add gzip, remove site_name & cigar_path?
+        tables.dump_tables(self._edit, self._tables_offset, self._output)
+        # Dump .csv file with all reads
+        # TODO - add gzip, remove site_name & cigar_path?
         self._tx_df.to_csv(os.path.join(self._output, "treatment_aggregated_reads.csv"), index=False)
         self._mock_df.to_csv(os.path.join(self._output, "mock_aggregated_reads.csv"), index=False)
         # Plot mutation distribution
         self._plot_modification_distribution(tables)
-
-        # TODO - Add bar plot for editing activity
+        # Plot editing activity
+        self._plot_editing_activity(result_dict)
 
         return result_dict
 
@@ -219,5 +219,58 @@ class CrispectorAlgorithm:
                         bbox_inches='tight', dpi=100)
             plt.close(fig)
 
+    def _plot_editing_activity(self, result_d: AlgResult):
+        # Set font
+        mpl.rcParams.update(mpl.rcParamsDefault)
+        sns.set(style="whitegrid")
+        mpl.rcParams['font.size'] = 14
+        mpl.rcParams['xtick.labelsize'] = 14
+        mpl.rcParams['ytick.labelsize'] = 14
+        mpl.rcParams['axes.labelsize'] = 16
+        mpl.rcParams['axes.titlesize'] = 16
+        bar_color = '#d0743c'
+        bar_width = 0.8
+
+        # Define fix and axes
+        fig = plt.figure(figsize=(4, 4))
+        ax = fig.add_axes([0, 0, 1, 1])
+
+        # Get bar data
+        editing = result_d[EDIT_PERCENT]
+        CI_high = result_d[CI_HIGH] - editing
+        CI_low = editing - result_d[CI_LOW]
+
+        # plot bar
+        ax.bar([0], [result_d[EDIT_PERCENT]], color=bar_color, width=bar_width,
+               yerr=[[CI_low], [CI_high]], align='center', ecolor='black')
+
+        # Set labels
+        ax.set_ylabel("Editing Activity (%)")
+
+        # Set scale and lim
+        y_lim = max(min(1.2 * (editing + CI_high), 100), 0.1)
+        ax.set_ylim(0, y_lim)
+        ax.set_xlim(-0.7, 0.7)
+
+        # Text below each bar plot + y ticks
+        ax.set_xticks([0])
+        ax.set_xticklabels([self._name])
+
+        ax.set_title(r"Editing Activity with {} % CI".format(self._confidence), weight='bold')
+
+        ax.text(x=-0.1, y=-0.3, s="Number of edited reads\nEditing activity",
+                ha='left', va='bottom', transform=fig.transFigure, family='serif')
+        ax.text(x=0.55, y=-0.3, s="- {:,} (out of {:,} reads).\n"
+                                  "- {:.2f}%, CI=({:.2f}%$-${:.2f}%).".format(result_d[TX_EDIT],
+                                                                              result_d[TX_READ_NUM],
+                                                                              editing, result_d[CI_LOW],
+                                                                              result_d[CI_HIGH]),
+                ha='left', va='bottom', transform=fig.transFigure, family='serif')
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            fig.savefig(os.path.join(self._output, 'site_editing_activity.png'),
+                        bbox_inches='tight', dpi=200)
+            plt.close(fig)
 
 

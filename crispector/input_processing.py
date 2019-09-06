@@ -6,11 +6,12 @@ from constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelTy
     DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, COMPLEMENT, REFERENCE, SGRNA, SITE_NAME, CUT_SITE, CIGAR_D, CIGAR_I, \
     CIGAR_S, CIGAR_M
 from utils import Logger, Configurator
-import edlib      # TODO - add to install requirements
+import edlib      # TODO - add to install requirements, conda install python-edlib, consider conda install gcc before.
+# TODO - no reason to install edlib with pip...
 from typing import List, Tuple, Dict
 import re
 import pandas as pd  # TODO - add to install requirements
-from Bio import Align  # TODO - add to install requirements
+from Bio import Align  # TODO - add to install requirements, make sure conda install biopython=1.74!
 from Bio.SubsMat import MatrixInfo
 from collections import defaultdict
 
@@ -323,12 +324,13 @@ class InputProcessing:
             reads[col_name] = col
 
     @classmethod
-    def _compute_needle_wunsch_alignment(cls, reference: DNASeq, read: DNASeq,
-                                         aligner: Align.PairwiseAligner) -> Tuple[DNASeq, DNASeq, CigarPath, float]:
+    def _compute_needle_wunsch_alignment(cls, reference: DNASeq, read: DNASeq, aligner: Align.PairwiseAligner) \
+        -> Tuple[DNASeq, DNASeq, CigarPath, float]:
         """
         Compute needle wunsch alignment, cigar_path and score.
         :param read:  reads
         :param reference:  amplicon reference sequences
+        :param : aligner: type Align.PairwiseAligner
         :return: (alignment with ins, alignment with deletion, cigar path, score)
         """
         alignments = aligner.align(reference, read)
