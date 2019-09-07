@@ -19,13 +19,15 @@ class CrispectorAlgorithm:
     """
 
     def __init__(self, site_name: str, cut_site: int, modification: ModificationTypes, binom_p_l: List[Pr],
-                 confidence: Pr, output: Path):
+                 confidence: Pr, on_target: bool, output: Path):
         """
         :param site_name:
         :param cut_site:
         :param modification:
         :param binom_p_l: binom_p list
         :param confidence: confidence interval
+        :param on_target: is on target flag
+        :param output:  output directory path
         """
         self._name = site_name
         self._cut_site = cut_site
@@ -42,6 +44,7 @@ class CrispectorAlgorithm:
         self._tx_df = None
         self._mock_df = None
         self._logger = Logger.get_logger()
+        self._on_target = on_target
 
     def evaluate(self, tables: ModificationTables) -> AlgResult:
         """
@@ -83,8 +86,8 @@ class CrispectorAlgorithm:
         tables.dump_tables(self._edit, self._tables_offset, self._output)
         # Dump .csv file with all reads
         # TODO - add gzip, remove site_name & cigar_path?
-        self._tx_df.to_csv(os.path.join(self._output, "treatment_aggregated_reads.csv"), index=False)
-        self._mock_df.to_csv(os.path.join(self._output, "mock_aggregated_reads.csv"), index=False)
+        self._tx_df.to_csv(os.path.join(self._output, "treatment_aligned_reads.csv"), index=False)
+        self._mock_df.to_csv(os.path.join(self._output, "mock_aligned_reads.csv"), index=False)
         # Plot mutation distribution
         self._plot_modification_distribution(tables)
         # Plot editing activity
@@ -165,7 +168,7 @@ class CrispectorAlgorithm:
         half_len_CI = confidence_inv * np.sqrt((editing_activity*(1-editing_activity))/self._n_reads_tx)
         return max(0, editing_activity - half_len_CI), editing_activity + half_len_CI
 
-    def _plot_modification_distribution(self, tables: ModificationTables):
+    def _plot_modification_distribution(self, tables):
         dist_d = dict()
         amplicon_length = len(tables.amplicon)
         for indel_type in [IndelType.DEL, IndelType.SUB, IndelType.INS]:
@@ -181,7 +184,7 @@ class CrispectorAlgorithm:
                     pos_idx += length
                 # Mismatch or deletions
                 elif indel_type in [IndelType.DEL, IndelType.SUB]:
-                    dist_d[indel_type][pos_idx:pos_idx+length] += row[FREQ]
+                    dist_d[indel_type][pos_idx:pos_idx + length] += row[FREQ]
                     pos_idx += length
                 # Insertions
                 elif indel_type == IndelType.INS:
@@ -190,25 +193,27 @@ class CrispectorAlgorithm:
         # Set font
         mpl.rcParams.update(mpl.rcParamsDefault)
         mpl.rcParams['font.size'] = 22
+        mpl.rcParams['axes.labelsize'] = 30
+        mpl.rcParams['axes.titlesize'] = 26
 
         # Create axes
         fig = plt.figure(figsize=(16, 9))
         ax = fig.add_axes([0, 0, 1, 1])
 
         positions = list(range(amplicon_length + 1))
-        ax.axvline(x=self._cut_site, linestyle='-', color='r', label='Expected cut-site', linewidth=2)
+        ax.axvline(x=self._cut_site, linestyle='-', color="red", label='Expected cut-site', linewidth=2)
         ax.axvline(x=self._cut_site - self._win_size, linestyle='--', color='k',
-                   label='Quantification window', linewidth=1.5)
-        ax.axvline(x=self._cut_site + self._win_size, linestyle='--', color='k', linewidth=1.5)
-        ax.plot(positions, dist_d[IndelType.INS], color='g', label="Insertions", linewidth=3, alpha=0.7)
-        ax.plot(positions, dist_d[IndelType.SUB], color='b', label="Substitutions", linewidth=3, alpha=0.7)
-        ax.plot(positions, dist_d[IndelType.DEL], color='darkviolet', label="Deletions", linewidth=3, alpha=0.7)
+                   label='Quantification window', linewidth=1)
+        ax.axvline(x=self._cut_site + self._win_size, linestyle='--', color='k', linewidth=1)
+        ax.plot(positions, dist_d[IndelType.INS], color='#32b165', label="Insertions", linewidth=3, alpha=0.9)
+        ax.plot(positions, dist_d[IndelType.SUB], color='b', label="Substitutions", linewidth=3, alpha=0.9)
+        ax.plot(positions, dist_d[IndelType.DEL], color='darkviolet', label="Deletions", linewidth=3, alpha=0.9)
 
         # Create legend, axes limit and labels
         ax.legend()
-        ax.set_title("Edited Reads Modification Distribution")
+        ax.set_title("Edited Reads Modification Distribution", weight='bold')
         max_indels = np.array([dist_d[IndelType.INS], dist_d[IndelType.DEL], dist_d[IndelType.SUB]]).max()
-        ax.set_ylim(bottom=0, top=max(int(1.05*max_indels), 10))
+        ax.set_ylim(bottom=0, top=max(int(1.1 * max_indels), 10))
         ax.set_xlim(left=0, right=amplicon_length)
         ax.set_xlabel("Position")
         ax.set_ylabel("Indel count")
@@ -216,7 +221,7 @@ class CrispectorAlgorithm:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
             fig.savefig(os.path.join(self._output, 'edited_reads_modification_distribution.png'),
-                        bbox_inches='tight', dpi=100)
+                        bbox_inches='tight', dpi=200)
             plt.close(fig)
 
     def _plot_editing_activity(self, result_d: AlgResult):
@@ -228,8 +233,12 @@ class CrispectorAlgorithm:
         mpl.rcParams['ytick.labelsize'] = 14
         mpl.rcParams['axes.labelsize'] = 16
         mpl.rcParams['axes.titlesize'] = 16
-        bar_color = '#d0743c'
+
         bar_width = 0.8
+        if self._on_target:
+            bar_color = "#39ad48"  # green
+        else:
+            bar_color = "#db5856"  # red
 
         # Define fix and axes
         fig = plt.figure(figsize=(4, 4))
@@ -242,7 +251,7 @@ class CrispectorAlgorithm:
 
         # plot bar
         ax.bar([0], [result_d[EDIT_PERCENT]], color=bar_color, width=bar_width,
-               yerr=[[CI_low], [CI_high]], align='center', ecolor='black')
+               yerr=[[CI_low], [CI_high]], align='center', ecolor='black', capsize=15)
 
         # Set labels
         ax.set_ylabel("Editing Activity (%)")
@@ -261,8 +270,7 @@ class CrispectorAlgorithm:
         ax.text(x=-0.1, y=-0.3, s="Number of edited reads\nEditing activity",
                 ha='left', va='bottom', transform=fig.transFigure, family='serif')
         ax.text(x=0.55, y=-0.3, s="- {:,} (out of {:,} reads).\n"
-                                  "- {:.2f}%, CI=({:.2f}%$-${:.2f}%).".format(result_d[TX_EDIT],
-                                                                              result_d[TX_READ_NUM],
+                                  "- {:.2f}%, CI=({:.2f}%$-${:.2f}%).".format(result_d[TX_EDIT], result_d[TX_READ_NUM],
                                                                               editing, result_d[CI_LOW],
                                                                               result_d[CI_HIGH]),
                 ha='left', va='bottom', transform=fig.transFigure, family='serif')

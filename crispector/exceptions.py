@@ -29,3 +29,6 @@ class PriorPositionHasWrongLength(Exception):
         self.indel_min = indel_min
         self.indel_max = indel_max
 
+
+class UnknownAlignmentChar(Exception):
+    pass

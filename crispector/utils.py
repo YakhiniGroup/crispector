@@ -6,6 +6,10 @@ from constants_and_types import Path, AlgResult, CI_HIGH, EDIT_PERCENT, SITE_NAM
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 import math
+import seaborn as sns # TODO - add to project requirements
+import numpy as np
+import warnings
+
 
 class Logger:
     """
@@ -93,8 +97,8 @@ def plot_editing_activity(result_df: AlgResult, confidence_interval: float, edit
     mpl.rcParams['legend.fontsize'] = 24
     editing_bar_text_size = 18
 
-    off_target_color = '#d0743c'
-    on_target_color = '#7b6888'
+    off_target_color = "#db5856"  # red
+    on_target_color = "#39ad48"  # green
     # Filter all low editing activity sites
     result_df = result_df.dropna()
     edit_df = result_df.loc[result_df[CI_HIGH] >= editing_threshold]
@@ -199,3 +203,90 @@ def plot_editing_activity(result_df: AlgResult, confidence_interval: float, edit
     fig.savefig(os.path.join(output, 'editing_activity.png'), box_inches='tight', dpi=300)
     plt.close(fig)
 
+
+def create_reads_statistics_report(result_df: AlgResult, reads_min_n: int, tx_in: int, tx_merged: int, tx_aligned: int,
+                                   mock_in: int, mock_merged: int, mock_aligned: int, output: Path):
+    # Set font
+    mpl.rcParams.update(mpl.rcParamsDefault)
+    sns.set(style="whitegrid")
+    mpl.rcParams['font.size'] = 18
+    mpl.rcParams['ytick.labelsize'] = 16
+    mpl.rcParams['xtick.labelsize'] = 18
+    mpl.rcParams['axes.labelsize'] = 20
+    mpl.rcParams['axes.titlesize'] = 22
+
+    bar_width = 0.4
+    mock_color = '#3690c0'  # blue
+    mock_color_lighter = '#72b1d2'
+    mock_color_lightest = '#9ac7df'
+    tx_color = '#f16a13'  # orange
+    tx_color_lighter = '#f59659'  # orange
+    tx_color_lightest = '#f7b488'  # orange
+
+    # Create mapping statistics plot
+    # Create axes
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(14, 16), constrained_layout=True)
+
+    # set input == merged if input information isn't available
+    if tx_in == -1:
+        tx_in = tx_merged
+    if mock_in == -1:
+        mock_in = mock_merged
+
+    bar_ind = np.arange(6)
+    bars = np.array([tx_in, tx_merged, tx_aligned, mock_in, mock_merged, mock_aligned])
+    colors = [tx_color, tx_color_lighter, tx_color_lightest, mock_color, mock_color_lighter, mock_color_lightest]
+
+    # Create bar plot
+    axes[0].bar(bar_ind, bars, width=bar_width, color=colors)
+
+    # Add numbers above bars
+    text_height = 1.01 * bars
+    axes[0].text(x=bar_ind[0], y=text_height[0],
+                 s="{:,}".format(tx_in), ha='center', va='bottom')
+    axes[0].text(x=bar_ind[1], y=text_height[1],
+                 s="{:,}\n({:.2f}%)".format(tx_merged, 100 * tx_merged / tx_in), ha='center', va='bottom')
+    axes[0].text(x=bar_ind[2], y=text_height[2],
+                 s="{:,}\n({:.2f}%)".format(tx_aligned, 100 * tx_aligned / tx_in), ha='center', va='bottom')
+    axes[0].text(x=bar_ind[3], y=text_height[3],
+                 s="{:,}".format(mock_in), ha='center', va='bottom')
+    axes[0].text(x=bar_ind[4], y=text_height[4],
+                 s="{:,}\n({:.2f}%)".format(mock_merged, 100 * mock_merged / mock_in), ha='center', va='bottom')
+    axes[0].text(x=bar_ind[5], y=text_height[5],
+                 s="{:,}\n({:.2f}%)".format(mock_aligned, 100 * mock_aligned / mock_in), ha='center', va='bottom')
+
+    # Set x, y lim & ticks and title
+    axes[0].set_xlim(min(bar_ind) - 0.5, max(bar_ind) + 0.5)
+    axes[0].set_xticks(bar_ind)
+    axes[0].set_xticklabels(['Treatment\nInput', 'Treatment\nMerged', 'Treatment\nAligned',
+                             'Mock\nInput', 'Mock\nMerged', 'Mock\nAligned'])
+    axes[0].set_ylim(0, 1.2 * np.max(bars))
+    axes[0].set_ylabel("Number Of Reads")
+    axes[0].set_title("Mapping Statistics", weight='bold')
+
+    # Create reads box_plot
+    bplot = sns.boxplot(x=["Treatment", "Mock"],
+                        y=[result_df["treatment_number_of_reads"], result_df["mock_number_of_reads"]],
+                        linewidth=2.5, ax=axes[1])
+    txbox = bplot.artists[0]
+    txbox.set_facecolor(tx_color)
+    mockbox = bplot.artists[1]
+    mockbox.set_facecolor(mock_color)
+
+    # Set x, y lim & ticks and title
+    axes[1].set_xlim(-1, 2)
+    axes[1].set_ylabel("Number Of Reads")
+    axes[1].set_title("Number of Aligned Reads Per Site", weight='bold')
+
+    # Print information on discarded reads
+    discarded_df = result_df.loc[result_df[EDIT_PERCENT].isna()]
+    if discarded_df.shape[0] > 0:
+        text = "{} sites were discarded due to low number of reads (below {:,}).\n".format(discarded_df.shape[0],
+                                                                                           reads_min_n)
+        text += "See \"result_summary.csv\" for more details."
+        axes[1].text(x=0.1, y=0, s=text, ha='left', va='bottom', transform=fig.transFigure, family='serif')
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        fig.savefig(os.path.join(output, 'reads_statistics.png'), bbox_inches='tight', dpi=200)
+        plt.close(fig)

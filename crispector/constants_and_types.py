@@ -60,8 +60,7 @@ class IndelType(Enum):
 # pandas data frame with 5 columns: SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE
 AmpliconDf = pandas.DataFrame
 
-# TODO - Add all columns
-# pandas data frame with XXX columns READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, CUT_SITE,
+# pandas data frame with all reads columns :READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, CUT_SITE...
 ReadsDf = pandas.DataFrame
 
 # Others

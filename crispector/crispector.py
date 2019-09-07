@@ -9,12 +9,12 @@ from send2trash import send2trash #TODO - add to poroject requiremnts
 from algorithm_utils import compute_binom_p
 from crispector_algorithm import CrispectorAlgorithm
 from exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInReferenceSequence, \
-    CantOpenMergedFastqFile, ConfiguratorIsCalledBeforeInitConfigPath, PriorPositionHasWrongLength
+    CantOpenMergedFastqFile, ConfiguratorIsCalledBeforeInitConfigPath, PriorPositionHasWrongLength, UnknownAlignmentChar
 from constants_and_types import ExpType, Path, FASTP_DIR, welcome_msg, FREQ, TX_READ_NUM, MOCK_READ_NUM, EDIT_PERCENT, \
     SUMMARY_RESULTS_TITLES, SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE
 from input_processing import InputProcessing
 import traceback
-from utils import Logger, Configurator, plot_editing_activity
+from utils import Logger, Configurator, plot_editing_activity, create_reads_statistics_report
 import os
 import pandas as pd #TODO - add to project requiremnts
 from modification_tables import ModificationTables
@@ -24,6 +24,7 @@ from modification_types import ModificationTypes
 
 # TODO - Add code that check amplicon have only correct bases (and make everything upper).
 # TODO - Same for guides.
+
 
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path, amplicons_csv: Path,
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,
@@ -54,20 +55,25 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
 
         # Filter low quality reads and merge pair-end reads with fastp
         if not override_fastp:
-            tx_merged = InputProcessing.fastp(tx_in1, tx_in2, fastp_options_string, output, ExpType.TX)
-            mock_merged = InputProcessing.fastp(mock_in1, mock_in2, fastp_options_string, output, ExpType.MOCK)
+            tx_merged, tx_input_n = InputProcessing.fastp(tx_in1, tx_in2, fastp_options_string, output, ExpType.TX)
+            mock_merged, mock_input_n = InputProcessing.fastp(mock_in1, mock_in2, fastp_options_string, output,
+                                                              ExpType.MOCK)
         else:
             logger.info("Skip merging with fastp and read merged files from input.")
             tx_merged, mock_merged = tx_in1, mock_in1
+            tx_input_n, mock_input_n = -1, -1
 
         # Align reads to the amplicon reference sequences
-        tx_reads_d, tx_discarded_reads_num = InputProcessing.split_read_and_align(tx_merged, ref_df,
-                                                                                  amplicon_min_alignment_score, output,
-                                                                                  ExpType.TX, override_alignment)
-        mock_reads_d, mock_discarded_reads_num = InputProcessing.split_read_and_align(mock_merged, ref_df,
-                                                                                      amplicon_min_alignment_score,
-                                                                                      output, ExpType.MOCK,
-                                                                                      override_alignment)
+        tx_reads_d, tx_merged_n, tx_aligned_n = InputProcessing.split_read_and_align(tx_merged, ref_df,
+                                                                                     amplicon_min_alignment_score,
+                                                                                     output, ExpType.TX,
+                                                                                     override_alignment)
+
+        mock_reads_d, mock_merged_n, mock_aligned_n = InputProcessing.split_read_and_align(mock_merged, ref_df,
+                                                                                           amplicon_min_alignment_score,
+                                                                                           output, ExpType.MOCK,
+                                                                                           override_alignment)
+
         # Get modification types and positions priors
         modifications = ModificationTypes.init_from_cfg(cfg)
 
@@ -119,13 +125,13 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                 os.makedirs(site_output)
 
             logger.info("Site {} - Evaluate editing activity".format(site))
-            algorithm = CrispectorAlgorithm(site, cut_site, modifications, binom_p_l, confidence_interval, site_output)
+            algorithm = CrispectorAlgorithm(site, cut_site, modifications, binom_p_l, confidence_interval,
+                                            row[ON_TARGET], site_output)
             result_summary_d[site] = algorithm.evaluate(tables_d[site])
             result_summary_d[site][ON_TARGET] = row[ON_TARGET]
             logger.debug("Site {} - Done! Editing activity is {:.2f}".format(site,
                                                                              result_summary_d[site][EDIT_PERCENT]))
 
-        # TODO - delete off course
         with open(os.path.join(output, "tables.pkl"), "wb") as file:
             pickle.dump(tables_d, file)
 
@@ -139,7 +145,9 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         # Create bar plot for editing activity
         plot_editing_activity(summary_result_df, confidence_interval, editing_threshold, output)
 
-        # TODO - Add final report with numbers.
+        # Dump reads statistics
+        create_reads_statistics_report(summary_result_df, min_num_of_reads, tx_input_n, tx_merged_n, tx_aligned_n,
+                                       mock_input_n, mock_merged_n, mock_aligned_n, output)
 
         # Remove fastp files
         if not keep_fastp_output:
@@ -179,6 +187,10 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         logger.error("Configuration for modification type=({} size {}-{}) has a bad pos_prior length {} (expected={})."
                      .format(e.indel_type.name, e.indel_min, e.indel_max, e.actual_len, e.expected_len))
         return 6
+    except UnknownAlignmentChar:
+        if verbose:
+            traceback.print_exc(file=sys.stdout)
+        logger.error("Unknown alignment character from Bio-python-Alignment. Please open a defect on GitHub.")
     except Exception:
         if verbose:
             traceback.print_exc(file=sys.stdout)

@@ -10,6 +10,7 @@ import os
 import warnings
 import pandas as pd
 from utils import Configurator
+import matplotlib.patheffects as path_effects
 
 
 class ModificationTables:
@@ -55,7 +56,6 @@ class ModificationTables:
     @property
     def amplicon(self) -> DNASeq:
         return self._amplicon
-
 
     def _create_modification_tables(self):
         """
@@ -118,9 +118,13 @@ class ModificationTables:
         mpl.rcParams['ytick.labelsize'] = 12
         indel_size = 12
         bar_width = 0.4
-
+        mock_color = '#3690c0'  # blue
+        tx_color = '#f16a13'  # orange
+        edit_color = '#dcdcdc' # '#d3d3d3' # '#e8ebeb'  # light grey
+        cut_site_color = "red"
+        grid_color = 'grey'
         # Create axes
-        fig, axes = plt.subplots(nrows=self._modifications.size, ncols=1, figsize=(12, 10), sharex=True)
+        fig, axes = plt.subplots(nrows=self._modifications.size, ncols=1, figsize=(16, 11), sharex=True)
 
         for table_idx in range(self._modifications.size):
 
@@ -129,74 +133,85 @@ class ModificationTables:
 
             # Positions and bars positions
             edit = edit_table[table_idx]
-            positions = np.arange(len(edit)) - 0.5*is_ins
+            positions = np.arange(len(edit)) - 0.5 * is_ins
             bar_ind = positions + 0.5
             cut_site = len(positions) / 2
 
-            tx = self._tables[table_idx][C_TX, table_offset:table_offset+len(positions)]
-            mock = self._tables[table_idx][C_MOCK, table_offset:table_offset+len(positions)]
+            tx = self._tables[table_idx][C_TX, table_offset:table_offset + len(positions)]
+            mock = self._tables[table_idx][C_MOCK, table_offset:table_offset + len(positions)]
             y_max = max(max(tx.max(), mock.max()), 1)
 
             # Set green color for Edit events
             for pos_idx, pos in enumerate(positions):
                 if edit[pos_idx]:
-                    axes[table_idx].axvspan(pos, pos + 1, facecolor='forestgreen', alpha=0.3)
+                    axes[table_idx].axvspan(pos, pos + 1, facecolor=edit_color)
 
             # Set bp "grid"
             grid_positions = positions if is_ins else np.arange(len(edit) + 1)
-            axes[table_idx].vlines(grid_positions, ymin=0, ymax=y_max, color='grey', lw=1, alpha=0.3)
+            axes[table_idx].vlines(grid_positions, ymin=0, ymax=y_max, color=grid_color, lw=1)
+            axes[table_idx].spines['bottom'].set_color(grid_color)
+            axes[table_idx].spines['top'].set_color(grid_color)
+            axes[table_idx].spines['right'].set_color(grid_color)
+            axes[table_idx].spines['left'].set_color(grid_color)
 
             # Set cut-site in red (Insertions cut site is a full bp cell)
             if is_ins:
-                axes[table_idx].vlines([cut_site-1, cut_site], ymin=0, ymax=y_max, color='red', lw=2)
-                axes[table_idx].hlines([0, y_max], xmin=cut_site-1, xmax=cut_site, color='red', lw=4)
+                axes[table_idx].vlines([cut_site - 1, cut_site], ymin=0, ymax=y_max, color=cut_site_color, lw=2)
+                axes[table_idx].hlines([0, y_max], xmin=cut_site - 1, xmax=cut_site, color=cut_site_color, lw=4)
             else:
-                axes[table_idx].axvline(cut_site, ymin=0, ymax=y_max, color='red', lw=2)
+                axes[table_idx].axvline(cut_site, ymin=0, ymax=y_max, color=cut_site_color, lw=2)
 
             # Create bar plot
-            axes[table_idx].bar(bar_ind - bar_width/2, tx, width=bar_width, color='deepskyblue',
-                                label="Tx ({} Reads)".format(self._n_reads_tx))
-            axes[table_idx].bar(bar_ind + bar_width/2, mock, width=bar_width, color='darkgrey',
-                                label="Mock ({} Reads)".format(self._n_reads_mock))
+            axes[table_idx].bar(bar_ind - bar_width / 2, tx, width=bar_width, color=tx_color,
+                                label="Tx ({:,} Reads)".format(self._n_reads_tx))
+            axes[table_idx].bar(bar_ind + bar_width / 2, mock, width=bar_width, color=mock_color,
+                                label="Mock ({:,} Reads)".format(self._n_reads_mock))
 
             # Set x, y lim & ticks
             axes[table_idx].set_xlim(min(positions) - 0.5, max(positions) + 1.5)
             axes[table_idx].set_xticks([])
-            axes[table_idx].set_yticks([0, y_max])
-            axes[table_idx].set_yticklabels([0, y_max])
+            axes[table_idx].set_yticks([])
             axes[table_idx].set_ylim(0, y_max)
 
             # Set y_label - Use text due to alignment issues
-            axes[table_idx].text(x=positions[0] - 3.5 - 0.5*(not is_ins), y=y_max/2,
+            axes[table_idx].text(x=positions[0] - 2.5 - 0.5 * (not is_ins), y=y_max / 2,
                                  s=self._modifications.plot_name_at_idx(table_idx), ha="left", va="center")
 
             # Create legend in the middle of the plot
             if table_idx == 2:
-                axes[table_idx].bar([0], [0], color='forestgreen', alpha=0.3, label="Edit event")
-                axes[table_idx].plot([], [], color='r', label="Cut-Site")
+                axes[table_idx].bar([0], [0], color=edit_color, label="Edit event", edgecolor='grey')
+                axes[table_idx].plot([], [], color=cut_site_color, label="Cut-Site")
                 handles, labels = axes[table_idx].get_legend_handles_labels()
                 order = [1, 2, 3, 0]
                 axes[table_idx].legend([handles[idx] for idx in order], [labels[idx] for idx in order],
-                                       bbox_to_anchor=(1.5, 0))
+                                       bbox_to_anchor=(1.38, 0))
 
             # Add the reference sequence in the position of the title
             if table_idx == 0:
-                ref = self._amplicon[table_offset:table_offset+len(positions)]
+                ref = self._amplicon[table_offset:table_offset + len(positions)]
                 for pos_idx, ii in enumerate(bar_ind):
-                    axes[table_idx].text(ii, y_max, ref[pos_idx], ha="center", va="bottom")
+                    axes[table_idx].text(ii, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
+                    axes[table_idx].text(ii, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
+                axes[table_idx].text(cut_site, 1.1 * y_max, "|", ha="center", va="bottom", weight='bold', size=20,
+                                     color=cut_site_color)
 
+            # TODO - add white border to text?
             # Add bars values (numbers) as text
             for pos_idx, bar_i in enumerate(bar_ind):
                 if tx[pos_idx]:
-                    axes[table_idx].text(bar_i - bar_width / 2, 0.05 * y_max, tx[pos_idx], rotation=90,
-                                         size=indel_size, ha="center", va="bottom")
+                    text = axes[table_idx].text(bar_i - bar_width / 2, 0.05 * y_max, "{:,}".format(tx[pos_idx]),
+                                                rotation=90,
+                                                size=indel_size, ha="center", va="bottom")
+                    # text.set_path_effects([path_effects.Stroke(linewidth=0.5, foreground='white'), path_effects.Normal()])
                 if mock[pos_idx]:
-                    axes[table_idx].text(bar_i + bar_width / 2,  0.05 * y_max, mock[pos_idx], rotation=90,
-                                         size=indel_size, ha="center", va="bottom")
+                    text = axes[table_idx].text(bar_i + bar_width / 2, 0.05 * y_max, "{:,}".format(mock[pos_idx]),
+                                                rotation=90,
+                                                size=indel_size, ha="center", va="bottom")
+                    # text.set_path_effects([path_effects.Stroke(linewidth=0.5, foreground='white'), path_effects.Normal()])
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
-            fig.savefig(os.path.join(output, 'modification_tables.png'), bbox_inches='tight', dpi=300)
+            fig.savefig(os.path.join(output, 'modification_tables.png'), bbox_inches='tight', dpi=200)
             plt.close(fig)
 
     def dump_tables(self, edit_table: IsEdit, table_offset: int, output: Path):
