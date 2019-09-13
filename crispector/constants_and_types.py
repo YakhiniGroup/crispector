@@ -1,4 +1,4 @@
-from typing import Dict, List, DefaultDict
+from typing import Dict, List, DefaultDict, Tuple
 from enum import Enum
 import pandas
 import numpy as np
@@ -132,3 +132,6 @@ SUMMARY_RESULTS_TITLES = [SITE_NAME, ON_TARGET, MOCK_READ_NUM, TX_READ_NUM, TX_E
 # Cigar path constants
 CIGAR_D, CIGAR_I, CIGAR_S, CIGAR_M = "D", "I", "X", "="
 
+# AlignedIndel - A Tuple of indel_type, length, and position in alignment coordinates.
+# Only used by input processing module.
+AlignedIndel = Tuple[IndelType, int, int]

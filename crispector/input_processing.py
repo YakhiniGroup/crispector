@@ -4,7 +4,7 @@ from exceptions import FastpRunTimeError, SgRNANotInReferenceSequence, CantOpenM
 from constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelType, Path, DNASeq, CigarPath, FASTP_DIR, \
     READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, SCORE, ALIGN_SCORE, FREQ, INS_LEN, INS_POS, DEL_LEN, DEL_START, \
     DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, COMPLEMENT, REFERENCE, SGRNA, SITE_NAME, CUT_SITE, CIGAR_D, CIGAR_I, \
-    CIGAR_S, CIGAR_M
+    CIGAR_S, CIGAR_M, AlignedIndel
 from utils import Logger, Configurator
 import edlib      # TODO - add to install requirements, conda install python-edlib, consider conda install gcc before.
 # TODO - no reason to install edlib with pip...
@@ -137,13 +137,10 @@ class InputProcessing:
             aligned_reads_num = reads_df[FREQ].sum()
             logger.debug("Alignment for {} - Needleman-Wunsch alignment done.".format(exp_type.name()))
 
-            # TODO - shift reads into cut-site, same score.
-
-            # TODO - Move this code Convert to the function of shift reads into cut-site
-            # reads_df["alignment"] = reads_df.apply(
-            #     (lambda row: cls._cigar_to_full_alignment(amplicon_d[row[SITE_NAME]], row[READ], row[CIGAR])), axis=1)
-            # reads_df[[ALIGNMENT_W_INS, ALIGNMENT_W_DEL]] = pd.DataFrame(reads_df['alignment'].tolist(), index=reads_df.index)
-            # reads_df.drop(columns=["alignment"], inplace=True)
+            # Shift modification into cut-site
+            logger.debug("Alignment for {} - Start shift modifications into cut-site.".format(exp_type.name()))
+            cls._shift_modifications_into_cut_site(reads_df, cut_site_d, window_size)
+            logger.debug("Alignment for {} - Shift modifications into cut-site done.".format(exp_type.name()))
 
             # TODO - move from here to the end of CRISPECTOR run
             aligned_read_path = os.path.join(output, "{}_aligned.csv".format(exp_type.name()))
@@ -345,32 +342,36 @@ class InputProcessing:
         """
         alignments = aligner.align(reference, read)
         [ref_with_ins, align, read_with_del, _] = format(alignments[0]).split("\n")
-        cigar_path, match_bp = cls._compute_cigar_path_from_alignment(reference=ref_with_ins,
-                                                                      read=read_with_del, align=align)
+        cigar_path = cls._compute_cigar_path_from_alignment(reference=ref_with_ins, read=read_with_del)
 
         # TODO - Consult with Zohar and delete one score type
+        match_bp  = len(list(filter(cls.delete_non_match, align)))  # Can be taken from _compute_cigar_path_from_alignment(), but probably we don't need it
         score = 100*(match_bp/len(reference))
         align_score = alignments[0].score
 
         return ref_with_ins, read_with_del, cigar_path, score, align_score
 
+    # TODO - delete this function!!!!
     @staticmethod
-    def _compute_cigar_path_from_alignment(reference: DNASeq, read: DNASeq, align: str) -> Tuple[CigarPath, int]:
+    def delete_non_match(base):
+        return base == "|"
+
+    @staticmethod
+    def _compute_cigar_path_from_alignment(reference: DNASeq, read: DNASeq) -> CigarPath:
         """
         Function return cigar path from biopython alignment
         :param reference: reference with insertions
         :param read: read with deletions
         :param align: align path in biopython format
-        :return: Tuple of cigar_path and number of matches.
+        :return: cigar_path
         """
-
+        # TODO - Change to work without align
         cigar_path = []
         state: str = ""
         length = 0
-        match_total = 0
-        for ref_bp, align_bp, read_bp in zip(reference, align, read):
+        for ref_bp, read_bp in zip(reference, read):
             # Insertion
-            if (align_bp == "-") and (ref_bp == "-"):
+            if ref_bp == "-":
                 if (state != CIGAR_I) and (length != 0):
                     cigar_path.append("{}{}".format(length, state))
                     length = 1
@@ -378,7 +379,7 @@ class InputProcessing:
                     length += 1
                 state = CIGAR_I
             # Deletion
-            elif (align_bp == "-") and (read_bp == "-"):
+            elif read_bp == "-":
                 if (state != CIGAR_D) and (length != 0):
                     cigar_path.append("{}{}".format(length, state))
                     length = 1
@@ -386,29 +387,26 @@ class InputProcessing:
                     length += 1
                 state = CIGAR_D
             # Match
-            elif align_bp == "|":
+            elif ref_bp == read_bp:
                 if (state != CIGAR_M) and (length != 0):
                     cigar_path.append("{}{}".format(length, state))
                     length = 1
                 else:
                     length += 1
                 state = CIGAR_M
-                match_total += 1
             # Mismatch
-            elif align_bp == "X":
+            else:
                 if (state != CIGAR_S) and (length != 0):
                     cigar_path.append("{}{}".format(length, state))
                     length = 1
                 else:
                     length += 1
                 state = CIGAR_S
-            else:
-                raise UnknownAlignmentChar
 
         # Push the last part of the path
         cigar_path.append("{}{}".format(length, state))
 
-        return "".join(cigar_path), match_total
+        return "".join(cigar_path)
 
     @staticmethod
     def _parse_fastq_file(file_name: Path) -> List[DNASeq]:
@@ -470,32 +468,6 @@ class InputProcessing:
                                         cut_site_position, row[SITE_NAME]), axis=1)
         return ref_df
 
-    @classmethod
-    def _cigar_to_full_alignment(cls, ref: DNASeq, read: DNASeq, cigar: str):
-        """
-        convert cigar path to full alignment
-        :param ref: reference
-        :param read: read
-        :param cigar: cigar path
-        :return:
-        """
-        read_idx = 0
-        ref_idx = 0
-        align_read = read
-        align_ref = ref
-        for length, indel in cls.parse_cigar(cigar):
-            if indel in [IndelType.MATCH, IndelType.SUB]:
-                read_idx += length
-                ref_idx += length
-            elif indel == IndelType.INS:
-                read_idx += length
-                align_ref = cls.insert_dash(align_ref, ref_idx, length)
-            elif indel == IndelType.DEL:
-                align_read = cls.insert_dash(align_read, read_idx, length)
-                ref_idx += length
-
-        return align_ref, align_read
-
     @staticmethod
     def parse_cigar(cigar: str) -> Tuple[int, IndelType]:
         """
@@ -510,13 +482,238 @@ class InputProcessing:
             yield length, indel
 
     @staticmethod
-    def insert_dash(string: str, index: int, length: int) -> str:
+    def _shift_indel_from_left(read_a: DNASeq, read_b: DNASeq, length: int, align_idx: int, alignment_cut_site: int) \
+        -> Tuple[DNASeq, bool]:
         """
-        insert dashes at the index position
-        :param string:
-        :param index:
-        :param length:
-        :return:
+        Shift indel from left to right if possible. only read_a is changed.
+        For insertion - read_a is the reference and read_b is the read.
+        For deletion - read_a is the read and read_b is the reference.
+        Shift is possible in two scenarios:
+        1. The "pushed" base in read_a is identical to his match in read_b (read_a[end_idx] == read_b[start_idx])
+        2. The "pushed" base in read_a is already marked as a mismatch
+        ((read_a[end_idx] != read_b[end_idx]) and (read_b[end_idx] != "-"))
+        :param read_a: DNASeq
+        :param read_b: DNASeq
+        :param length: indel length
+        :param align_idx: indel position
+        :param alignment_cut_site: cut-site position
+        :return: A tuple of shifted read_a and flag is read_a was changes
         """
-        return string[:index] + length*'-' + string[index:]
 
+        shift = 0
+        start_idx = align_idx
+        end_idx = align_idx + length  # Consider to replace the base at end_idx
+        while end_idx < alignment_cut_site:
+            if (read_a[end_idx] == read_b[start_idx]) or \
+               ((read_a[end_idx] != read_b[end_idx]) and (read_b[end_idx] != "-")):
+                shift += 1
+            # Can't shift any further
+            else:
+                break
+            start_idx += 1
+            end_idx += 1
+
+        if shift == 0:
+            return read_a, False
+
+        # Shift indels left
+        shifted_bases = read_a[align_idx + length:align_idx + length + shift]
+        indels = read_a[align_idx:align_idx + length]
+        read_a = read_a[0:align_idx] + shifted_bases + indels + read_a[align_idx + length + shift:]
+
+        return read_a, True
+
+    @staticmethod
+    def _shift_indel_from_right(read_a: DNASeq, read_b: DNASeq, length: int, align_idx: int, alignment_cut_site: int) \
+        -> Tuple[DNASeq, bool]:
+        """
+        Shift indel from right to left if possible. only read_a is changed.
+        For insertion - read_a is the reference and read_b is the read.
+        For deletion - read_a is the read and read_b is the reference.
+        Shift is possible in two scenarios:
+        1. The "pushed" base in read_a is identical to his match in read_b (read_a[end_idx] == read_b[start_idx])
+        2. The "pushed" base in read_a is already marked as a mismatch
+        ((read_a[end_idx] != read_b[end_idx]) and (read_b[end_idx] != "-"))
+        :param read_a: DNASeq
+        :param read_b: DNASeq
+        :param length: indel length
+        :param align_idx: indel position
+        :param alignment_cut_site: cut-site position
+        :return: A tuple of shifted read_a and flag is read_a was changes
+        """
+        shift = 0
+        start_idx = align_idx - 1  # Consider to replace base at start_idx
+        end_idx = align_idx + length - 1
+        while start_idx >= alignment_cut_site:
+            if (read_a[start_idx] == read_b[end_idx]) or \
+               ((read_a[start_idx] != read_b[start_idx]) and (read_b[start_idx] != "-")):
+                shift += 1
+            # Can't shift any further
+            else:
+                break
+            start_idx -= 1
+            end_idx -= 1
+
+        if shift == 0:
+            return read_a, False
+
+        # Shift bp's in the read for deletions
+        shifted_bases = read_a[align_idx - shift:align_idx]
+        indels = read_a[align_idx:align_idx + length]
+        read_a = read_a[0:align_idx - shift] + indels + shifted_bases + read_a[align_idx + length:]
+
+        return read_a, True
+
+    # TODO - keep only for debug?
+    @classmethod
+    def compute_alignment_score_from_cigar(cls, cigar):
+        # Get alignment config
+        cfg = Configurator.get_cfg()
+        align_cfg = cfg["alignment"]
+        match_score = align_cfg["match_score"]
+        mismatch_score = align_cfg["mismatch_score"]
+        open_gap_score = align_cfg["open_gap_score"]
+        extend_gap_score = align_cfg["extend_gap_score"]
+        score = 0
+
+        # Find closest indels from left and from right
+        for length, indel_type in cls.parse_cigar(cigar):
+            if indel_type == IndelType.MATCH:
+                score += length * match_score
+            elif indel_type in [IndelType.INS, IndelType.DEL]:
+                score += open_gap_score + (length - 1) * extend_gap_score
+            else:
+                score += length * mismatch_score
+
+        return score
+
+    @classmethod
+    def _find_closest_indels_to_cut_site(cls, cigar: CigarPath, cut_site: int) -> Tuple[AlignedIndel, AlignedIndel, int]:
+        """
+        Find closest indels left to the cut-site and right to the cut-site.
+        :param cigar: cigar path of the alignment
+        :param cut_site: cut-site in reference coordinates
+        :return: most_left indel, most right indel and aligned cut-site. return None if indel is already on cut-site
+        or if there is no such indel.
+        """
+        most_left: AlignedIndel = None  # closest indel from left to the cut-site
+        most_right: AlignedIndel = None  # closest indel from right to the cut-site
+        pos_idx = 0  # position index for the original reference (with no indels)
+        align_idx = 0  # position index for the alignment (with indels)
+        aligned_cut_site = -1  # cut-site in align_idx coordinates
+        search_finished = False  # Search finished flag. will be used to jump to return value
+
+        # Find closest indels from left and from right
+        for length, indel_type in cls.parse_cigar(cigar):
+
+            # Deletions
+            if indel_type == IndelType.DEL:
+                # Deletion is left to the cut-site
+                if pos_idx <= cut_site:
+                    if (pos_idx + length) < cut_site:
+                        most_left = (indel_type, length, align_idx)
+                    # Deletion is already on the cut-site
+                    else:
+                        most_left = None
+                        search_finished = True
+                # Deletion is right to the cut-site
+                elif most_right is None:
+                    most_right = (indel_type, length, align_idx)
+                    search_finished = True
+
+            # Insertions
+            elif indel_type == IndelType.INS:
+                # Insertion is already on the cut-site
+                if pos_idx == cut_site:
+                    most_left = None
+                    search_finished = True
+                # Insertion is left to the cut-site
+                elif pos_idx < cut_site:
+                    most_left = (indel_type, length, align_idx)
+                # Insertion is right to the cut-site
+                elif most_right is None:
+                    most_right = (indel_type, length, align_idx)
+                    search_finished = True
+
+            # Update indexes and compute cut-site in alignment coordinates
+            if indel_type != IndelType.INS:
+                # store cut-site position
+                if cut_site in range(pos_idx, pos_idx + length + 1):
+                    aligned_cut_site = align_idx + (cut_site - pos_idx)
+                pos_idx += length
+            align_idx += length
+
+            if search_finished:
+                break
+
+        return most_left, most_right, aligned_cut_site
+
+    @classmethod
+    def _shift_modifications_into_cut_site(cls, reads: ReadsDf, cut_site_d: Dict[str, int], window_size: int):
+        """
+        Shift deletions and insertions with a region of 2*window_size into the cut-site
+        :param reads: ReadsDf - All reads, already aligned with a cigar path.
+        :param cut_site_d: cut-site dict
+        :param window_size: config window_size
+        :return: no return value. Change reads inplace.
+        """
+        update_idx = []  # Changed read indexes list
+        reference_l = []  # Changed references (read with insertions) list
+        read_l = []  # Changed reads (read with deletions) list
+        cigar_l = []  # Changed cigar path list
+
+        for row_idx, row in reads.iterrows():
+            cut_site = cut_site_d[row[SITE_NAME]]  # cut-site in pos_idx coordinates
+            cigar = row[CIGAR]
+            reference = row[ALIGNMENT_W_INS]
+            read = row[ALIGNMENT_W_DEL]
+            changed_right = False
+            changed_left = False
+
+            # Find closest indels left and right to the cut-site and cut-site in alignment coordinates
+            most_left, most_right, aligned_cut_site = cls._find_closest_indels_to_cut_site(cigar, cut_site)
+
+            # Shift most left modification to the cut-site
+            if most_left is not None:
+                indel_type, length, align_idx = most_left  # most_left is type AlignedIndel
+                # shift indels with a region of twice the window size from the cut-site
+                if align_idx + length + (2*window_size) < aligned_cut_site:
+                    changed_left = False
+                elif indel_type == IndelType.DEL:
+                    read, changed_left = cls._shift_indel_from_left(read, reference, length, align_idx,
+                                                                    aligned_cut_site)
+                else:
+                    reference, changed_left = cls._shift_indel_from_left(reference, read, length, align_idx,
+                                                                         aligned_cut_site)
+
+            # Shift most right modification to the cut-site
+            if most_right is not None:
+                indel_type, length, align_idx = most_right  # most_left is type AlignedIndel
+                # shift indels with a region of twice the window size from the cut-site
+                if align_idx > aligned_cut_site + (2*window_size):
+                    changed_right = False
+                elif indel_type == IndelType.DEL:
+                    read, changed_right = cls._shift_indel_from_right(read, reference, length, align_idx,
+                                                                      aligned_cut_site)
+                else:
+                    reference, changed_right = cls._shift_indel_from_right(reference, read, length, align_idx,
+                                                                           aligned_cut_site)
+            # Mark read if it was changed
+            if changed_right or changed_left:
+                # Compute new cigar_path
+                cigar = cls._compute_cigar_path_from_alignment(reference, read)
+                # TODO - delete this assertion from final version
+                original_score = cls.compute_alignment_score_from_cigar(row[CIGAR])
+                new_score = cls.compute_alignment_score_from_cigar(cigar)
+                assert new_score == original_score, "Bad modification shift! reference={}, read={}, cut-site={}".format(
+                    row[ALIGNMENT_W_INS], row[ALIGNMENT_W_DEL], aligned_cut_site)
+
+                update_idx.append(row_idx)
+                reference_l.append(reference)
+                read_l.append(read)
+                cigar_l.append(cigar)
+
+        # Update with all changed reads
+        updated_reads_df = pd.DataFrame({ALIGNMENT_W_INS: reference_l, ALIGNMENT_W_DEL: read_l,
+                                         CIGAR: cigar_l}, index=update_idx)
+        reads.update(updated_reads_df)

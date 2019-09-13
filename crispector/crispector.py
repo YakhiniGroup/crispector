@@ -82,7 +82,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         tables_d: Dict[str, ModificationTables] = dict()
 
         # TODO - delete dump to pickle files.
-        if os.path.exists(os.path.join(output, "tables.pkl")):
+        if os.path.exists(os.path.join(output, "tables.pkl")) and override_alignment:
             with open(os.path.join(output, "tables.pkl"), "rb") as file:
                 tables_d = pickle.load(file)
         else:
