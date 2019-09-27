@@ -94,26 +94,33 @@ FASTP_DIR = dict()
 FASTP_DIR[ExpType.TX] = "treatment_fastp"
 FASTP_DIR[ExpType.MOCK] = "mock_fastp"
 
+BOWTIE2_DIR = dict()
+BOWTIE2_DIR[ExpType.TX] = "treatment_bowtie2"
+BOWTIE2_DIR[ExpType.MOCK] = "mock_bowtie2"
+
 # AmpliconDf constants
-SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE = 'site_name', 'reference', 'sgRNA', 'on_target', 'cut-site'
+SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE = 'site_name', 'reference', 'sgRNA', 'Site type', 'cut-site'
 
 # ReadDf constants
 READ = "read"
 ALIGNMENT_W_INS = "alignment_w_ins"
 ALIGNMENT_W_DEL = "alignment_w_del"
 CIGAR = 'cigar_path'
-SCORE = 'final_score'
-ALIGN_SCORE = 'alignment_score'  # TODO - need  them both??
+ALIGN_SCORE = 'alignment_score'
 FREQ = "frequency"
 IS_EDIT = "is_edited"
-INS_LEN = "inserted_base_len"
+INS_LEN = "inserted_bases_length"
 INS_POS = "insertion_position"
-DEL_LEN = "deleted_base_len"
-DEL_START = "deletion_start"
-DEL_END = "deletion_end"
+INS_BASE = "inserted_bases"
+DEL_LEN = "deleted_bases_length"
+DEL_START = "deletion_start_position"
+DEL_END = "deletion_end_position"
+DEL_BASE = "deleted_bases"
 SUB_CNT = "substitution_count"
 SUB_POS = "substitution_position"
-INDEL_COLS = [DEL_LEN, DEL_START, DEL_END, INS_LEN, INS_POS, SUB_CNT, SUB_POS]
+SUB_BASE = "substitution_bases"
+INDEL_COLS = [DEL_LEN, DEL_START, DEL_END, DEL_BASE, INS_LEN, INS_POS, INS_BASE, SUB_CNT, SUB_POS, SUB_BASE]
+REVERSED = "reversed_reads"
 
 # General constants
 C_TX = 0
@@ -121,10 +128,10 @@ C_MOCK = 1
 COMPLEMENT = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
 
 # AlgResult columns
-TX_READ_NUM = "treatment_number_of_reads"
-MOCK_READ_NUM = "mock_number_of_reads"
-TX_EDIT = "edited_reads"
-EDIT_PERCENT = "editing_activity"
+TX_READ_NUM = "Treatment number of reads"
+MOCK_READ_NUM = "Mock number of reads"
+TX_EDIT = "Edited reads"
+EDIT_PERCENT = "Editing Activity"
 CI_LOW = "CI_low"
 CI_HIGH = "CI_high"
 SUMMARY_RESULTS_TITLES = [SITE_NAME, ON_TARGET, MOCK_READ_NUM, TX_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH]

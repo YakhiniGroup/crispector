@@ -18,10 +18,11 @@ class CrispectorAlgorithm:
     Core algorithm for CRISPECTOR
     """
 
-    def __init__(self, site_name: str, cut_site: int, modification: ModificationTypes, binom_p_l: List[Pr],
-                 confidence: Pr, on_target: bool, output: Path):
+    def __init__(self, site_name: str, experiment_name: str,cut_site: int, modification: ModificationTypes,
+                 binom_p_l: List[Pr], confidence: Pr, on_target: bool, output: Path):
         """
         :param site_name:
+        :param experiment_name:
         :param cut_site:
         :param modification:
         :param binom_p_l: binom_p list
@@ -30,6 +31,7 @@ class CrispectorAlgorithm:
         :param output:  output directory path
         """
         self._name = site_name
+        self._experiment_name = "{} - {}".format(experiment_name, site_name)
         self._cut_site = cut_site
         self._modifications = modification
         self._binom_p_l = binom_p_l
@@ -80,18 +82,21 @@ class CrispectorAlgorithm:
 
         self._logger.debug("Site {} - Start creating plots and tables".format(self._name))
 
-        # Site output
-        # plot modification table
-        tables.plot_tables(self._edit, self._tables_offset, self._output)
-        tables.dump_tables(self._edit, self._tables_offset, self._output)
-        # Dump .csv file with all reads
-        # TODO - add gzip, remove site_name & cigar_path?
-        self._tx_df.to_csv(os.path.join(self._output, "treatment_aligned_reads.csv"), index=False)
-        self._mock_df.to_csv(os.path.join(self._output, "mock_aligned_reads.csv"), index=False)
-        # Plot mutation distribution
-        self._plot_modification_distribution(tables)
-        # Plot editing activity
-        self._plot_editing_activity(result_dict)
+        # Site output - Only plot for a valid output
+        if self._output is not None:
+            # plot modification table
+            tables.plot_tables(self._edit, self._tables_offset, self._output, self._experiment_name)
+            tables.dump_tables(self._edit, self._tables_offset, self._output)
+            # Dump .csv file with all reads
+            # TODO - remove site_name & cigar_path?
+            self._tx_df.to_csv(os.path.join(self._output, "treatment_aligned_reads.csv.gz"), index=False,
+                               compression='gzip')
+            self._mock_df.to_csv(os.path.join(self._output, "mock_aligned_reads.csv.gz"), index=False,
+                                 compression='gzip')
+            # Plot mutation distribution
+            self._plot_modification_distribution(tables)
+            # Plot editing activity
+            self._plot_editing_activity(result_dict)
 
         return result_dict
 
@@ -211,7 +216,8 @@ class CrispectorAlgorithm:
 
         # Create legend, axes limit and labels
         ax.legend()
-        ax.set_title("Edited Reads Modification Distribution", weight='bold')
+        ax.set_title("Edited Reads Modification Distribution\n{}".format(self._experiment_name),
+                     weight='bold', family='serif')
         max_indels = np.array([dist_d[IndelType.INS], dist_d[IndelType.DEL], dist_d[IndelType.SUB]]).max()
         ax.set_ylim(bottom=0, top=max(int(1.1 * max_indels), 10))
         ax.set_xlim(left=0, right=amplicon_length)
@@ -223,6 +229,7 @@ class CrispectorAlgorithm:
             fig.savefig(os.path.join(self._output, 'edited_reads_modification_distribution.png'),
                         bbox_inches='tight', dpi=200)
             plt.close(fig)
+        # TODO - split to plots, with all modification include mock. and one only for tx.
 
     def _plot_editing_activity(self, result_d: AlgResult):
         # Set font
@@ -236,9 +243,9 @@ class CrispectorAlgorithm:
 
         bar_width = 0.8
         if self._on_target:
-            bar_color = "#39ad48"  # green
+            bar_color = "#39ad48"
         else:
-            bar_color = "#db5856"  # red
+            bar_color = "#db5856"
 
         # Define fix and axes
         fig = plt.figure(figsize=(4, 4))
@@ -259,13 +266,14 @@ class CrispectorAlgorithm:
         # Set scale and lim
         y_lim = max(min(1.2 * (editing + CI_high), 100), 0.1)
         ax.set_ylim(0, y_lim)
-        ax.set_xlim(-0.7, 0.7)
+        ax.set_xlim(-0.8, 0.8)
 
         # Text below each bar plot + y ticks
         ax.set_xticks([0])
         ax.set_xticklabels([self._name])
 
-        ax.set_title(r"Editing Activity with {} % CI".format(self._confidence), weight='bold')
+        ax.set_title("Editing Activity with {} % CI\n{}".format(100 * self._confidence, self._experiment_name),
+                     weight='bold', family='serif')
 
         ax.text(x=-0.1, y=-0.3, s="Number of edited reads\nEditing activity",
                 ha='left', va='bottom', transform=fig.transFigure, family='serif')

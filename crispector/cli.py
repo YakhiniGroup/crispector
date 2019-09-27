@@ -26,12 +26,18 @@ import os
 @click.option('--output', '-o', type=click.Path(), default="CRISPECTOR", show_default=True,
               help="Output folder path (string)")
 @click.option('--fastp_options_string', type=click.STRING, default="", help="Try \"fastp --help\" for more details")
-@click.option('--override_fastp', is_flag=True, default=False, show_default=True,
+@click.option('--fastp_threads', type=click.INT, default=2, help="fastp worker thread number")
+@click.option('--bowtie2_options_string', type=click.STRING, default="-k 1 --np 0  -N 1 --score-min L,-100,-3",
+              help="Try \"bowtie2 --help\" for more details")
+@click.option('--bowtie2_threads', type=click.INT, default=10, help="bowtie2 number of alignment threads to launch")
+@click.option('--override_fastp', is_flag=True, default=False, show_default=True, # TODO -Change default to 1
               help="Override fastp and require merged fastq files (pre-processing is necessary).\
                     Set paths to merged fastq files at --tx_in1 and --mock_in1.\
                     Can't be used with --fastp_options_string")
 # TODO -delete this option
 @click.option('--override_alignment', is_flag=True, default=False, show_default=True,
+              help="Delete this option. Set paths to alignment fastq files at --tx_in1 and --mock_in1")
+@click.option('--override_bowtie2', is_flag=True, default=False, show_default=True,
               help="Delete this option. Set paths to alignment fastq files at --tx_in1 and --mock_in1")
 @click.option('--verbose', is_flag=True, default=False, show_default=True, help="Higher verbosity")
 @click.option('--keep_fastp_output', is_flag=True, default=False, show_default=True, help="Keep fastp output directory")
@@ -48,16 +54,21 @@ import os
               help="Confidence interval for the evaluted editing activity")
 @click.option("--editing_threshold", type=click.FloatRange(), default=0.1, show_default=True,
               help="The editing activity threshold (%). Below this threshold, activity won't be reported at the "
-                   "final bar plot XXXXXXXX") # TODO - change description
+                   "final bar plot XXXXXXXX")  # TODO - change description
+@click.option("--suppress_site_output",  is_flag=True, default=False, show_default=True,
+              help="Do not dump plots and reads for all sites")
 # TODO - this values and description should be changed.
 @click.option('--amplicon_min_alignment_score', type=click.FloatRange(min=0, max=100), default=30, show_default=True,
               help="Minimum alignment score to consider a read alignment to a specific amplicon reference sequence."
                    "Score is normalized between 0 (not even one bp match) to 100 (the read is identical to"
                    "the reference). Below this alignment threshold, reads are discarded."
                    "This is useful for filtering erroneous reads that do not align to any target amplicon.")
+@click.option('--experiment_name', type=str, default=" ", show_default=True,
+              help="Experiment name as will be reported in CRISPECTOR plots")
 def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, override_fastp, override_alignment,
          keep_fastp_output, verbose, min_num_of_reads, amplicons_csv, cut_site_position, amplicon_min_alignment_score,
-         config, override_binomial_p, confidence_interval, editing_threshold):
+         config, override_binomial_p, confidence_interval, editing_threshold, suppress_site_output,
+         experiment_name, fastp_threads, bowtie2_threads, bowtie2_options_string, override_bowtie2):
     """CRISPECTOR - Console script"""
 
     # Input verification
@@ -80,7 +91,8 @@ def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, overr
     return crispector.run(tx_in1, tx_in2, mock_in1, mock_in2, output, amplicons_csv, fastp_options_string,
                           override_fastp, keep_fastp_output, verbose, min_num_of_reads, cut_site_position,
                           amplicon_min_alignment_score, override_alignment, config, override_binomial_p,
-                          confidence_interval, editing_threshold)
+                          confidence_interval, editing_threshold, suppress_site_output,
+                          experiment_name, fastp_threads, bowtie2_threads, bowtie2_options_string, override_bowtie2)
 
 
 if __name__ == "__main__":

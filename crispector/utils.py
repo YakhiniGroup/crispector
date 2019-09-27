@@ -2,13 +2,15 @@ import logging
 import os
 import yaml # TODO - add to project requirements - This is conda install pyyaml and not "yaml"!!!
 from exceptions import ConfiguratorIsCalledBeforeInitConfigPath
-from constants_and_types import Path, AlgResult, CI_HIGH, EDIT_PERCENT, SITE_NAME, CI_LOW, ON_TARGET
+from constants_and_types import Path, AlgResult, CI_HIGH, EDIT_PERCENT, SITE_NAME, CI_LOW, ON_TARGET, \
+    SUMMARY_RESULTS_TITLES, AmpliconDf, MOCK_READ_NUM, TX_READ_NUM
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 import math
 import seaborn as sns # TODO - add to project requirements
 import numpy as np
 import warnings
+import pandas as pd
 
 
 class Logger:
@@ -19,6 +21,7 @@ class Logger:
     _configured = False
     _OUTPUT_DIR = None
     _logger_level = logging.DEBUG
+    _logger_path = None
 
     @classmethod
     def get_logger(cls):
@@ -31,10 +34,10 @@ class Logger:
 
             # Create handlers
             c_handler = logging.StreamHandler()
-            logger_path = os.path.join(cls._OUTPUT_DIR, 'crispector_main.log')
-            if os.path.exists(logger_path):
-                os.remove(logger_path)
-            f_handler = logging.FileHandler(logger_path)
+            cls._logger_path = os.path.join(cls._OUTPUT_DIR, 'crispector_main.log')
+            if os.path.exists(cls._logger_path):
+                os.remove(cls._logger_path)
+            f_handler = logging.FileHandler(cls._logger_path)
 
             f_handler.setLevel(cls._logger_level)
             c_handler.setLevel(cls._logger_level)
@@ -51,8 +54,12 @@ class Logger:
         return logger
 
     @classmethod
-    def set_log_path(cls, path: Path):
+    def set_output_dir(cls, path: Path):
         cls._OUTPUT_DIR = path
+
+    @classmethod
+    def get_log_path(cls) -> Path:
+        return cls._logger_path
 
     @classmethod
     def set_logger_level(cls, mode):
@@ -86,7 +93,8 @@ class Configurator:
         return cls._config_file
 
 
-def plot_editing_activity(result_df: AlgResult, confidence_interval: float, editing_threshold: float, output: Path):
+def plot_editing_activity(result_df: AlgResult, confidence_interval: float, editing_threshold: float, output: Path,
+                          experiment_name: str):
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
     mpl.rcParams['font.size'] = 20
@@ -97,8 +105,8 @@ def plot_editing_activity(result_df: AlgResult, confidence_interval: float, edit
     mpl.rcParams['legend.fontsize'] = 24
     editing_bar_text_size = 18
 
-    off_target_color = "#db5856"  # red
-    on_target_color = "#39ad48"  # green
+    off_target_color = "#db5856"
+    on_target_color = "#39ad48"
     # Filter all low editing activity sites
     result_df = result_df.dropna()
     edit_df = result_df.loc[result_df[CI_HIGH] >= editing_threshold]
@@ -188,13 +196,15 @@ def plot_editing_activity(result_df: AlgResult, confidence_interval: float, edit
         # Text on the top of each bar plot
         text_height = 1.1 * (plt_editing + plt_CI_high)
         for text_idx in range(number_of_bars):
-            axes[idx].text(x=bar_pos[text_idx] - 0.45 + bar_width / 2., y=text_height[text_idx],
+            axes[idx].text(x=bar_pos[text_idx], y=text_height[text_idx],
                            s="{:.2f}".format(plt_editing[text_idx]), ha='center', va='bottom',
                            size=editing_bar_text_size)
 
         if idx == 0:
-            axes[idx].set_title(r"Editing Activity with {} % CI above {}%".format(confidence_interval,
-                                                                                  editing_threshold), weight='bold')
+            axes[idx].set_title("Editing Activity with {} % CI above {}%\n{}".format(100 * confidence_interval,
+                                                                                     editing_threshold,
+                                                                                     experiment_name), weight='bold',
+                                family='serif')
             # Add legend
             axes[idx].bar([0], [y_lim], color=on_target_color, label="On-Target")
             axes[idx].bar([0], [y_lim], color=off_target_color, label="Off-Target")
@@ -205,7 +215,8 @@ def plot_editing_activity(result_df: AlgResult, confidence_interval: float, edit
 
 
 def create_reads_statistics_report(result_df: AlgResult, reads_min_n: int, tx_in: int, tx_merged: int, tx_aligned: int,
-                                   mock_in: int, mock_merged: int, mock_aligned: int, output: Path):
+                                   mock_in: int, mock_merged: int, mock_aligned: int, output: Path,
+                                   experiment_name: str):
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
     sns.set(style="whitegrid")
@@ -262,11 +273,11 @@ def create_reads_statistics_report(result_df: AlgResult, reads_min_n: int, tx_in
                              'Mock\nInput', 'Mock\nMerged', 'Mock\nAligned'])
     axes[0].set_ylim(0, 1.2 * np.max(bars))
     axes[0].set_ylabel("Number Of Reads")
-    axes[0].set_title("Mapping Statistics", weight='bold')
+    axes[0].set_title("{}\nMapping Statistics".format(experiment_name), weight='bold', family='serif')
 
     # Create reads box_plot
     bplot = sns.boxplot(x=["Treatment", "Mock"],
-                        y=[result_df["treatment_number_of_reads"], result_df["mock_number_of_reads"]],
+                        y=[result_df[TX_READ_NUM], result_df[MOCK_READ_NUM]],
                         linewidth=2.5, ax=axes[1])
     txbox = bplot.artists[0]
     txbox.set_facecolor(tx_color)
@@ -276,7 +287,7 @@ def create_reads_statistics_report(result_df: AlgResult, reads_min_n: int, tx_in
     # Set x, y lim & ticks and title
     axes[1].set_xlim(-1, 2)
     axes[1].set_ylabel("Number Of Reads")
-    axes[1].set_title("Number of Aligned Reads Per Site", weight='bold')
+    axes[1].set_title("Number of Aligned Reads Per Site", weight='bold', family='serif')
 
     # Print information on discarded reads
     discarded_df = result_df.loc[result_df[EDIT_PERCENT].isna()]
@@ -290,3 +301,36 @@ def create_reads_statistics_report(result_df: AlgResult, reads_min_n: int, tx_in
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'reads_statistics.png'), bbox_inches='tight', dpi=200)
         plt.close(fig)
+
+
+def summary_result_to_excel(summary_result_df: pd.DataFrame, confidence_interval: float, output: str):
+    """
+    Dump results summary to excel
+    :param summary_result_df
+    :param confidence_interval
+    :param output
+    :return:
+    """
+    df = summary_result_df.copy()
+    df.loc[df[ON_TARGET] == True, ON_TARGET] = "on-target"
+    df.loc[df[ON_TARGET] == False, ON_TARGET] = "off-target"
+    df.rename(columns={CI_LOW: 'CI low ({}%)'.format(100*confidence_interval),
+                       CI_HIGH: 'CI high ({}%)'.format(100*confidence_interval)}, inplace=True)
+
+    df.to_excel(os.path.join(output, "results_summary.xlsx"), index=False, float_format='%.4f')
+    # TODO - add auto alignment
+
+
+def discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int, output: str):
+    # Print information on discarded reads
+    discarded_df = summary_result_df.loc[summary_result_df[EDIT_PERCENT].isna()]
+
+    with open(os.path.join(output, "discarded_sites.txt"), 'w') as file:
+
+        if discarded_df.shape[0] > 0:
+            file.write("{} sites were discarded due to low number of reads (below {:,}):\n".format(
+                discarded_df.shape[0], min_num_of_reads))
+            for row_idx, row in discarded_df.iterrows():
+                file.write("{} - Treatment reads - {:,}. Mock reads - {:,}.\n".format(row[SITE_NAME], row[TX_READ_NUM],
+                                                                                      row[MOCK_READ_NUM]))
+
