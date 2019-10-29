@@ -321,7 +321,7 @@ class InputProcessing:
         #         if ((row['cigar_len'] > 20) and (row[ALIGN_SCORE] < 0.8 * max_score)) or (
         #             row[ALIGN_SCORE] < (score_threshold * (len(row[READ]) / amplicon_len))):
         #             unaligned_indexes.append(row_idx)
-        for site in amplicon_d.keys():
+        for site in ref_df[SITE_NAME].keys():
             site_df = reads_df.loc[reads_df[SITE_NAME] == site]
             max_score = site_df[ALIGN_SCORE].max() # TODO - decide if to use alignment score or regular score, delete the other
             score_threshold = (min_score/100)*max_score
