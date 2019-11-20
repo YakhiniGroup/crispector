@@ -78,23 +78,20 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
 
         # Demultiplexing reads with Bowtie2
         if not override_bowtie2:
-            tx_demultiplexed = InputProcessing.demultiplex_reads(tx_merged, ref_df, canonial_names,
-                                                                 bowtie2_options_string, bowtie2_threads, output,
-                                                                 ExpType.TX)
-
-            mock_demultiplexed = InputProcessing.demultiplex_reads(mock_merged, ref_df, canonial_names,
-                                                                   bowtie2_options_string, bowtie2_threads, output,
-                                                                   ExpType.MOCK)
+            tx_reads = InputProcessing.demultiplex_reads(tx_merged, ref_df, ExpType.TX)
+            mock_reads = InputProcessing.demultiplex_reads(mock_merged, ref_df, ExpType.MOCK)
         else:
-            tx_demultiplexed = tx_in1
-            mock_demultiplexed = mock_in1
+            tx_reads = tx_in1
+            mock_reads = mock_in1
+
+        allow_translocations = True # TODO - Change to user input
 
         # Align reads to the amplicon reference sequences
-        tx_reads_d, tx_aligned_n = InputProcessing.align_reads(tx_demultiplexed, ref_df, canonial_names,
+        tx_reads_d, tx_aligned_n = InputProcessing.align_reads(tx_reads, ref_df,
                                                                amplicon_min_alignment_score, output, ExpType.TX,
                                                                override_alignment)
 
-        mock_reads_d, mock_aligned_n = InputProcessing.align_reads(mock_demultiplexed, ref_df, canonial_names,
+        mock_reads_d, mock_aligned_n = InputProcessing.align_reads(mock_reads, ref_df,
                                                                    amplicon_min_alignment_score, output, ExpType.MOCK,
                                                                    override_alignment)
 

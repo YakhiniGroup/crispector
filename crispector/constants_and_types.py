@@ -121,10 +121,17 @@ SUB_POS = "substitution_position"
 SUB_BASE = "substitution_bases"
 INDEL_COLS = [DEL_LEN, DEL_START, DEL_END, DEL_BASE, INS_LEN, INS_POS, INS_BASE, SUB_CNT, SUB_POS, SUB_BASE]
 REVERSED = "reversed_reads"
+L_SITE = "left_site_name"
+L_REV = "left_site_reversed"
+R_SITE = "right_site_name"
+R_REV = "right_site_reversed"
+R_READ = "right_primer_read"
+L_READ = "left_primer_read"
 
 # General constants
 C_TX = 0
 C_MOCK = 1
+PRIMER_LEN = 20
 COMPLEMENT = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
 
 # AlgResult columns

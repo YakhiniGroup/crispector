@@ -25,6 +25,11 @@ class CantOpenDemultiplexedSamFile(Exception):
         self.path = path
 
 
+class CantOpenMergedFastqFile(Exception):
+    def __init__(self, path):
+        self.path = path
+
+
 class ConfiguratorIsCalledBeforeInitConfigPath(Exception):
     pass
 

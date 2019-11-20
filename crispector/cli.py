@@ -26,6 +26,7 @@ import os
 @click.option('--output', '-o', type=click.Path(), default="CRISPECTOR", show_default=True,
               help="Output folder path (string)")
 @click.option('--fastp_options_string', type=click.STRING, default="", help="Try \"fastp --help\" for more details")
+# TODO - Add --length_required 40 to filter anything under 40 (15 is the default). see fastp TODO
 @click.option('--fastp_threads', type=click.INT, default=2, help="fastp worker thread number")
 @click.option('--bowtie2_options_string', type=click.STRING, default="-k 1 --np 0  -N 1 --score-min L,-100,-3",
               help="Try \"bowtie2 --help\" for more details")

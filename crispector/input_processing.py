@@ -1,11 +1,12 @@
 import os
 import subprocess
 from exceptions import FastpRunTimeError, SgRNANotInReferenceSequence, UnknownAlignmentChar, \
-    Bowtie2BuildRunTimeError, Bowtie2RunTimeError, CantOpenDemultiplexedSamFile
+    Bowtie2BuildRunTimeError, Bowtie2RunTimeError, CantOpenDemultiplexedSamFile, CantOpenMergedFastqFile
 from constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelType, Path, DNASeq, CigarPath, FASTP_DIR, \
     READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, ALIGN_SCORE, FREQ, INS_LEN, INS_POS, DEL_LEN, DEL_START, \
     DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, COMPLEMENT, REFERENCE, SGRNA, SITE_NAME, CUT_SITE, CIGAR_D, CIGAR_I, \
-    CIGAR_S, CIGAR_M, AlignedIndel, DEL_BASE, INS_BASE, SUB_BASE, REVERSED, BOWTIE2_DIR
+    CIGAR_S, CIGAR_M, AlignedIndel, DEL_BASE, INS_BASE, SUB_BASE, REVERSED, BOWTIE2_DIR, L_SITE, L_REV, R_SITE, R_REV, \
+    L_READ, L_READ, R_READ, PRIMER_LEN
 from utils import Logger, Configurator
 from typing import List, Tuple, Dict
 import re
@@ -14,6 +15,7 @@ from Bio import Align  # TODO - add to install requirements, make sure conda ins
 from Bio.SubsMat import MatrixInfo
 from collections import defaultdict
 import json
+import edlib      # TODO - add to install requirements
 import numpy as np
 from simplesam import Reader # TODO - add to install requirements (no conda or bioconda!!!!!)
 
@@ -48,7 +50,9 @@ class InputProcessing:
         command = ["fastp", "-i", in1, "-I", in2, "-o", os.path.join(fastp_output, "r1_filtered_reads.fastq"),
                    "-O", os.path.join(fastp_output, "r2_filtered_reads.fastq"), "-m", "--merged_out", merged_path,
                    "-j", os.path.join(fastp_output, "fastp.json"), "-h", os.path.join(fastp_output, "fastp.html"),
-                   "-w {}".format(threads), options_string, ">> {} 2>&1".format(Logger.get_log_path())]
+                   "-w {}".format(threads), "--length_required 40", options_string, ">> {} 2>&1".format(Logger.get_log_path())]
+        # TODO - Change to a parameters with minimum value of 40
+
         command = " ".join(command)
 
         logger.debug("fastp for {} - Command {}".format(exp_type.name(), command))
@@ -74,7 +78,7 @@ class InputProcessing:
         return merged_path, reads_in_input_num, merged_reads_num
 
     @staticmethod
-    def demultiplex_reads(merged_fastq: Path, ref_df: AmpliconDf, canonial_names: Dict[str, str], options_string: str,
+    def bowtie2_demultiplex_reads(merged_fastq: Path, ref_df: AmpliconDf, canonial_names: Dict[str, str], options_string: str,
                           threads: int, output_dir: Path, exp_type: ExpType) -> Path:
         """
         Prepare bowtie2-index file and run Bowtie2.
@@ -134,8 +138,54 @@ class InputProcessing:
         return demultiplexed_path
 
     @classmethod
-    def align_reads(cls, demultiplexed_sam: Path, ref_df: AmpliconDf, canonial_names: Dict[str, str],
-                    min_score: float, output: Path, exp_type: ExpType, override_alignment: bool) -> Tuple[ReadsDict, int]:
+    def demultiplex_reads(cls, merged_fastq: Path, ref_df: AmpliconDf, exp_type: ExpType) -> ReadsDf:
+        """
+        Demultiplex reads using edit distance on primers.
+        Assign each read with a left primer match and right primer match
+        :param merged_fastq: fastp merged fastq file
+        :param ref_df: AmpliconDf
+        :param exp_type: ExpType
+        :return: ReadsDf
+        """
+        logger = Logger.get_logger()
+        reads = cls._parse_fastq_file(merged_fastq)
+        reads_df = pd.DataFrame(data=reads, columns=[READ])
+        cfg = Configurator.get_cfg()
+        max_edit_distance = cfg["alignment"]["max_edit_distance_on_primers"]
+
+        # Prepare primers for match
+        references = ref_df[REFERENCE].str
+        left_primers = list(references[:PRIMER_LEN]) + list(references[-PRIMER_LEN:].apply(cls.reverse_and_complement))
+        right_primers = list(references[-PRIMER_LEN:]) + list(references[:PRIMER_LEN].apply(cls.reverse_and_complement))
+        primers_names = 2 * list(ref_df[SITE_NAME])
+        primers_rev = ref_df.shape[0] * [False] + ref_df.shape[0] * [True]
+
+        # Group identical reads together
+        reads_df = reads_df.groupby(READ).size().to_frame(FREQ).reset_index()
+
+        # Create temporary columns for read start and end
+        reads_df[L_READ] = reads_df[READ].str[0:20]
+        reads_df[R_READ] = reads_df[READ].str[-20:]
+
+        logger.info("Demultiplexing for {} - Start Demultiplexing {:,} reads - May take a few minutes"
+                    .format(exp_type.name(), reads_df[FREQ].sum()))
+
+        # Find a match for left and right parts of the read
+        l_match = cls._compute_read_primer_matching(reads_df[L_READ].unique(), left_primers, primers_rev,
+                                                    primers_names, max_edit_distance)
+        r_match = cls._compute_read_primer_matching(reads_df[R_READ].unique(), right_primers, primers_rev,
+                                                    primers_names, max_edit_distance)
+
+        reads_df[[L_SITE, L_REV]] = reads_df.apply((lambda row: l_match[row[L_READ]]), axis=1, result_type='expand')
+        reads_df[[R_SITE, R_REV]] = reads_df.apply((lambda row: r_match[row[R_READ]]), axis=1, result_type='expand')
+
+        logger.info("Demultiplexing for {} - Done".format(exp_type.name()))
+
+        return reads_df
+
+    @classmethod
+    def align_reads(cls, reads_df: ReadsDf, ref_df: AmpliconDf, min_score: float, output: Path, exp_type: ExpType,
+                    override_alignment: bool) -> Tuple[ReadsDict, int]:
         """
         Split all reads and align them to their amplicon sequence:
         1. Find for every read in merged_fastq the alignment with min_edit_distance.
@@ -150,7 +200,7 @@ class InputProcessing:
         :param exp_type: ExpType
         :return: A tuple of (dictionary with key=SITE_NAME and value=ReadsDf, merged reads num, aligned reads num)
         """
-
+        # TODO - Add support to translocations....Currently throw everything!
         logger = Logger.get_logger()
         cfg = Configurator.get_cfg()
         window_size = cfg["window_size"]
@@ -158,24 +208,21 @@ class InputProcessing:
         # TODO - remove when delete override_alignment + split to 2 functions?
         if override_alignment:
             logger.debug("Alignment for {} - Skip alignment and read from input.".format(exp_type.name()))
-            reads_df = pd.read_csv(demultiplexed_sam)
+            reads_df = pd.read_csv(reads_df)
             aligned_reads_num = reads_df[FREQ].sum()
         else:
-            # Parse sam file
-            logger.debug("Alignment for {} - Parse Bowtie2 sam file - Start".format(exp_type.name()))
-            reads, sites, reversed_sites, unaligned_reads = cls._parse_sam_file(demultiplexed_sam, canonial_names)
-            reads_df: ReadsDf = pd.DataFrame(data=reads, columns=[READ])
-            reads_df[SITE_NAME] = sites
-            reads_df[REVERSED] = reversed_sites
-
-            # Group identical reads together
-            reads_df = reads_df.groupby([READ, SITE_NAME, REVERSED]).size().to_frame(FREQ).reset_index()
+            # TODO - Change names
+            low_q_reads_df = reads_df.loc[(reads_df[L_SITE] != reads_df[R_SITE]) | (reads_df[L_REV] != reads_df[R_REV])]
+            low_q_reads_df.to_csv(os.path.join(output, "{}_low_q_reads.csv".format(exp_type.name())), index=False)
+            reads_df.drop(low_q_reads_df.index, inplace=True)
+            reads_df.reset_index(drop=True, inplace=True)
+            # reads_df = reads_df.loc[(reads_df[L_SITE] == reads_df[R_SITE]) & (reads_df[L_REV] == reads_df[R_REV])]
+            reads_df[SITE_NAME] = reads_df[L_SITE]
+            reads_df[REVERSED] = reads_df[L_REV]
 
             # Reverse all the reversed reads
             rev_reads = reads_df.loc[reads_df[REVERSED], READ]
             reads_df.loc[rev_reads.index, READ] = rev_reads.apply(cls.reverse_and_complement)
-
-            logger.debug("Alignment for {} - Parse Bowtie2 sam file - Done".format(exp_type.name()))
 
             # Align reads to their amplicon
             logger.debug("Alignment for {} - Start Needleman-Wunsch alignment for all reads.".format(exp_type.name()))
@@ -183,6 +230,7 @@ class InputProcessing:
             cls._align_reads_to_amplicon(reads_df, ref_df)
 
             # Filter reads with low alignment score
+            unaligned_reads = list(low_q_reads_df[READ].values) # TODO - Change filter_low_score_reads
             cls._filter_low_score_reads(reads_df, output, exp_type, min_score, ref_df, unaligned_reads)
             aligned_reads_num = reads_df[FREQ].sum()
             logger.debug("Alignment for {} - Needleman-Wunsch alignment done.".format(exp_type.name()))
@@ -206,6 +254,51 @@ class InputProcessing:
 
         logger.info("Alignment for {} - Done.".format(exp_type.name(), ref_df.shape[0]))
         return read_d, aligned_reads_num
+
+    @classmethod
+    def _compute_read_primer_matching(cls, reads: List[DNASeq], primers: List[DNASeq], primers_revered: List[bool],
+                                      primers_names: List[str],
+                                      max_edit_distance: int) -> Dict[DNASeq, Tuple[str, bool]]:
+        """
+        Create a dictionary with a match between each possible read (key) and a primer (val).
+        :param reads:  partial (left or right) reads
+        :param primers: List of primers sequences
+        :param primers_revered: List that indicates if primers reversed or not
+        :param primers_names: primers names
+        :param max_edit_distance: Max edit distance to account as a match
+        :return: Dict[read, Tuple[site_name, reversed_flag]]
+        """
+        match = dict()
+        for read in reads:
+            match[read] = cls._match_by_edit_distance(read, primers, primers_revered, primers_names, max_edit_distance)
+
+        return match
+
+    @staticmethod
+    def _match_by_edit_distance(read: DNASeq, primers: List[DNASeq], primers_revered: List[bool],
+                                primers_names: List[str], max_edit_distance: int) -> Tuple[str, bool]:
+        """
+        Find for every read the most similar sequence (primer).
+        If the minimum edit distance is above DNASeq, no primer is matched.
+        :param read:  reads
+        :param primers: List of primers sequences
+        :param primers_revered: List that indicates if primers reversed or not
+        :param primers_names: primers names
+        :param max_edit_distance: Max edit distance to account as a match
+        :return: site_name, reversed flag
+        """
+        min_name = None
+        min_dist = max_edit_distance + 1
+        min_reversed = False
+
+        for primer, reverse, name  in zip(primers, primers_revered, primers_names):
+            d = edlib.align(read, primer, k=min_dist)['editDistance']
+            if d < min_dist and d != -1:
+                min_dist = d
+                min_name = name
+                min_reversed = reverse
+
+        return min_name, min_reversed
 
     @staticmethod
     def _add_indels_columns(reads: ReadsDf, cut_site: int, window_size: int):
@@ -263,11 +356,11 @@ class InputProcessing:
                             new_col_d[SUB_POS][row_idx] = str(pos_idx)
                             new_col_d[SUB_POS][row_idx] += "".join([", {}".format(pos_idx+i) for i in range(1, length)])
                             new_col_d[SUB_BASE][row_idx] = read[align_idx]
-                            new_col_d[SUB_BASE][row_idx] += "".join([", {}".format(align_idx+i) for i in range(1, length)])
+                            new_col_d[SUB_BASE][row_idx] += "".join([", {}".format(read[align_idx+i]) for i in range(1, length)])
                         else:
                             new_col_d[SUB_CNT][row_idx] += int(length)
                             new_col_d[SUB_POS][row_idx] += "".join([", {}".format(pos_idx+i) for i in range(length)])
-                            new_col_d[SUB_BASE][row_idx] += "".join([", {}".format(align_idx+i) for i in range(1, length)])
+                            new_col_d[SUB_BASE][row_idx] += "".join([", {}".format(read[align_idx+i]) for i in range(1, length)])
 
                     pos_idx += length
 
@@ -295,7 +388,7 @@ class InputProcessing:
 
     @classmethod
     def _filter_low_score_reads(cls, reads_df: ReadsDf, output: Path, exp_type: ExpType, min_score: float,
-                                ref_df: AmpliconDf, bowtie2_unaligned_reads: List[DNASeq]):
+                                ref_df: AmpliconDf, demultiplex_unaligned_reads: List[DNASeq]):
         """
         - Filter low alignment score reads
         - Store all unaligned reads in a fasta format.
@@ -308,30 +401,28 @@ class InputProcessing:
         :return:
         """
         logger = Logger.get_logger()
-        # TODO - find new system. Try to filter only reads that doesn't have a pure 30%{} continues match
         # Find all indexes with lower score than the threshold
         unaligned_indexes = []
+        # TODO - decide if to use alignment score or regular score, delete the other
+
         # for site in ref_df.index:
         #     amplicon_len = len(ref_df[REFERENCE][site])
         #     site_df = reads_df.loc[reads_df[SITE_NAME] == site]
         #     max_score = site_df[ALIGN_SCORE].max()
         #     score_threshold = (min_score/100)*max_score
-        #     # TODO - rewrite - to to filter with top 15 changes
         #     for row_idx, row in reads_df.iterrows():
         #         if ((row['cigar_len'] > 20) and (row[ALIGN_SCORE] < 0.8 * max_score)) or (
         #             row[ALIGN_SCORE] < (score_threshold * (len(row[READ]) / amplicon_len))):
         #             unaligned_indexes.append(row_idx)
         for site in ref_df[SITE_NAME].keys():
             site_df = reads_df.loc[reads_df[SITE_NAME] == site]
-            max_score = site_df[ALIGN_SCORE].max() # TODO - decide if to use alignment score or regular score, delete the other
+            max_score = site_df[ALIGN_SCORE].max()
             score_threshold = (min_score/100)*max_score
             unaligned_indexes += list(site_df.loc[site_df[ALIGN_SCORE] < score_threshold].index)
 
-            # unaligned_indexes += list(site_df.loc[site_df[ALIGN_SCORE] < score_threshold].index)
-
-        total_reads_num = reads_df[FREQ].sum() + len(bowtie2_unaligned_reads)
+        total_reads_num = reads_df[FREQ].sum() + len(demultiplex_unaligned_reads)
         unaligned_df = reads_df.loc[unaligned_indexes]
-        unaligned_reads_num = unaligned_df[FREQ].sum() + len(bowtie2_unaligned_reads)
+        unaligned_reads_num = unaligned_df[FREQ].sum() + len(demultiplex_unaligned_reads)
 
         logger.info("Alignment for {} - {:,} reads weren't aligned ({:.2f}% of all reads)".format(exp_type.name(),
                     unaligned_reads_num, 100*unaligned_reads_num/total_reads_num))
@@ -345,7 +436,7 @@ class InputProcessing:
 
             # Also Dump all bowtie2 unaligned reads
             idx = unaligned_df.shape[0]
-            for read in bowtie2_unaligned_reads:
+            for read in demultiplex_unaligned_reads: # TODO - add number of copies...change to df
                 file.write("> unaligned read index {} - read has 1 copy in the original fastq file and it isn't"
                            "similar to any site\n".format(idx))
                 file.write("{}\n".format(read))
@@ -536,6 +627,27 @@ class InputProcessing:
         ref_df[CUT_SITE] = ref_df.apply(lambda row: cls._get_expected_cut_site(row[REFERENCE], row[SGRNA],
                                         cut_site_position, row[SITE_NAME]), axis=1)
         return ref_df
+
+    @staticmethod
+    def _parse_fastq_file(file_name: Path) -> List[DNASeq]:
+        """
+        process fastq_file to a list of DNA strings
+        :param file_name: fastq file name
+        :return: list of DNA strings
+        """
+        sequences = []
+        try:
+            with open(file_name) as fastq_file:
+                line = fastq_file.readline()
+
+                while line:
+                    line = fastq_file.readline()
+                    if re.match("[ACGT]+\Z", line[:-1]):
+                        sequences.append(line[:-1])
+        except IOError:
+            raise CantOpenMergedFastqFile(file_name)
+
+        return sequences
 
     @staticmethod
     def parse_cigar(cigar: str) -> Tuple[int, IndelType]:
@@ -730,7 +842,7 @@ class InputProcessing:
         reference_l = []  # Changed references (read with insertions) list
         read_l = []  # Changed reads (read with deletions) list
         cigar_l = []  # Changed cigar path list
-
+        # TODO - check that "cost" is the same for every mismtach
         for row_idx, row in reads.iterrows():
             cut_site = ref_df.loc[row[SITE_NAME], CUT_SITE]  # cut-site in pos_idx coordinates
             cigar = row[CIGAR]
