@@ -108,6 +108,8 @@ class ModificationTypes:
         """
         if self._max_indel_size == max(self._range[idx]):
             return r"{} $\geq {}$".format(self._type[idx].name[:3], min(self._range[idx]))
+        elif min(self._range[idx]) == max(self._range[idx]):
+            return r"{} ${}$".format(self._type[idx].name[:3], min(self._range[idx]))
         else:
             return r"{} ${}:{}$".format(self._type[idx].name[:3], min(self._range[idx]), max(self._range[idx]))
 

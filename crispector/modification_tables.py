@@ -81,6 +81,7 @@ class ModificationTables:
         :param exp_type: ExpType
         :return:
         """
+        # TODO - combain here mismatch and deletions together.
         table_row = C_TX if exp_type == ExpType.TX else C_MOCK
         for row_idx, row in read.iterrows():
             pos_idx = 0  # position index

@@ -63,8 +63,10 @@ AmpliconDf = pandas.DataFrame
 # pandas data frame with all reads columns :READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, CUT_SITE...
 ReadsDf = pandas.DataFrame
 
+# pandas data frame with all reads columns :READ, TRANS_NAME, REFERENCE, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CUT_SITE,
+# R_SITE, L_SITE
+TransDf = pandas.DataFrame
 # Others
-
 # A dictionary with key=SITE_NAME and value=ReadsDf - Dict for all reads in the experiments
 ReadsDict = Dict[str, ReadsDf]
 
@@ -94,18 +96,17 @@ FASTP_DIR = dict()
 FASTP_DIR[ExpType.TX] = "treatment_fastp"
 FASTP_DIR[ExpType.MOCK] = "mock_fastp"
 
-BOWTIE2_DIR = dict()
-BOWTIE2_DIR[ExpType.TX] = "treatment_bowtie2"
-BOWTIE2_DIR[ExpType.MOCK] = "mock_bowtie2"
-
 # AmpliconDf constants
 SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE = 'site_name', 'reference', 'sgRNA', 'Site type', 'cut-site'
-
+F_PRIMER = 'forward_primer'
+R_PRIMER = 'reverse_primer'
+MAX_SCORE = 'max_score'
 # ReadDf constants
 READ = "read"
 ALIGNMENT_W_INS = "alignment_w_ins"
 ALIGNMENT_W_DEL = "alignment_w_del"
 CIGAR = 'cigar_path'
+CIGAR_LEN = 'cigar_length'
 ALIGN_SCORE = 'alignment_score'
 FREQ = "frequency"
 IS_EDIT = "is_edited"
@@ -128,11 +129,17 @@ R_REV = "right_site_reversed"
 R_READ = "right_primer_read"
 L_READ = "left_primer_read"
 
+# TransDf constants
+TRANS_NAME = "translocation_name"
+
 # General constants
 C_TX = 0
 C_MOCK = 1
 PRIMER_LEN = 20
 COMPLEMENT = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
+BAD_AMPLICON_THRESHOLD = 500
+CIGAR_LEN_THRESHOLD = 8 # This threshold is applied only if alignment score is low
+MIN_PRIMER_DIMER_THRESH = 10
 
 # AlgResult columns
 TX_READ_NUM = "Treatment number of reads"

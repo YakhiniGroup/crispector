@@ -10,9 +10,10 @@ from algorithm_utils import compute_binom_p
 from crispector_algorithm import CrispectorAlgorithm
 from exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInReferenceSequence, \
     ConfiguratorIsCalledBeforeInitConfigPath, PriorPositionHasWrongLength, \
-    UnknownAlignmentChar, Bowtie2RunTimeError, Bowtie2BuildRunTimeError, CantOpenDemultiplexedSamFile
+    UnknownAlignmentChar, Bowtie2RunTimeError, Bowtie2BuildRunTimeError, CantOpenDemultiplexedSamFile, \
+    AlignerSubstitutionDoesntExist, ClassificationFailed, BadSgRNAChar, BadReferenceAmpliconChar
 from constants_and_types import ExpType, Path, FASTP_DIR, welcome_msg, FREQ, TX_READ_NUM, MOCK_READ_NUM, EDIT_PERCENT, \
-    SUMMARY_RESULTS_TITLES, SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE, AlgResult
+    SUMMARY_RESULTS_TITLES, SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE, AlgResult, R_PRIMER, F_PRIMER
 from input_processing import InputProcessing
 import traceback
 from utils import Logger, Configurator, plot_editing_activity, create_reads_statistics_report, summary_result_to_excel, \
@@ -21,19 +22,17 @@ import os
 import pandas as pd #TODO - add to project requiremnts
 from modification_tables import ModificationTables
 from typing import Dict
-# TODO - add bowtie2 to project requirements
 from modification_types import ModificationTypes
-# TODO simplesam - add t project - notice, not conda or bioconda for this. I think we can copy the code
 
-
+# TODO - add GGG prior change.
+# TODO - Unite mismatches and deletions?
+# TODO - coin. when not tx == mock number of reads
+# TODO - PRIMER_DIMER effect
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path, amplicons_csv: Path,
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,
-        cut_site_position: int, amplicon_min_alignment_score: float, override_alignment: bool, config: Path,
+        cut_site_position: int, min_alignment_score: float, min_read_length: int, override_alignment: bool, config: Path,
         override_binomial_p: bool, confidence_interval: float, editing_threshold: float, suppress_site_output: bool,
-        experiment_name: str, fastp_threads: int, bowtie2_threads: int, bowtie2_options_string: str,
-        override_bowtie2: bool):
-
-    # TODO - of logger not on debug don't print fastp and bowtie2 messages.
+        experiment_name: str, fastp_threads: int, allow_translocations: bool, max_error_on_primer: int):
 
     # Init the logger
     Logger.set_output_dir(output)
@@ -51,49 +50,60 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         Configurator.set_cfg_path(config)
         cfg = Configurator.get_cfg()
 
-        # TODO - Add code that check amplicon have only correct bases (and make everything upper).
-        # TODO - Same for guides.
-
         # Convert the amplicon_csv to a pandas.DataFrame
-        ref_df = pd.read_csv(amplicons_csv, names=[SITE_NAME, REFERENCE, SGRNA, ON_TARGET])
-        if ref_df.isnull().values.any():
+        ref_df = pd.read_csv(amplicons_csv, names=[SITE_NAME, REFERENCE, SGRNA, ON_TARGET, F_PRIMER, R_PRIMER])
+        if ref_df[[SITE_NAME, REFERENCE, SGRNA, ON_TARGET]].isnull().values.any():
             raise NoneValuesInAmpliconsCSV()
-        ref_df = InputProcessing.convert_sgRNA_to_cut_site_position(ref_df, cut_site_position)
         ref_df.index = ref_df[SITE_NAME]
-        # canonial (index based) site names.
-        canonial_names = {name: "site_{}".format(idx) for idx, name in enumerate(ref_df.index)}
+
+        # Convert all bases to upper case
+        ref_df[REFERENCE] = ref_df[REFERENCE].apply(lambda x : x.upper())
+        if ref_df[REFERENCE].str.contains('[^ATGC]',regex=True).any():
+            raise BadReferenceAmpliconChar()
+
+        ref_df[SGRNA] = ref_df[SGRNA].apply(lambda x: x.upper())
+        if ref_df[SGRNA].str.contains('[^ATGC]', regex=True).any():
+            raise BadSgRNAChar()
+
+        # Create InputProcessing instance
+        input_processing = InputProcessing(ref_df, output, min_alignment_score, min_read_length, max_error_on_primer)
+
+        # Find expected cut-site position
+        ref_df = input_processing.convert_sgRNA_to_cut_site_position(cut_site_position)
 
         # Filter low quality reads and merge pair-end reads with fastp
         if not override_fastp:
-            tx_merged, tx_input_n, tx_merged_n = InputProcessing.fastp(tx_in1, tx_in2, fastp_options_string,
-                                                                       fastp_threads, output, ExpType.TX)
-
-            mock_merged, mock_input_n, mock_merged_n = InputProcessing.fastp(mock_in1, mock_in2, fastp_options_string,
-                                                                             fastp_threads, output, ExpType.MOCK)
+            tx_merged = input_processing.fastp(tx_in1, tx_in2, fastp_options_string, fastp_threads, ExpType.TX)
+            mock_merged = input_processing.fastp(mock_in1, mock_in2, fastp_options_string, fastp_threads, ExpType.MOCK)
         else:
             logger.info("Skip merging with fastp and read merged files from input.")
             tx_merged, mock_merged = tx_in1, mock_in1
-            tx_input_n, mock_input_n = -1, -1
-            tx_merged_n, mock_merged_n = -1, -1
 
-        # Demultiplexing reads with Bowtie2
-        if not override_bowtie2:
-            tx_reads = InputProcessing.demultiplex_reads(tx_merged, ref_df, ExpType.TX)
-            mock_reads = InputProcessing.demultiplex_reads(mock_merged, ref_df, ExpType.MOCK)
+        # TODO - delete dump to pickle files.
+        if os.path.exists(os.path.join(output, "tx_reads_d.pkl")) and override_alignment:
+            with open(os.path.join(output, "tx_reads_d.pkl"), "rb") as file:
+                tx_reads_d = pickle.load(file)
+            with open(os.path.join(output, "mock_reads_d.pkl"), "rb") as file:
+                mock_reads_d = pickle.load(file)
+            tx_trans_df = pd.read_csv(os.path.join(output, "tx_translocation_reads.csv"), index=False)
+            mock_trans_df = pd.read_csv(os.path.join(output, "mock_translocation_reads.csv"), index=False)
         else:
-            tx_reads = tx_in1
-            mock_reads = mock_in1
+            # Demultiplexing reads
+            tx_reads = input_processing.demultiplex_reads(tx_merged, ExpType.TX)
+            mock_reads = input_processing.demultiplex_reads(mock_merged, ExpType.MOCK)
 
-        allow_translocations = True # TODO - Change to user input
+            # Align reads to the amplicon reference sequences
+            tx_reads_d, tx_trans_df = input_processing.align_reads(tx_reads, ExpType.TX, allow_translocations)
+            mock_reads_d, mock_trans_df = input_processing.align_reads(mock_reads, ExpType.MOCK, allow_translocations)
 
-        # Align reads to the amplicon reference sequences
-        tx_reads_d, tx_aligned_n = InputProcessing.align_reads(tx_reads, ref_df,
-                                                               amplicon_min_alignment_score, output, ExpType.TX,
-                                                               override_alignment)
+            # TODO - remove
+            tx_trans_df.to_csv(os.path.join(output, "tx_translocation_reads.csv"), index=False)
+            mock_trans_df.to_csv(os.path.join(output, "mock_translocation_reads.csv"), index=False)
 
-        mock_reads_d, mock_aligned_n = InputProcessing.align_reads(mock_reads, ref_df,
-                                                                   amplicon_min_alignment_score, output, ExpType.MOCK,
-                                                                   override_alignment)
+            with open(os.path.join(output, "tx_reads_d.pkl"), "wb") as file:
+                pickle.dump(tx_reads_d, file)
+            with open(os.path.join(output, "mock_reads_d.pkl"), "wb") as file:
+                pickle.dump(mock_reads_d, file)
 
         # Get modification types and positions priors
         modifications = ModificationTypes.init_from_cfg(cfg)
@@ -103,8 +113,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         tables_d: Dict[str, ModificationTables] = dict()
 
         # TODO - delete dump to pickle files.
-        if os.path.exists(os.path.join(output, "tables.pkl")) and override_alignment:
-            with open(os.path.join(output, "tables.pkl"), "rb") as file:
+        if os.path.exists(os.path.join(output, "tables_d.pkl")) and override_alignment:
+            with open(os.path.join(output, "tables_d.pkl"), "rb") as file:
                 tables_d = pickle.load(file)
         else:
             for site, row in ref_df.iterrows():
@@ -119,6 +129,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                     logger.debug(
                         "Site {} - Converted. Number of reads (treatment={}, mock={}).".format(site, tx_reads_num,
                                                                                                mock_reads_num))
+            with open(os.path.join(output, "tables_d.pkl"), "wb") as file:
+                pickle.dump(tables_d, file)
 
         # Compute binomial coin for all modification types
         # TODO -delete readDF from inputs, output as well
@@ -134,8 +146,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                 # Log the following in the result dict
                 tx_reads_num = tx_reads_d[site][FREQ].sum()
                 mock_reads_num = mock_reads_d[site][FREQ].sum()
-                result_summary_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num,
-                                          ON_TARGET: row[ON_TARGET]}
+                result_summary_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num, ON_TARGET: row[ON_TARGET]}
                 continue
 
             # Create output folder
@@ -154,9 +165,6 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
             logger.debug("Site {} - Done! Editing activity is {:.2f}".format(site,
                                                                              result_summary_d[site][EDIT_PERCENT]))
 
-        with open(os.path.join(output, "tables.pkl"), "wb") as file:
-            pickle.dump(tables_d, file)
-
         # Dump summary results
         summary_result_df = pd.DataFrame.from_dict(result_summary_d, orient='index')
         summary_result_df[SITE_NAME] = summary_result_df.index
@@ -170,6 +178,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         plot_editing_activity(summary_result_df, confidence_interval, editing_threshold, output, experiment_name)
 
         # Dump reads statistics
+        tx_input_n, tx_merged_n, tx_aligned_n = input_processing.read_numbers(ExpType.TX)
+        mock_input_n, mock_merged_n, mock_aligned_n = input_processing.read_numbers(ExpType.MOCK)
         create_reads_statistics_report(summary_result_df, min_num_of_reads, tx_input_n, tx_merged_n, tx_aligned_n,
                                        mock_input_n, mock_merged_n, mock_aligned_n, output, experiment_name)
 
@@ -214,7 +224,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
     except UnknownAlignmentChar:
         if verbose:
             traceback.print_exc(file=sys.stdout)
-        logger.error("Unknown alignment character from Bio-python-Alignment. Please open a defect on GitHub.")
+        logger.error("Unknown alignment character from Bio-python-Alignment. Please open an issue on GitHub.")
     except Bowtie2BuildRunTimeError:
         if verbose:
             traceback.print_exc(file=sys.stdout)
@@ -225,6 +235,26 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
             traceback.print_exc(file=sys.stdout)
         logger.error("Bowtie2 failed ! check log for more details")
         return 8
+    except AlignerSubstitutionDoesntExist as e:
+        if verbose:
+            traceback.print_exc(file=sys.stdout)
+        logger.error("Configuration aligner substitution matrix {} Doesn't exist!".format(e.name))
+        return 9
+    except ClassificationFailed:
+        if verbose:
+            traceback.print_exc(file=sys.stdout)
+        logger.error("Classification failed!!! Please open an issue on GitHub.")
+        return 10
+    except BadSgRNAChar:
+        if verbose:
+            traceback.print_exc(file=sys.stdout)
+        logger.error("Bad character in sgRNA column! Check input!")
+        return 11
+    except BadReferenceAmpliconChar:
+        if verbose:
+            traceback.print_exc(file=sys.stdout)
+        logger.error("Bad character in REFERENCE amplicon column! Check input!")
+        return 12
     except Exception:
         if verbose:
             traceback.print_exc(file=sys.stdout)

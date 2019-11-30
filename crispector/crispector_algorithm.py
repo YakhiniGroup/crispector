@@ -1,5 +1,6 @@
 from constants_and_types import IsEdit, IndelType, AlgResult, Pr, Path, CIGAR, FREQ, IS_EDIT, C_TX, C_MOCK, TX_READ_NUM, \
     MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH
+from exceptions import ClassificationFailed
 from input_processing import InputProcessing
 from utils import Configurator, Logger
 from modification_tables import ModificationTables
@@ -110,7 +111,6 @@ class CrispectorAlgorithm:
         :return: Edit or not bool
         """
 
-        total_edit = tx_indels + mock_indels
         total_reads = self._n_reads_tx + self._n_reads_mock
         no_edit_prior = 1 - edit_prior
 
@@ -118,22 +118,28 @@ class CrispectorAlgorithm:
         if tx_indels == 0:
             return False
 
-        # Likelihood function computation
-        no_edit_likelihood = hypergeom.pmf(tx_indels, total_reads, total_edit, self._n_reads_tx)
-        edit_likelihood = binom.pmf(k=tx_indels, n=total_edit, p=binom_p)
-
-        # Posterior probability computation
-        no_edit_post = no_edit_prior * no_edit_likelihood
-        edit_post = edit_prior * edit_likelihood
-
         # In extreme cases both posteriors are smaller than python minimum number (1e-325).
-        # The only observed case is when a positions is both with high number of edits and relative high experiment
-        # contamination. In this case mark all treatment edits as edit.
-        if (edit_post == 0) and (no_edit_post == 0):
-            return True
+        # The heuristic to solve this rare event, is to divide by 10 both the treatment and the mock indels.
+        for idx in range(5):
+            total_edit = tx_indels + mock_indels
 
-        edit = edit_post > no_edit_post
-        return edit
+            # Likelihood function computation
+            no_edit_likelihood = hypergeom.pmf(tx_indels, total_reads, total_edit, self._n_reads_tx)
+            edit_likelihood = binom.pmf(k=tx_indels, n=total_edit, p=binom_p)
+
+            # Posterior probability computation
+            no_edit_post = no_edit_prior * no_edit_likelihood
+            edit_post = edit_prior * edit_likelihood
+
+            # Regular case - Both different from zero
+            if (edit_post != 0) or (no_edit_post != 0):
+                edit = edit_post > no_edit_post
+                return edit
+            else:
+                tx_indels = tx_indels // 10
+                mock_indels = mock_indels // 10
+
+        raise ClassificationFailed()
 
     def _compute_editing_activity(self, edited_indexes: List) -> AlgResult:
         """

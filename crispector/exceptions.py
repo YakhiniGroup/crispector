@@ -34,6 +34,20 @@ class ConfiguratorIsCalledBeforeInitConfigPath(Exception):
     pass
 
 
+class BadReferenceAmpliconChar(Exception):
+    pass
+
+class BadSgRNAChar(Exception):
+    pass
+
+class AlignerSubstitutionDoesntExist(Exception):
+    def __init__(self, name):
+        self.name = name
+
+
+class ClassificationFailed(Exception):
+    pass
+
 class PriorPositionHasWrongLength(Exception):
     def __init__(self, expected_len, actual_len, indel_type, indel_min, indel_max):
         self.expected_len = expected_len

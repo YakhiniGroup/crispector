@@ -28,17 +28,12 @@ import os
 @click.option('--fastp_options_string', type=click.STRING, default="", help="Try \"fastp --help\" for more details")
 # TODO - Add --length_required 40 to filter anything under 40 (15 is the default). see fastp TODO
 @click.option('--fastp_threads', type=click.INT, default=2, help="fastp worker thread number")
-@click.option('--bowtie2_options_string', type=click.STRING, default="-k 1 --np 0  -N 1 --score-min L,-100,-3",
-              help="Try \"bowtie2 --help\" for more details")
-@click.option('--bowtie2_threads', type=click.INT, default=10, help="bowtie2 number of alignment threads to launch")
 @click.option('--override_fastp', is_flag=True, default=False, show_default=True, # TODO -Change default to 1
               help="Override fastp and require merged fastq files (pre-processing is necessary).\
                     Set paths to merged fastq files at --tx_in1 and --mock_in1.\
                     Can't be used with --fastp_options_string")
 # TODO -delete this option
 @click.option('--override_alignment', is_flag=True, default=False, show_default=True,
-              help="Delete this option. Set paths to alignment fastq files at --tx_in1 and --mock_in1")
-@click.option('--override_bowtie2', is_flag=True, default=False, show_default=True,
               help="Delete this option. Set paths to alignment fastq files at --tx_in1 and --mock_in1")
 @click.option('--verbose', is_flag=True, default=False, show_default=True, help="Higher verbosity")
 @click.option('--keep_fastp_output', is_flag=True, default=False, show_default=True, help="Keep fastp output directory")
@@ -66,10 +61,16 @@ import os
                    "This is useful for filtering erroneous reads that do not align to any target amplicon.")
 @click.option('--experiment_name', type=str, default=" ", show_default=True,
               help="Experiment name as will be reported in CRISPECTOR plots")
+@click.option('--allow_translocations', is_flag=True, default=True, show_default=True,
+              help="Add something") # TODO - add description
+@click.option("--min_read_length", type=click.INT, default=40, show_default=True,
+              help="Filter out any read shorter than min read length")
+@click.option("--max_error_on_primer", type=click.INT, default=4, show_default=True,
+              help="") # TODO - change to  max_edit distance on primer
 def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, override_fastp, override_alignment,
-         keep_fastp_output, verbose, min_num_of_reads, amplicons_csv, cut_site_position, amplicon_min_alignment_score,
-         config, override_binomial_p, confidence_interval, editing_threshold, suppress_site_output,
-         experiment_name, fastp_threads, bowtie2_threads, bowtie2_options_string, override_bowtie2):
+         keep_fastp_output, verbose, min_num_of_reads, min_read_length,  amplicons_csv, cut_site_position,
+         amplicon_min_alignment_score, config, override_binomial_p, confidence_interval, editing_threshold,
+         suppress_site_output, experiment_name, fastp_threads, allow_translocations, max_error_on_primer):
     """CRISPECTOR - Console script"""
 
     # Input verification
@@ -90,10 +91,10 @@ def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, overr
 
     # Run crispector
     return crispector.run(tx_in1, tx_in2, mock_in1, mock_in2, output, amplicons_csv, fastp_options_string,
-                          override_fastp, keep_fastp_output, verbose, min_num_of_reads, cut_site_position,
-                          amplicon_min_alignment_score, override_alignment, config, override_binomial_p,
-                          confidence_interval, editing_threshold, suppress_site_output,
-                          experiment_name, fastp_threads, bowtie2_threads, bowtie2_options_string, override_bowtie2)
+                          override_fastp, keep_fastp_output, verbose, min_num_of_reads,  cut_site_position,
+                          amplicon_min_alignment_score, min_read_length, override_alignment, config,
+                          override_binomial_p, confidence_interval, editing_threshold, suppress_site_output,
+                          experiment_name, fastp_threads, allow_translocations, max_error_on_primer)
 
 
 if __name__ == "__main__":
