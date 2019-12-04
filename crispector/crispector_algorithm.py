@@ -6,13 +6,13 @@ from utils import Configurator, Logger
 from modification_tables import ModificationTables
 from modification_types import ModificationTypes
 from typing import List, Tuple
-from scipy.stats import norm, binom, hypergeom  # TODO - add to package requirements
+from scipy.stats import norm, binom, hypergeom
 import numpy as np
 import os
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 import warnings
-import seaborn as sns # TODO - add to package requirements
+import seaborn as sns #
 
 class CrispectorAlgorithm:
     """

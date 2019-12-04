@@ -5,7 +5,7 @@ import sys
 import pickle
 import click
 import logging
-from send2trash import send2trash #TODO - add to poroject requiremnts
+from send2trash import send2trash
 from algorithm_utils import compute_binom_p
 from crispector_algorithm import CrispectorAlgorithm
 from exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInReferenceSequence, \
@@ -19,7 +19,7 @@ import traceback
 from utils import Logger, Configurator, plot_editing_activity, create_reads_statistics_report, summary_result_to_excel, \
     discarded_sites_text
 import os
-import pandas as pd #TODO - add to project requiremnts
+import pandas as pd
 from modification_tables import ModificationTables
 from typing import Dict
 from modification_types import ModificationTypes

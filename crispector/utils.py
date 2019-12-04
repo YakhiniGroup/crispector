@@ -1,13 +1,12 @@
 import logging
 import os
-import yaml # TODO - add to project requirements - This is conda install pyyaml and not "yaml"!!!
+import yaml
 from exceptions import ConfiguratorIsCalledBeforeInitConfigPath
-from constants_and_types import Path, AlgResult, CI_HIGH, EDIT_PERCENT, SITE_NAME, CI_LOW, ON_TARGET, \
-    SUMMARY_RESULTS_TITLES, AmpliconDf, MOCK_READ_NUM, TX_READ_NUM
+from constants_and_types import Path, AlgResult, CI_HIGH, EDIT_PERCENT, SITE_NAME, CI_LOW, ON_TARGET, MOCK_READ_NUM, TX_READ_NUM
 from matplotlib import pyplot as plt
 import matplotlib as mpl
 import math
-import seaborn as sns # TODO - add to project requirements
+import seaborn as sns
 import numpy as np
 import warnings
 import pandas as pd

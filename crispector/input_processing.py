@@ -11,12 +11,12 @@ from constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelTy
 from utils import Logger, Configurator
 from typing import List, Tuple, Dict
 import re
-import pandas as pd  # TODO - add to install requirements
-from Bio import Align  # TODO - add to install requirements, make sure conda install biopython=1.74!
+import pandas as pd
+from Bio import Align
 from Bio.SubsMat import MatrixInfo
 from collections import defaultdict
 import json
-import edlib      # TODO - add to install requirements
+import edlib
 
 class InputProcessing:
     """

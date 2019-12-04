@@ -14,7 +14,7 @@ class ModificationTypes:
         :param indel_type: IndelType
         :param min_l: indel_type length min
         :param max_l: indel_type length min
-        :param priors: prior for eac modification type
+        :param priors: prior for each modification type
         :param max_indel_size: max number of indel (from config file)
         """
         self._type = indel_type

@@ -1,4 +1,4 @@
-from constants_and_types import Pr, IndelType, C_TX, C_MOCK, ON_TARGET, SITE_NAME, CUT_SITE
+from constants_and_types import Pr, IndelType, C_TX, C_MOCK, ON_TARGET, CUT_SITE
 from utils import Configurator, Logger
 from typing import Dict, List
 from modification_tables import ModificationTables

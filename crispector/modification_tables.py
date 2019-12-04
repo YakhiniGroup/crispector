@@ -4,13 +4,12 @@ from input_processing import InputProcessing
 from modification_types import ModificationTypes
 import numpy as np
 from collections import defaultdict
-from matplotlib import pyplot as plt  # TODO - add to package requirements
+from matplotlib import pyplot as plt
 import matplotlib as mpl
 import os
 import warnings
 import pandas as pd
 from utils import Configurator
-import matplotlib.patheffects as path_effects
 
 
 class ModificationTables:
