@@ -11,7 +11,11 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['Click>=6.0', ]
+# TODO - Should be install via conda or here?? biopython?
+# TODO - pyyaml it's the conda install pyyaml and not "yaml"!!!
+# TODO - edlib & send2trash is fucked up...no version
+requirements = ['Click>=6.0', 'matplotlib>=3.1.0', 'seaborn>=0.9.0','pyyaml>=5.1.2',
+                'numpy>=1.12.1', 'pandas>=0.24.2', 'edlib', 'biopython==1.74', 'scipy>=1.2.1', 'send2trash']
 
 setup_requirements = ['pytest-runner', ]
 

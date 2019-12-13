@@ -63,7 +63,7 @@ class CrispectorAlgorithm:
         edited_indexes = []
 
         # Run evaluation on each modification type
-        for table_idx, (indel_type, prior) in enumerate(zip(self._modifications.types, self._modifications.priors)):
+        for table_idx, (indel_type, prior) in enumerate(zip(self._modifications.types, tables.priors)):
             table = tables.tables[table_idx]
             pointers = tables.pointers[table_idx]
             binom_p = self._binom_p_l[table_idx]
@@ -194,7 +194,7 @@ class CrispectorAlgorithm:
                 if indel_type == IndelType.MATCH:
                     pos_idx += length
                 # Mismatch or deletions
-                elif indel_type in [IndelType.DEL, IndelType.SUB]:
+                elif indel_type in [IndelType.DEL, IndelType.SUB, IndelType.INDEL]:
                     dist_d[indel_type][pos_idx:pos_idx + length] += row[FREQ]
                     pos_idx += length
                 # Insertions

@@ -3,16 +3,19 @@ from enum import Enum
 import pandas
 import numpy as np
 
+
+version = "0.1.0"
 welcome_msg = "\n\
  CCCCC  RRRRRR  IIIII  SSSSS  PPPPPP  EEEEEEE  CCCCC  TTTTTTT  OOOOO  RRRRRR\n\
 CC    C RR   RR  III  SS      PP   PP EE      CC    C   TTT   OO   OO RR   RR\n\
 CC      RRRRRR   III   SSSSS  PPPPPP  EEEEE   CC        TTT   OO   OO RRRRRR\n\
 CC    C RR  RR   III       SS PP      EE      CC    C   TTT   OO   OO RR  RR\n\
- CCCCC  RR   RR IIIII  SSSSS  PP      EEEEEEE  CCCCC    TTT    OOOO0  RR   RR\n\
+ CCCCC  RR   RR IIIII  SSSSS  PP      EEEEEEE  CCCCC    TTT    OOOOO  RR   RR\n\
 \n\
               CRISPR/CAS9 Off-Target Analysis From NGS Data\n\
-                            version={}\n".format("0.1.0")
-# TODO -  Need to auto import from somewhere -search in online repositories
+                            version={}\n".format(version)
+# TODO -  Need to read version from setup tools just like CRISPRESSO2
+
 
 # Enums
 
@@ -31,7 +34,8 @@ class ExpType(Enum):
 class IndelType(Enum):
     DEL = 0
     INS = 1
-    SUB = 2
+    INDEL = 2
+    SUB = 3
     MATCH = -1
 
     @property
@@ -42,6 +46,20 @@ class IndelType(Enum):
             return "Insertions"
         elif self._name_ == "SUB":
             return "Substitutions"
+        elif self._name_ == "INDEL":
+            return "Indels"
+        else:
+            return "Match"
+    @property
+    def plot_name(self):
+        if self._name_ == "DEL":
+            return "Del"
+        elif self._name_ == "INS":
+            return "Ins"
+        elif self._name_ == "SUB":
+            return "Sub"
+        elif self._name_ == "INDEL":
+            return "Indel"
         else:
             return "Match"
 
@@ -101,6 +119,10 @@ SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE = 'site_name', 'reference', 'sg
 F_PRIMER = 'forward_primer'
 R_PRIMER = 'reverse_primer'
 MAX_SCORE = 'max_score'
+CS_SHIFT_R = 'possible_cut_site_shift_to_right'
+CS_SHIFT_L = 'possible_cut_site_shift_to_left'
+SGRNA_REVERSED = 'sgRNA_reversed'
+
 # ReadDf constants
 READ = "read"
 ALIGNMENT_W_INS = "alignment_w_ins"

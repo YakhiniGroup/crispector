@@ -7,7 +7,7 @@ from constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelTy
     DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, COMPLEMENT, REFERENCE, SGRNA, SITE_NAME, CUT_SITE, CIGAR_D, CIGAR_I, \
     CIGAR_S, CIGAR_M, AlignedIndel, DEL_BASE, INS_BASE, SUB_BASE, REVERSED, L_SITE, L_REV, R_SITE, R_REV, \
     L_READ, R_READ, PRIMER_LEN, TransDf, TRANS_NAME, BAD_AMPLICON_THRESHOLD, CIGAR_LEN, CIGAR_LEN_THRESHOLD, MAX_SCORE, \
-    F_PRIMER, R_PRIMER, MIN_PRIMER_DIMER_THRESH
+    F_PRIMER, R_PRIMER, MIN_PRIMER_DIMER_THRESH, SGRNA_REVERSED, CS_SHIFT_L, CS_SHIFT_L, CS_SHIFT_R
 from utils import Logger, Configurator
 from typing import List, Tuple, Dict
 import re
@@ -68,9 +68,12 @@ class InputProcessing:
             max_score_list.append(max_score)
         self._ref_df[MAX_SCORE] = max_score_list
 
-        # Add primer len where values are None
-        self._ref_df.loc[self._ref_df[F_PRIMER].isna(), F_PRIMER] = PRIMER_LEN
-        self._ref_df.loc[self._ref_df[R_PRIMER].isna(), R_PRIMER] = PRIMER_LEN
+        # Add primers where values are None
+        self._ref_df.loc[self._ref_df[F_PRIMER].isna(), F_PRIMER] = self._ref_df.loc[self._ref_df[F_PRIMER].isna(),
+                                                                                     REFERENCE].str[0:PRIMER_LEN]
+
+        self._ref_df.loc[self._ref_df[R_PRIMER].isna(), R_PRIMER] = self._ref_df.loc[self._ref_df[R_PRIMER].isna(),
+                                                                                     REFERENCE].apply(self.reverse_complement).str[0:PRIMER_LEN]
 
         # Reads numbers for statistics
         self._input_n = dict()
@@ -88,14 +91,47 @@ class InputProcessing:
     # -------------------------------#
     ######### Public methods #########
     # -------------------------------#
-    def convert_sgRNA_to_cut_site_position(self, cut_site_position: int) -> AmpliconDf:
+    def convert_sgRNA_to_cut_site_position(self, cut_site_position: int):
         """
         :param cut_site_position: position relative to the PAM
-        :return: ref_df with new column - CUT_SITE
+        :return:
         """
-        self._ref_df[CUT_SITE] = self._ref_df.apply(lambda row: self._get_expected_cut_site(row[REFERENCE], row[SGRNA],
-                                                    cut_site_position, row[SITE_NAME]), axis=1)
-        return self._ref_df
+        self._ref_df[[CUT_SITE, SGRNA_REVERSED]] = self._ref_df.apply(lambda row: self._get_expected_cut_site(row[REFERENCE],
+                                                   row[SGRNA], cut_site_position, row[SITE_NAME]), axis=1, result_type='expand')
+
+
+    def detect_ambiguous_cut_site(self, cut_site_pos: int, ambiguous_cut_site_detection: bool):
+        """
+        # Check if there is an alternative PAM
+        :param cut_site_pos: position relative to the PAM
+        :param ambiguous_cut_site_detection: Flag
+        :return:
+        """
+        self._ref_df[CS_SHIFT_L] = False
+        self._ref_df[CS_SHIFT_R] = False
+
+        if not ambiguous_cut_site_detection:
+            return
+
+        for idx, row in self._ref_df.iterrows():
+            reverse = row[SGRNA_REVERSED]
+            ref = self.reverse_complement(row[REFERENCE]) if reverse else row[REFERENCE]
+            cut_site = len(row[REFERENCE]) - row[CUT_SITE] if reverse else row[CUT_SITE]
+            PAM_start = cut_site-cut_site_pos
+
+            # cut-site can possibly shift to the right
+            if ref[PAM_start+2:PAM_start+4] == "GG":
+                if not reverse:
+                    self._ref_df.at[idx, CS_SHIFT_R] = True
+                else: # right is left for 3'->5' reference
+                    self._ref_df.at[idx, CS_SHIFT_L] = True
+
+            # cut-site can possibly shift to the left
+            if ref[PAM_start:PAM_start+2] == "GG":
+                if not reverse:
+                    self._ref_df.at[idx, CS_SHIFT_L] = True
+                else:  # left is right for 3'->5' reference
+                    self._ref_df.at[idx, CS_SHIFT_R] = True
 
     def fastp(self, in1: Path, in2: Path, options_string: str, threads: int, exp_type: ExpType) -> Path:
         """
@@ -187,7 +223,7 @@ class InputProcessing:
 
         return reads_df
 
-    def align_reads(self, reads_df: ReadsDf, exp_type: ExpType, allow_trans: bool) -> Tuple[ReadsDict, TransDf]:
+    def align_reads(self, reads_df: ReadsDf, exp_type: ExpType, allow_trans: bool, debug: bool) -> Tuple[ReadsDict, TransDf]:
         """
         - Align each read to his reference.
         - find possible translocations.
@@ -197,7 +233,6 @@ class InputProcessing:
         :param allow_trans: flag to allow translocations check
         :return: A tuple of (dictionary with key=SITE_NAME and value=ReadsDf, translocations DF)
         """
-
         unmatched_df = reads_df.loc[(reads_df[L_SITE] != reads_df[R_SITE]) | (reads_df[L_REV] != reads_df[R_REV])].copy()
         reads_df.drop(index=unmatched_df.index, inplace=True)
 
@@ -224,7 +259,8 @@ class InputProcessing:
         self._align_reads_to_amplicon(reads_df)
 
         # Filter reads with low alignment score
-        self._filter_low_score_reads(unmatched_df, reads_df, exp_type)
+        unaligned_df = self._filter_low_score_reads(unmatched_df, reads_df, exp_type)
+
         aligned_reads_num = reads_df[FREQ].sum()
         self._logger.debug("Alignment for {} - Needleman-Wunsch alignment done.".format(exp_type.name()))
 
@@ -244,8 +280,138 @@ class InputProcessing:
         self._logger.info("Alignment for {} - Done.".format(exp_type.name(), self._ref_df.shape[0]))
         self._aligned_n[exp_type] = aligned_reads_num
 
+        # TODO - delete!!!!!!!
+        if debug:
+            filtered_df = pd.concat([unaligned_df, unmatched_df])
+            filtered_df.reset_index(inplace=True, drop=True)
+
+            # prepare reference list and names
+            self._logger.debug("Alignment for {} - debug start".format(exp_type.name()))
+
+            references = list(self._ref_df[REFERENCE].values)
+            names = list(self._ref_df[SITE_NAME].values)
+            references += list(self._ref_df[REFERENCE].apply(self.reverse_complement))
+            names += names
+            ref_rev = self._ref_df.shape[0]*[False] + self._ref_df.shape[0]*[True]
+            ref_scores = list(self._ref_df[MAX_SCORE].values) + list(self._ref_df[MAX_SCORE].values)
+
+            # full demultiplexing
+            filtered_df[['presumed_site','is_rev','score_normal']] = filtered_df.apply((lambda row: self.debug_match(row[READ],references, names, ref_rev, ref_scores)), axis=1, result_type='expand')
+
+            # Reverse all the reversed reads
+            rev_reads = filtered_df.loc[filtered_df['is_rev'], READ]
+            filtered_df.loc[rev_reads.index, READ] = rev_reads.apply(self.reverse_complement)
+
+            # full alignment
+            self.debug_align(filtered_df)
+            filtered_df.drop(inplace=True, columns=['left_primer_read','left_site_name','left_site_reversed',
+                                                    'right_primer_read', 'right_site_reversed', 'right_site_name',
+                                                    'is_rev', 'reversed_reads', 'site_name'])
+
+            # draw alignment
+            filtered_df.reset_index(inplace=True, drop=True)
+            filtered_df['read_id'] = filtered_df.index
+            filtered_df = pd.concat([filtered_df, filtered_df, filtered_df]).reset_index(drop=True)
+            filtered_df.sort_values(by=['read_id'], ascending=False)
+
+            filtered_df['left_alignment'] = None
+            filtered_df['right_alignment'] = None
+            filtered_df[CUT_SITE] = None
+            filtered_df['indel_on_cutsite'] = False
+            for read_id in filtered_df['read_id'].unique():
+                filtered_read_df = filtered_df.loc[filtered_df['read_id'] == read_id]
+                ref_cut_site = self._ref_df.at[filtered_read_df['presumed_site'].values[0], CUT_SITE]
+                filtered_df.at[filtered_read_df.index, CUT_SITE] = ref_cut_site
+                # Find alignment
+                pos_idx = 0
+                align_idx = 0
+                aligned_cut_site = 0
+                for length, indel_type in InputProcessing.parse_cigar(filtered_read_df[CIGAR].values[0]):
+                    if indel_type != IndelType.INS:
+                        if ref_cut_site in range(pos_idx, pos_idx + length + 1):
+                            aligned_cut_site = align_idx + (ref_cut_site - pos_idx)
+                        pos_idx += length
+                    align_idx += length
+
+                # Draw alignment
+                for idx, (read_idx, row) in enumerate(filtered_read_df.iterrows()):
+                    # draw ref
+                    if idx == 0:
+                        filtered_df.at[read_idx, 'left_alignment'] = row[ALIGNMENT_W_INS][0:aligned_cut_site]
+                        filtered_df.at[read_idx, 'right_alignment'] = row[ALIGNMENT_W_INS][aligned_cut_site:]
+                        if (row['alignment_human_readable'][aligned_cut_site-5:aligned_cut_site] != "|||||") or\
+                           (row['alignment_human_readable'][aligned_cut_site:aligned_cut_site+5]!= "|||||"):
+                            filtered_df.at[read_idx, 'indel_on_cutsite'] = True
+                    # draw lines
+                    elif idx == 1:
+                        filtered_df.at[read_idx, 'left_alignment'] = row['alignment_human_readable'][0:aligned_cut_site]
+                        filtered_df.at[read_idx, 'right_alignment'] = row['alignment_human_readable'][aligned_cut_site:]
+                        filtered_df.at[read_idx, FREQ] = 0
+                        if (row['alignment_human_readable'][aligned_cut_site-5:aligned_cut_site] != "|||||") or\
+                           (row['alignment_human_readable'][aligned_cut_site:aligned_cut_site+5]!= "|||||"):
+                            filtered_df.at[read_idx, 'indel_on_cutsite'] = True
+                    # draw read
+                    else:
+                        filtered_df.at[read_idx, 'left_alignment'] = row[ALIGNMENT_W_DEL][0:aligned_cut_site]
+                        filtered_df.at[read_idx, 'right_alignment'] = row[ALIGNMENT_W_DEL][aligned_cut_site:]
+                        filtered_df.at[read_idx, FREQ] = 0
+                        if (row['alignment_human_readable'][aligned_cut_site-5:aligned_cut_site] != "|||||") or\
+                           (row['alignment_human_readable'][aligned_cut_site:aligned_cut_site+5]!= "|||||"):
+                            filtered_df.at[read_idx, 'indel_on_cutsite'] = True
+            filtered_df = filtered_df.reindex(columns=['read_id','frequency','presumed_site','cigar_length', 'cigar_path',
+                                                       'score_normal', 'alignment_score', 'indel_on_cutsite', 'left_alignment',
+                                                       'right_alignment','cut-site','read','alignment_human_readable',
+                                                       'alignment_w_del','alignment_w_del'])
+            filtered_df.to_csv(os.path.join(self._output, "{}_filtered.csv".format(exp_type.name())), index=False)
+            self._logger.debug("Alignment for {} - debug done".format(exp_type.name()))
+
         return read_d, trans_df
 
+    # TODO - delete
+    def debug_match(self, read: DNASeq, references: List[DNASeq], names: List[str],
+                    reverse_l: List[bool], ref_score_l):
+        alignments = self._aligner.align(references[0], read)
+        max_name = names[0]
+        max_score = alignments[0].score / ref_score_l[0]
+        max_rev = reverse_l[0]
+
+        for reference, name, ref_score, rev in zip(references[1:], names[1:], ref_score_l[1:], reverse_l[1:]):
+            alignments = self._aligner.align(reference, read)
+            score = alignments[0].score / ref_score
+            if score > max_score:
+                max_score = score
+                max_name = name
+                max_rev = rev
+
+        return max_name, max_rev, max_score
+
+    # TODO - delete
+    def debug_align(self, reads: ReadsDf):
+        """
+        - Align all reads to their amplicon.
+        - Compute cigar path.
+        - Compute score
+        :param reads: all reads
+        :return:
+        """
+
+        new_cols_d = defaultdict(list)
+        for row_idx, row in reads.iterrows():
+            alignments = self._aligner.align(self._ref_df[REFERENCE][row['presumed_site']], row[READ])
+            [ref_with_ins, align_human, read_with_del, _] = format(alignments[0]).split("\n")
+            cigar, cigar_len = self._compute_cigar_path_from_alignment(reference=ref_with_ins, read=read_with_del)
+            align_score = alignments[0].score
+
+            new_cols_d[ALIGNMENT_W_INS].append(ref_with_ins)
+            new_cols_d[ALIGNMENT_W_DEL].append(read_with_del)
+            new_cols_d[CIGAR_LEN].append(cigar_len)
+            new_cols_d[CIGAR].append(cigar)
+
+            new_cols_d[ALIGN_SCORE].append(align_score)
+            new_cols_d['alignment_human_readable'].append(align_human)
+
+        for col_name, col in new_cols_d.items():
+            reads[col_name] = col
 
     #-------------------------------#
     ######### Private methods #######
@@ -391,11 +557,11 @@ class InputProcessing:
             # Check if left or right sites have better alignment than the translocation
             if (r_normalized_score > normalized_score) or (l_normalized_score > normalized_score):
                 if r_normalized_score > l_normalized_score:
-                    unmatched_df[L_SITE].loc[idx] = row[R_SITE]
-                    unmatched_df[L_REV].loc[idx] = row[R_REV]
+                    unmatched_df.at[idx, L_SITE] = row[R_SITE]
+                    unmatched_df.at[idx, L_REV] = row[R_REV]
                 else:
-                    unmatched_df[R_SITE].loc[idx] = row[L_SITE]
-                    unmatched_df[R_REV].loc[idx] = row[L_REV]
+                    unmatched_df.at[idx, R_SITE] = row[L_SITE]
+                    unmatched_df.at[idx, R_REV] = row[L_REV]
                 re_matched_idx_list.append(idx)
             # If read has high quality alignment, consider it as translocation
             # TODO - change min score?
@@ -501,6 +667,7 @@ class InputProcessing:
 
         # remove unaligned reads from reads_df
         reads_df.drop(unaligned_df.index, inplace=True)
+        return unaligned_df # TODO - remove
 
     def _align_reads_to_amplicon(self, reads: ReadsDf):
         """
@@ -921,7 +1088,7 @@ class InputProcessing:
         return "".join(COMPLEMENT.get(base, base) for base in reversed(seq))
 
     def _get_expected_cut_site(self, reference: DNASeq, sgRNA: DNASeq, cut_site_position: int, site_name: str = '') \
-        -> int:
+        -> Tuple[int, bool]:
         """
         Find sgRNA (or the reverse complement) inside the reference and return the expected cut-site.
         The cut-site is LEFT to returned index
@@ -929,8 +1096,9 @@ class InputProcessing:
         :param sgRNA: sgRNA sequence
         :param cut_site_position: position relative to the PAM
         :param site_name: site name
-        :return: expected cut-site
+        :return: expected cut-site, reversed sgRNA or not
         """
+        reverse = False
         sgRNA_start_idx = reference.find(sgRNA)
         if sgRNA_start_idx == -1:
             sgRNA_start_idx = reference.find(self.reverse_complement(sgRNA))
@@ -938,10 +1106,11 @@ class InputProcessing:
                 raise SgRNANotInReferenceSequence(site_name)
             else:
                 cut_site = sgRNA_start_idx - cut_site_position
+                reverse = True
         else:
             cut_site = sgRNA_start_idx + len(sgRNA) + cut_site_position
 
-        return cut_site
+        return cut_site, reverse
 
     @staticmethod
     def _parse_fastq_file(file_name: Path) -> List[DNASeq]:
@@ -977,6 +1146,36 @@ class InputProcessing:
             indel = IndelType.from_cigar(indel)
             yield length, indel
 
+    @staticmethod
+    def parse_cigar_with_adjacent_indels(cigar: str) -> List[Tuple[int, int, IndelType]]:
+        """
+        Function returns a list of Tuple[indel length, IndelType] where adjacent indels are aggregated
+        into indel type = Indel.
+        :param cigar:
+        :return: list of Tuple[indel length, indel length without insertion, IndelType]
+        """
+        indel_list = []
+        prev_indel = IndelType.MATCH
+        prev_length = 0
+        prev_length_wo_ins = 0  # used to understand with positions are relevant for this modification
+        for length, indel in re.findall(r'(\d+)([{}{}{}{}])'.format(CIGAR_D, CIGAR_I, CIGAR_S, CIGAR_M), cigar):
+            indel = IndelType.from_cigar(indel)
+            length = int(length)
+            length_wo_ins = int(length) if indel != IndelType.INS else 0
+            if (indel != IndelType.MATCH) and (prev_indel != IndelType.MATCH):
+                indel = IndelType.INDEL
+                length += prev_length
+                length_wo_ins += prev_length_wo_ins
+                indel_list[-1] = (length, length_wo_ins, indel)
+            else:
+                indel_list.append((length, length_wo_ins, indel))
+
+            # update prev
+            prev_indel = indel
+            prev_length = length
+            prev_length_wo_ins = length_wo_ins
+
+        return indel_list
 
     ######### Getters #############
     def read_numbers(self, exp_type: ExpType) -> Tuple[int, int, int]:

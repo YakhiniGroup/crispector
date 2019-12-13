@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 import os
 
-# TODO - upgrade function.
-# TODO - decide if need to override values here with other user parameters.
 def compute_binom_p(tables: Dict[str ,ModificationTables], modifications: ModificationTypes,
                     override_coin: bool, ref_df, output) -> List[Pr]:
 

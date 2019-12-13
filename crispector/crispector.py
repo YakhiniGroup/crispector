@@ -32,7 +32,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,
         cut_site_position: int, min_alignment_score: float, min_read_length: int, override_alignment: bool, config: Path,
         override_binomial_p: bool, confidence_interval: float, editing_threshold: float, suppress_site_output: bool,
-        experiment_name: str, fastp_threads: int, allow_translocations: bool, max_error_on_primer: int):
+        experiment_name: str, fastp_threads: int, allow_translocations: bool, max_error_on_primer: int,
+        enable_substitutions: bool, ambiguous_cut_site_detection: bool, debug: bool):
 
     # Init the logger
     Logger.set_output_dir(output)
@@ -69,7 +70,10 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         input_processing = InputProcessing(ref_df, output, min_alignment_score, min_read_length, max_error_on_primer)
 
         # Find expected cut-site position
-        ref_df = input_processing.convert_sgRNA_to_cut_site_position(cut_site_position)
+        input_processing.convert_sgRNA_to_cut_site_position(cut_site_position)
+
+        # Detect ambiguous cut-sites
+        input_processing.detect_ambiguous_cut_site(cut_site_position, ambiguous_cut_site_detection)
 
         # Filter low quality reads and merge pair-end reads with fastp
         if not override_fastp:
@@ -93,8 +97,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
             mock_reads = input_processing.demultiplex_reads(mock_merged, ExpType.MOCK)
 
             # Align reads to the amplicon reference sequences
-            tx_reads_d, tx_trans_df = input_processing.align_reads(tx_reads, ExpType.TX, allow_translocations)
-            mock_reads_d, mock_trans_df = input_processing.align_reads(mock_reads, ExpType.MOCK, allow_translocations)
+            tx_reads_d, tx_trans_df = input_processing.align_reads(tx_reads, ExpType.TX, allow_translocations, debug)
+            mock_reads_d, mock_trans_df = input_processing.align_reads(mock_reads, ExpType.MOCK, allow_translocations, debug)
 
             # TODO - remove
             tx_trans_df.to_csv(os.path.join(output, "tx_translocation_reads.csv"), index=False)
@@ -106,7 +110,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                 pickle.dump(mock_reads_d, file)
 
         # Get modification types and positions priors
-        modifications = ModificationTypes.init_from_cfg(cfg)
+        modifications = ModificationTypes.init_from_cfg(enable_substitutions)
 
         # Convert alignment to modification tables
         logger.info("Convert alignment tables to algorithm input")
@@ -118,14 +122,13 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                 tables_d = pickle.load(file)
         else:
             for site, row in ref_df.iterrows():
-                amplicon = row[REFERENCE]
                 tx_reads_num = tx_reads_d[site][FREQ].sum()
                 mock_reads_num = mock_reads_d[site][FREQ].sum()
                 if min(tx_reads_num, mock_reads_num) < min_num_of_reads:
                     logger.info("Site {} - Discarded from evaluation due to low number of reads (treatment={}, "
                                 "mock={}).".format(site, tx_reads_num, mock_reads_num))
                 else:
-                    tables_d[site] = ModificationTables(tx_reads_d[site], mock_reads_d[site], modifications, amplicon)
+                    tables_d[site] = ModificationTables(tx_reads_d[site], mock_reads_d[site], modifications, row)
                     logger.debug(
                         "Site {} - Converted. Number of reads (treatment={}, mock={}).".format(site, tx_reads_num,
                                                                                                mock_reads_num))
@@ -165,6 +168,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
             logger.debug("Site {} - Done! Editing activity is {:.2f}".format(site,
                                                                              result_summary_d[site][EDIT_PERCENT]))
 
+
         # Dump summary results
         summary_result_df = pd.DataFrame.from_dict(result_summary_d, orient='index')
         summary_result_df[SITE_NAME] = summary_result_df.index
@@ -191,74 +195,61 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                     send2trash(fastp_output)
 
     except NoneValuesInAmpliconsCSV:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("amplicons_csv file contains None values! Check the input file.")
         return 1
     except SgRNANotInReferenceSequence as e:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Site={} - sgRNA not in reference sequence!".format(e.site_name))
         return 2
     except FastpRunTimeError:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("fastp failed ! check log for more details")
         return 3
     except CantOpenDemultiplexedSamFile as e:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Can't read demultiplexed sam file at {}. Please check path and permissions".format(e.path))
         return 4
     except ConfiguratorIsCalledBeforeInitConfigPath:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Configurator is called before set config path")
         return 5
     except PriorPositionHasWrongLength as e:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Configuration for modification type=({} size {}-{}) has a bad pos_prior length {} (expected={})."
                      .format(e.indel_type.name, e.indel_min, e.indel_max, e.actual_len, e.expected_len))
         return 6
     except UnknownAlignmentChar:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Unknown alignment character from Bio-python-Alignment. Please open an issue on GitHub.")
     except Bowtie2BuildRunTimeError:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Bowtie2-build failed ! check log for more details")
         return 7
     except Bowtie2RunTimeError:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Bowtie2 failed ! check log for more details")
         return 8
     except AlignerSubstitutionDoesntExist as e:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Configuration aligner substitution matrix {} Doesn't exist!".format(e.name))
         return 9
     except ClassificationFailed:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Classification failed!!! Please open an issue on GitHub.")
         return 10
     except BadSgRNAChar:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Bad character in sgRNA column! Check input!")
         return 11
     except BadReferenceAmpliconChar:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Bad character in REFERENCE amplicon column! Check input!")
         return 12
     except Exception:
-        if verbose:
-            traceback.print_exc(file=sys.stdout)
+        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
         logger.error("Unknown Error. Open an issue on GitHub (#######)")  # Add GitHub link
+
         return -1
     # exit with success
     return 0

@@ -3,6 +3,8 @@ from constants_and_types import IndelType
 from typing import List, Dict
 from collections import defaultdict
 
+from utils import Configurator
+
 
 class ModificationTypes:
     """
@@ -61,12 +63,13 @@ class ModificationTypes:
         return index
 
     @classmethod
-    def init_from_cfg(cls, cfg: Dict):
+    def init_from_cfg(cls, enable_substitutions: bool):
         """
         Parse the config file to ModificationTypes class
-        :param cfg: config (Dict)
+        :param enable_substitutions: Flag
         :return: ModificationTypes.
         """
+        cfg = Configurator.get_cfg()
         indel_types_cfg = cfg["IndelTypes"]
         window_size = cfg["window_size"]
         m_list = []
@@ -83,6 +86,10 @@ class ModificationTypes:
 
                 # Extract priors
                 pos_prior = indel_dict["pos_prior"]
+                # If enable_substitutions is false, change priors to zero
+                if not enable_substitutions and (indel_type == IndelType.SUB):
+                    pos_prior = len(pos_prior)*[0.0]
+
                 prior_expected_len = (2*window_size + 1) if indel_type == IndelType.INS else 2*window_size
                 if len(pos_prior) != prior_expected_len:
                     raise PriorPositionHasWrongLength(prior_expected_len, len(pos_prior), indel_type, m_min[-1],
@@ -107,11 +114,11 @@ class ModificationTypes:
         :return:
         """
         if self._max_indel_size == max(self._range[idx]):
-            return r"{} $\geq {}$".format(self._type[idx].name[:3], min(self._range[idx]))
+            return r"{} $\geq {}$".format(self._type[idx].plot_name, min(self._range[idx]))
         elif min(self._range[idx]) == max(self._range[idx]):
-            return r"{} ${}$".format(self._type[idx].name[:3], min(self._range[idx]))
+            return r"{} ${}$".format(self._type[idx].plot_name, min(self._range[idx]))
         else:
-            return r"{} ${}:{}$".format(self._type[idx].name[:3], min(self._range[idx]), max(self._range[idx]))
+            return r"{} ${}:{}$".format(self._type[idx].plot_name, min(self._range[idx]), max(self._range[idx]))
 
 
 

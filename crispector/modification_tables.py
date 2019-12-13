@@ -1,5 +1,5 @@
 from constants_and_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, Path, IsEdit, CIGAR, FREQ, \
-    C_TX, C_MOCK
+    C_TX, C_MOCK, REFERENCE, CS_SHIFT_R, CS_SHIFT_L
 from input_processing import InputProcessing
 from modification_types import ModificationTypes
 import numpy as np
@@ -10,24 +10,42 @@ import os
 import warnings
 import pandas as pd
 from utils import Configurator
-
+from copy import deepcopy
 
 class ModificationTables:
     """
     A container class for all modification (Indel) tables.
     """
-    def __init__(self, tx_reads: ReadsDf, mock_reads: ReadsDf, modifications: ModificationTypes, amplicon: DNASeq):
+    def __init__(self, tx_reads: ReadsDf, mock_reads: ReadsDf, modifications: ModificationTypes, ref_df_row: pd.Series):
         self._tx_reads = tx_reads
         self._mock_reads = mock_reads
         self._modifications = modifications
-        self._amplicon = amplicon
+        self._amplicon = ref_df_row[REFERENCE]
         self._tables: ModTables = dict()
         self._pointers: ModTablesP = dict()
         self._create_modification_tables()
         self._n_reads_tx = self._tx_reads[FREQ].sum()
         self._n_reads_mock = self._mock_reads[FREQ].sum()
+        self._priors = deepcopy(self._modifications.priors)
+
+        # if cut-site location is ambiguous, use cute-site priors in ambiguous locations as well
+        for idx, prior in enumerate(self._priors):
+            cut_site_idx = int(len(prior)//2)
+            is_ins = self._modifications.types[idx] == IndelType.INS
+            if ref_df_row[CS_SHIFT_R]:
+                self._priors[idx][cut_site_idx+1] = self._priors[idx][cut_site_idx]
+            if ref_df_row[CS_SHIFT_L]:
+                # cut-site is left to cut-site index for non insertions, and on cut-site for insertions
+                if is_ins:
+                    self._priors[idx][cut_site_idx-1] = self._priors[idx][cut_site_idx]
+                else:
+                    self._priors[idx][cut_site_idx-2] = self._priors[idx][cut_site_idx-1]
 
     # Getters
+    @property
+    def priors(self):
+        return self._priors
+
     @property
     def tx_reads(self) -> ReadsDf:
         return self._tx_reads
@@ -80,25 +98,26 @@ class ModificationTables:
         :param exp_type: ExpType
         :return:
         """
-        # TODO - combain here mismatch and deletions together
         table_row = C_TX if exp_type == ExpType.TX else C_MOCK
         for row_idx, row in read.iterrows():
             pos_idx = 0  # position index
-            for length, indel_type in InputProcessing.parse_cigar(row[CIGAR]):
+            for length, length_wo_ins, indel_type in InputProcessing.parse_cigar_with_adjacent_indels(row[CIGAR]):
                 table_idx = self._modifications.find_index(indel_type, length)
                 # For a match - continue
                 if indel_type == IndelType.MATCH:
                     pos_idx += length
                 # For a mismatch or deletions - update multi indexes according to length
-                elif indel_type in [IndelType.DEL, IndelType.SUB]:
-                    self._tables[table_idx][table_row, pos_idx:pos_idx+length] += row[FREQ]
-                    # update multiple keys
+                elif indel_type in [IndelType.DEL, IndelType.SUB, IndelType.INDEL]:
+                    self._tables[table_idx][table_row, pos_idx:pos_idx+length_wo_ins] += row[FREQ]
+                    # Update multiple keys
                     if exp_type == ExpType.TX:
-                        for pointer_idx in range(pos_idx, pos_idx+length):
+                        for pointer_idx in range(pos_idx, pos_idx+length_wo_ins):
                             self._pointers[table_idx][pointer_idx].append(row_idx)
-                    pos_idx += length
+                    pos_idx += length_wo_ins
                 # For an insertion update single index and don't increase pos_idx
                 elif indel_type == IndelType.INS:
+                    if pos_idx >= len(self._tables[table_idx][table_row]):
+                        print("asdffffffffff")
                     self._tables[table_idx][table_row, pos_idx] += row[FREQ]
                     if exp_type == ExpType.TX:
                         self._pointers[table_idx][pos_idx].append(row_idx)
@@ -125,7 +144,7 @@ class ModificationTables:
         cut_site_color = "red"
         grid_color = 'grey'
         # Create axes
-        fig, axes = plt.subplots(nrows=self._modifications.size, ncols=1, figsize=(16, 11), sharex=True)
+        fig, axes = plt.subplots(nrows=self._modifications.size, ncols=1, figsize=(14, 20), sharex=True)
 
         for table_idx in range(self._modifications.size):
 
@@ -175,17 +194,17 @@ class ModificationTables:
             axes[table_idx].set_ylim(0, y_max)
 
             # Set y_label - Use text due to alignment issues
-            axes[table_idx].text(x=positions[0] - 2.5 - 0.5 * (not is_ins), y=y_max / 2,
+            axes[table_idx].text(x=positions[0] - 5 - 0.5 * (not is_ins), y=y_max / 2,
                                  s=self._modifications.plot_name_at_idx(table_idx), ha="left", va="center")
 
             # Create legend in the middle of the plot
-            if table_idx == 2:
+            if table_idx == 7:
                 axes[table_idx].bar([0], [0], color=edit_color, label="Edit event", edgecolor='grey')
                 axes[table_idx].plot([], [], color=cut_site_color, label="Cut-Site")
                 handles, labels = axes[table_idx].get_legend_handles_labels()
                 order = [1, 2, 3, 0]
                 axes[table_idx].legend([handles[idx] for idx in order], [labels[idx] for idx in order],
-                                       bbox_to_anchor=(1.38, 0))
+                                       bbox_to_anchor=(1.48, 0))
 
             # Add the reference sequence in the position of the title
             if table_idx == 0:

@@ -65,12 +65,20 @@ import os
               help="Add something") # TODO - add description
 @click.option("--min_read_length", type=click.INT, default=40, show_default=True,
               help="Filter out any read shorter than min read length")
-@click.option("--max_error_on_primer", type=click.INT, default=4, show_default=True,
+@click.option("--max_error_on_primer", type=click.INT, default=8, show_default=True,
               help="") # TODO - change to  max_edit distance on primer
+@click.option('--enable_substitutions', is_flag=True, default=False, show_default=True, help="Enable substitutions"
+              "events for the quantification of edit events")
+@click.option('--ambiguous_cut_site_detection', is_flag=True, default=True, show_default=True,
+              help="Detect ambiguous cut-site (e.g. PAM is GGG, so cut-site can be shift one base to the left."
+              "Set False if this isn't a CAS9 experiment")
+@click.option('--debug', is_flag=True, default=False, show_default=True,
+              help="Delete...")
 def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, override_fastp, override_alignment,
          keep_fastp_output, verbose, min_num_of_reads, min_read_length,  amplicons_csv, cut_site_position,
          amplicon_min_alignment_score, config, override_binomial_p, confidence_interval, editing_threshold,
-         suppress_site_output, experiment_name, fastp_threads, allow_translocations, max_error_on_primer):
+         suppress_site_output, experiment_name, fastp_threads, allow_translocations, max_error_on_primer,
+         enable_substitutions, ambiguous_cut_site_detection, debug):
     """CRISPECTOR - Console script"""
 
     # Input verification
@@ -94,7 +102,8 @@ def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, overr
                           override_fastp, keep_fastp_output, verbose, min_num_of_reads,  cut_site_position,
                           amplicon_min_alignment_score, min_read_length, override_alignment, config,
                           override_binomial_p, confidence_interval, editing_threshold, suppress_site_output,
-                          experiment_name, fastp_threads, allow_translocations, max_error_on_primer)
+                          experiment_name, fastp_threads, allow_translocations, max_error_on_primer,
+                          enable_substitutions, ambiguous_cut_site_detection, debug)
 
 
 if __name__ == "__main__":
