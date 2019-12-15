@@ -62,7 +62,6 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         ref_df[SGRNA] = ref_df[SGRNA].apply(lambda x: x.upper())
         if ref_df[SGRNA].str.contains('[^ATGC]', regex=True).any():
             raise BadSgRNAChar()
-        # TODO - Multi on-target sites - Change to default coin and add warning.
         # TODO - HDR - Change to default coin, delete on-target results and add warning. read HDR and remove.
 
         # Create InputProcessing instance
@@ -137,7 +136,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                 pickle.dump(tables_d, file)
 
         # Compute binomial coin for all modification types
-        binom_p_d = compute_binom_p(tables_d, modifications, override_binomial_p, ref_df, output)
+        binom_p_d = compute_binom_p(tables_d, modifications, override_binomial_p, ref_df)
 
         result_summary_d: AlgResult = dict()  # Algorithm result dictionary
         # Run crispector algorithm on all sites

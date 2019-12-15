@@ -88,8 +88,8 @@ class CrispectorAlgorithm:
             # plot modification table
             tables.plot_tables(self._edit, self._tables_offset, self._output, self._experiment_name)
             tables.dump_tables(self._edit, self._tables_offset, self._output)
+
             # Dump .csv file with all reads
-            # TODO - remove site_name & cigar_path?
             self._tx_df.to_csv(os.path.join(self._output, "treatment_aligned_reads.csv.gz"), index=False,
                                compression='gzip')
             self._mock_df.to_csv(os.path.join(self._output, "mock_aligned_reads.csv.gz"), index=False,

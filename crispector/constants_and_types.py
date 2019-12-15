@@ -154,6 +154,10 @@ L_READ = "left_primer_read"
 # TransDf constants
 TRANS_NAME = "translocation_name"
 
+# Binomial probability estimation
+BINOM_AVERAGE_P = 0.9
+BINOM_PERCENTILE = 0.95
+
 # General constants
 C_TX = 0
 C_MOCK = 1

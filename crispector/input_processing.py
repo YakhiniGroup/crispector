@@ -277,6 +277,9 @@ class InputProcessing:
             # Add indels columns to reads df
             self._add_indels_columns(read_d[site], self._ref_df.loc[site, CUT_SITE])
 
+            # Remove unnecessary columns
+            # TODO - Change to read_d[site].drop(columns=[SITE_NAME, REVERSED, CIGAR_LEN, ALIGN_SCORE], inplace=True)
+            read_d[site].drop(columns=[SITE_NAME, REVERSED], inplace=True)
         self._logger.info("Alignment for {} - Done.".format(exp_type.name(), self._ref_df.shape[0]))
         self._aligned_n[exp_type] = aligned_reads_num
 

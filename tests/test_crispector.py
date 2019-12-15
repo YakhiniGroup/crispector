@@ -9,7 +9,7 @@ from Bio import Align
 from click.testing import CliRunner
 
 from constants_and_types import CIGAR, SITE_NAME, ALIGNMENT_W_INS, ALIGNMENT_W_DEL
-from crispector import crispector
+from crispector import crispector_main
 from crispector import cli
 from input_processing import InputProcessing
 from utils import Configurator

@@ -1,7 +1,6 @@
 max_indel_size: &max_indel_size 500
 window_size: 10 # Priors size should be 2*window_size for deletions & substitutions a 2*window_size+1 for insertions
 default_binom_p: 0.95 # Default binomial coin if user specifies --override_binomial_p
-average_binom_p: 0.90 # Default binomial coin if user specifies --override_binomial_p
 IndelTypes:
     Deletions:
         A:
