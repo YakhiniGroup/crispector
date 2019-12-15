@@ -528,8 +528,9 @@ class InputProcessing:
             direction = '5\'_to_3\'' if not rev else '3\'_to_5\''
             return name + "_" + direction
 
-        self._logger.info("Search possible Translocations for {} reads. May take a few minutes".format(
-            unmatched_df.shape[0]))
+        if allow_trans:
+            self._logger.info("Search possible Translocations for {} reads. May take a few minutes".format(
+                unmatched_df.shape[0]))
 
         for idx, row in possible_trans_df.iterrows():
             # Compute translocation reference, cut-site & max alignment score
@@ -583,10 +584,10 @@ class InputProcessing:
                 trans_d['max_score'].append(max_score)
                 trans_d['normalized_score'].append(normalized_score)
 
-        self._logger.info("Search possible Translocations - Done.")
 
         # Convert translocation dictionary to translocation pandas
         if allow_trans:
+            self._logger.info("Search possible Translocations - Done.")
             trans_df = pd.DataFrame.from_dict(trans_d, orient='columns')
             # TODO - for debug only, change to by FREQ
             if trans_df.shape[0] > 0:
@@ -1163,7 +1164,7 @@ class InputProcessing:
             length = int(length)
             length_wo_ins = int(length) if indel != IndelType.INS else 0
             if (indel != IndelType.MATCH) and (prev_indel != IndelType.MATCH):
-                indel = IndelType.INDEL
+                indel = IndelType.MIXED
                 length += prev_length
                 length_wo_ins += prev_length_wo_ins
                 indel_list[-1] = (length, length_wo_ins, indel)

@@ -6,7 +6,7 @@ import pickle
 import click
 import logging
 from send2trash import send2trash
-from algorithm_utils import compute_binom_p
+from binomial_p import compute_binom_p
 from crispector_algorithm import CrispectorAlgorithm
 from exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInReferenceSequence, \
     ConfiguratorIsCalledBeforeInitConfigPath, PriorPositionHasWrongLength, \
@@ -24,16 +24,13 @@ from modification_tables import ModificationTables
 from typing import Dict
 from modification_types import ModificationTypes
 
-# TODO - add GGG prior change.
-# TODO - Unite mismatches and deletions?
 # TODO - coin. when not tx == mock number of reads
-# TODO - PRIMER_DIMER effect
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path, amplicons_csv: Path,
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,
-        cut_site_position: int, min_alignment_score: float, min_read_length: int, override_alignment: bool, config: Path,
+        cut_site_position: int, amplicon_min_score: float, min_read_length: int, config: Path,
         override_binomial_p: bool, confidence_interval: float, editing_threshold: float, suppress_site_output: bool,
         experiment_name: str, fastp_threads: int, allow_translocations: bool, max_error_on_primer: int,
-        enable_substitutions: bool, ambiguous_cut_site_detection: bool, debug: bool):
+        enable_substitutions: bool, ambiguous_cut_site_detection: bool, debug: bool, alignment_input, table_input):
 
     # Init the logger
     Logger.set_output_dir(output)
@@ -65,9 +62,11 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         ref_df[SGRNA] = ref_df[SGRNA].apply(lambda x: x.upper())
         if ref_df[SGRNA].str.contains('[^ATGC]', regex=True).any():
             raise BadSgRNAChar()
+        # TODO - Multi on-target sites - Change to default coin and add warning.
+        # TODO - HDR - Change to default coin, delete on-target results and add warning. read HDR and remove.
 
         # Create InputProcessing instance
-        input_processing = InputProcessing(ref_df, output, min_alignment_score, min_read_length, max_error_on_primer)
+        input_processing = InputProcessing(ref_df, output, amplicon_min_score, min_read_length, max_error_on_primer)
 
         # Find expected cut-site position
         input_processing.convert_sgRNA_to_cut_site_position(cut_site_position)
@@ -84,13 +83,13 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
             tx_merged, mock_merged = tx_in1, mock_in1
 
         # TODO - delete dump to pickle files.
-        if os.path.exists(os.path.join(output, "tx_reads_d.pkl")) and override_alignment:
-            with open(os.path.join(output, "tx_reads_d.pkl"), "rb") as file:
+        if alignment_input:
+            with open(os.path.join(alignment_input, "tx_reads_d.pkl"), "rb") as file:
                 tx_reads_d = pickle.load(file)
-            with open(os.path.join(output, "mock_reads_d.pkl"), "rb") as file:
+            with open(os.path.join(alignment_input, "mock_reads_d.pkl"), "rb") as file:
                 mock_reads_d = pickle.load(file)
-            tx_trans_df = pd.read_csv(os.path.join(output, "tx_translocation_reads.csv"), index=False)
-            mock_trans_df = pd.read_csv(os.path.join(output, "mock_translocation_reads.csv"), index=False)
+            tx_trans_df = pd.read_csv(os.path.join(alignment_input, "tx_translocation_reads.csv"))
+            mock_trans_df = pd.read_csv(os.path.join(alignment_input, "mock_translocation_reads.csv"))
         else:
             # Demultiplexing reads
             tx_reads = input_processing.demultiplex_reads(tx_merged, ExpType.TX)
@@ -109,6 +108,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
             with open(os.path.join(output, "mock_reads_d.pkl"), "wb") as file:
                 pickle.dump(mock_reads_d, file)
 
+       # TODO - uneven reads in Tx & Mock - put warning (and in final report)
+
         # Get modification types and positions priors
         modifications = ModificationTypes.init_from_cfg(enable_substitutions)
 
@@ -117,8 +118,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         tables_d: Dict[str, ModificationTables] = dict()
 
         # TODO - delete dump to pickle files.
-        if os.path.exists(os.path.join(output, "tables_d.pkl")) and override_alignment:
-            with open(os.path.join(output, "tables_d.pkl"), "rb") as file:
+        if table_input:
+            with open(os.path.join(table_input, "tables_d.pkl"), "rb") as file:
                 tables_d = pickle.load(file)
         else:
             for site, row in ref_df.iterrows():
@@ -136,8 +137,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                 pickle.dump(tables_d, file)
 
         # Compute binomial coin for all modification types
-        # TODO -delete readDF from inputs, output as well
-        binom_p_l = compute_binom_p(tables_d, modifications, override_binomial_p, ref_df, output)
+        binom_p_d = compute_binom_p(tables_d, modifications, override_binomial_p, ref_df, output)
 
         result_summary_d: AlgResult = dict()  # Algorithm result dictionary
         # Run crispector algorithm on all sites
@@ -161,7 +161,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                 site_output = None
 
             logger.info("Site {} - Evaluate editing activity".format(site))
-            algorithm = CrispectorAlgorithm(site, experiment_name, cut_site, modifications, binom_p_l,
+            algorithm = CrispectorAlgorithm(site, experiment_name, cut_site, modifications, binom_p_d[site],
                                             confidence_interval, row[ON_TARGET], site_output)
             result_summary_d[site] = algorithm.evaluate(tables_d[site])
             result_summary_d[site][ON_TARGET] = row[ON_TARGET]
@@ -195,59 +195,59 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                     send2trash(fastp_output)
 
     except NoneValuesInAmpliconsCSV:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("amplicons_csv file contains None values! Check the input file.")
         return 1
     except SgRNANotInReferenceSequence as e:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Site={} - sgRNA not in reference sequence!".format(e.site_name))
         return 2
     except FastpRunTimeError:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("fastp failed ! check log for more details")
         return 3
     except CantOpenDemultiplexedSamFile as e:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Can't read demultiplexed sam file at {}. Please check path and permissions".format(e.path))
         return 4
     except ConfiguratorIsCalledBeforeInitConfigPath:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Configurator is called before set config path")
         return 5
     except PriorPositionHasWrongLength as e:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Configuration for modification type=({} size {}-{}) has a bad pos_prior length {} (expected={})."
                      .format(e.indel_type.name, e.indel_min, e.indel_max, e.actual_len, e.expected_len))
         return 6
     except UnknownAlignmentChar:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Unknown alignment character from Bio-python-Alignment. Please open an issue on GitHub.")
     except Bowtie2BuildRunTimeError:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Bowtie2-build failed ! check log for more details")
         return 7
     except Bowtie2RunTimeError:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Bowtie2 failed ! check log for more details")
         return 8
     except AlignerSubstitutionDoesntExist as e:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Configuration aligner substitution matrix {} Doesn't exist!".format(e.name))
         return 9
     except ClassificationFailed:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Classification failed!!! Please open an issue on GitHub.")
         return 10
     except BadSgRNAChar:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Bad character in sgRNA column! Check input!")
         return 11
     except BadReferenceAmpliconChar:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Bad character in REFERENCE amplicon column! Check input!")
         return 12
     except Exception:
-        logger.info("{}".format(traceback.format_exc(file=sys.stdout)))
+        logger.info("{}".format(traceback.format_exc()))
         logger.error("Unknown Error. Open an issue on GitHub (#######)")  # Add GitHub link
 
         return -1

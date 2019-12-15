@@ -1,6 +1,7 @@
 max_indel_size: &max_indel_size 500
 window_size: 10 # Priors size should be 2*window_size for deletions & substitutions a 2*window_size+1 for insertions
 default_binom_p: 0.95 # Default binomial coin if user specifies --override_binomial_p
+average_binom_p: 0.90 # Default binomial coin if user specifies --override_binomial_p
 IndelTypes:
     Deletions:
         A:
@@ -25,6 +26,11 @@ IndelTypes:
                         0.5, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
         E:
             min: 5
+            max: 5
+            pos_prior: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.5,
+                        0.5, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
+        F:
+            min: 6
             max: *max_indel_size
             pos_prior: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.5,
                         0.5, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
@@ -51,10 +57,15 @@ IndelTypes:
                         0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
         E:
             min: 5
+            max: 5
+            pos_prior: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.5,
+                        0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
+        F:
+            min: 6
             max: *max_indel_size
             pos_prior: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.5,
                         0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
-    Indels: # Any combination of adjacent insertion, deletion and/or Substitution
+    Mixed: # Any combination of adjacent insertion, deletion and/or Substitution
         A:
             min: 1
             max: 1
@@ -77,6 +88,11 @@ IndelTypes:
                         0.5, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
         E:
             min: 5
+            max: 5
+            pos_prior: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.5,
+                        0.5, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
+        F:
+            min: 6
             max: *max_indel_size
             pos_prior: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.5,
                         0.5, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]

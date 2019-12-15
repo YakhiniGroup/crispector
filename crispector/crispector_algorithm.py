@@ -194,7 +194,7 @@ class CrispectorAlgorithm:
                 if indel_type == IndelType.MATCH:
                     pos_idx += length
                 # Mismatch or deletions
-                elif indel_type in [IndelType.DEL, IndelType.SUB, IndelType.INDEL]:
+                elif indel_type in [IndelType.DEL, IndelType.SUB, IndelType.MIXED]:
                     dist_d[indel_type][pos_idx:pos_idx + length] += row[FREQ]
                     pos_idx += length
                 # Insertions

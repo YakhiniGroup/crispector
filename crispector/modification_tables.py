@@ -107,7 +107,7 @@ class ModificationTables:
                 if indel_type == IndelType.MATCH:
                     pos_idx += length
                 # For a mismatch or deletions - update multi indexes according to length
-                elif indel_type in [IndelType.DEL, IndelType.SUB, IndelType.INDEL]:
+                elif indel_type in [IndelType.DEL, IndelType.SUB, IndelType.MIXED]:
                     self._tables[table_idx][table_row, pos_idx:pos_idx+length_wo_ins] += row[FREQ]
                     # Update multiple keys
                     if exp_type == ExpType.TX:
@@ -116,8 +116,6 @@ class ModificationTables:
                     pos_idx += length_wo_ins
                 # For an insertion update single index and don't increase pos_idx
                 elif indel_type == IndelType.INS:
-                    if pos_idx >= len(self._tables[table_idx][table_row]):
-                        print("asdffffffffff")
                     self._tables[table_idx][table_row, pos_idx] += row[FREQ]
                     if exp_type == ExpType.TX:
                         self._pointers[table_idx][pos_idx].append(row_idx)

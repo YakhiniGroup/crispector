@@ -3,7 +3,7 @@
 """Console script for crispector."""
 import sys
 import click
-import crispector
+from crispector_main import run
 import os
 
 # TODO - add a config from user + window_size + effective qualification window
@@ -32,9 +32,6 @@ import os
               help="Override fastp and require merged fastq files (pre-processing is necessary).\
                     Set paths to merged fastq files at --tx_in1 and --mock_in1.\
                     Can't be used with --fastp_options_string")
-# TODO -delete this option
-@click.option('--override_alignment', is_flag=True, default=False, show_default=True,
-              help="Delete this option. Set paths to alignment fastq files at --tx_in1 and --mock_in1")
 @click.option('--verbose', is_flag=True, default=False, show_default=True, help="Higher verbosity")
 @click.option('--keep_fastp_output', is_flag=True, default=False, show_default=True, help="Keep fastp output directory")
 @click.option("--min_num_of_reads", type=click.INT, default=500, show_default=True,
@@ -54,7 +51,7 @@ import os
 @click.option("--suppress_site_output",  is_flag=True, default=False, show_default=True,
               help="Do not dump plots and reads for all sites")
 # TODO - this values and description should be changed.
-@click.option('--amplicon_min_alignment_score', type=click.FloatRange(min=0, max=100), default=30, show_default=True,
+@click.option('--amplicon_min_score', type=click.FloatRange(min=0, max=100), default=30, show_default=True,
               help="Minimum alignment score to consider a read alignment to a specific amplicon reference sequence."
                    "Score is normalized between 0 (not even one bp match) to 100 (the read is identical to"
                    "the reference). Below this alignment threshold, reads are discarded."
@@ -74,12 +71,14 @@ import os
               "Set False if this isn't a CAS9 experiment")
 @click.option('--debug', is_flag=True, default=False, show_default=True,
               help="Delete...")
-def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, override_fastp, override_alignment,
-         keep_fastp_output, verbose, min_num_of_reads, min_read_length,  amplicons_csv, cut_site_position,
-         amplicon_min_alignment_score, config, override_binomial_p, confidence_interval, editing_threshold,
-         suppress_site_output, experiment_name, fastp_threads, allow_translocations, max_error_on_primer,
-         enable_substitutions, ambiguous_cut_site_detection, debug):
+@click.option('--alignment_input',type=click.Path(), required=False, help="") # TODO - delete
+@click.option('--table_input', type=click.Path(), required=False, help="") # TODO - delete
+def main(**kwargs):
     """CRISPECTOR - Console script"""
+    override_fastp = kwargs["override_fastp"]
+    tx_in2 = kwargs["tx_in2"]
+    mock_in2 = kwargs["mock_in2"]
+    output = kwargs["output"]
 
     # Input verification
     if override_fastp:
@@ -98,13 +97,7 @@ def main(tx_in1, tx_in2, mock_in1, mock_in2, output, fastp_options_string, overr
         os.makedirs(output)
 
     # Run crispector
-    return crispector.run(tx_in1, tx_in2, mock_in1, mock_in2, output, amplicons_csv, fastp_options_string,
-                          override_fastp, keep_fastp_output, verbose, min_num_of_reads,  cut_site_position,
-                          amplicon_min_alignment_score, min_read_length, override_alignment, config,
-                          override_binomial_p, confidence_interval, editing_threshold, suppress_site_output,
-                          experiment_name, fastp_threads, allow_translocations, max_error_on_primer,
-                          enable_substitutions, ambiguous_cut_site_detection, debug)
-
+    run(**kwargs)
 
 if __name__ == "__main__":
     sys.exit(main())  # pragma: no cover

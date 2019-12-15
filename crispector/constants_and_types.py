@@ -34,7 +34,7 @@ class ExpType(Enum):
 class IndelType(Enum):
     DEL = 0
     INS = 1
-    INDEL = 2
+    MIXED = 2
     SUB = 3
     MATCH = -1
 
@@ -46,8 +46,8 @@ class IndelType(Enum):
             return "Insertions"
         elif self._name_ == "SUB":
             return "Substitutions"
-        elif self._name_ == "INDEL":
-            return "Indels"
+        elif self._name_ == "MIXED":
+            return "Mixed"
         else:
             return "Match"
     @property
@@ -58,8 +58,8 @@ class IndelType(Enum):
             return "Ins"
         elif self._name_ == "SUB":
             return "Sub"
-        elif self._name_ == "INDEL":
-            return "Indel"
+        elif self._name_ == "MIXED":
+            return "Mix"
         else:
             return "Match"
 
