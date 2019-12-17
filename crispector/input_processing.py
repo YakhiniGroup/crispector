@@ -7,7 +7,7 @@ from constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelTy
     DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, COMPLEMENT, REFERENCE, SGRNA, SITE_NAME, CUT_SITE, CIGAR_D, CIGAR_I, \
     CIGAR_S, CIGAR_M, AlignedIndel, DEL_BASE, INS_BASE, SUB_BASE, REVERSED, L_SITE, L_REV, R_SITE, R_REV, \
     L_READ, R_READ, PRIMER_LEN, TransDf, TRANS_NAME, BAD_AMPLICON_THRESHOLD, CIGAR_LEN, CIGAR_LEN_THRESHOLD, MAX_SCORE, \
-    F_PRIMER, R_PRIMER, MIN_PRIMER_DIMER_THRESH, SGRNA_REVERSED, CS_SHIFT_L, CS_SHIFT_L, CS_SHIFT_R
+    F_PRIMER, R_PRIMER, MIN_PRIMER_DIMER_THRESH, SGRNA_REVERSED, CS_SHIFT_L, CS_SHIFT_L, CS_SHIFT_R, ALIGN_CUT_SITE
 from utils import Logger, Configurator
 from typing import List, Tuple, Dict
 import re
@@ -791,10 +791,6 @@ class InputProcessing:
                 if pos_idx > end_idx:
                     break
 
-                # For a match - continue
-                if indel_type == IndelType.MATCH:
-                    pos_idx += length
-
                 # Deletions
                 elif indel_type == IndelType.DEL:
                     if (pos_idx + length > start_idx) and (pos_idx < end_idx):
@@ -809,8 +805,6 @@ class InputProcessing:
                             new_col_d[DEL_START][row_idx] += ", {}".format(pos_idx)
                             new_col_d[DEL_END][row_idx] += ", {}".format(pos_idx + length - 1)
                             new_col_d[DEL_BASE][row_idx] += ", {}".format(reference[align_idx:align_idx+length])
-
-                    pos_idx += length
 
                 # Substations
                 elif indel_type == IndelType.SUB:
@@ -827,8 +821,6 @@ class InputProcessing:
                             new_col_d[SUB_POS][row_idx] += "".join([", {}".format(pos_idx+i) for i in range(length)])
                             new_col_d[SUB_BASE][row_idx] += "".join([", {}".format(read[align_idx+i]) for i in range(1, length)])
 
-                    pos_idx += length
-
                 # Insertions
                 elif indel_type == IndelType.INS:
                     if pos_idx >= start_idx:
@@ -842,10 +834,13 @@ class InputProcessing:
                             new_col_d[INS_POS][row_idx] += ", {}".format(pos_idx)
                             new_col_d[INS_BASE][row_idx] += ", {}".format(read[align_idx:align_idx+length])
 
+                # update indexes and store aligned_cut_site
+                if indel_type != IndelType.INS:
+                    # store cut-site position
+                    if cut_site in range(pos_idx, pos_idx + length + 1):
+                        new_col_d[ALIGN_CUT_SITE][row_idx] = align_idx + (cut_site - pos_idx)
+                    pos_idx += length
                 align_idx += length
-
-        # Add the cut-site
-        reads[CUT_SITE] = reads.shape[0] * [cut_site]
 
         # Add the new
         for col in INDEL_COLS:

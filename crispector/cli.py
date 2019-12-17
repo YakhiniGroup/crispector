@@ -42,7 +42,7 @@ import os
               help="Path YAML configuration file. See README on GitHub (####) for more details.")
 @click.option("--override_binomial_p", is_flag=True, default=False, show_default=True,
               help="Override binomial coin estimation with default value from config file. It's advisable to set"
-              "this flag for low number of sites (< ############)") # TODO - fix this option, currently True
+              "this flag for low number of sites (< ############)") # TODO - fix this description
 @click.option("--confidence_interval", type=click.FloatRange(min=0, max=1), default=0.95, show_default=True,
               help="Confidence interval for the evaluted editing activity")
 @click.option("--editing_threshold", type=click.FloatRange(), default=0.1, show_default=True,

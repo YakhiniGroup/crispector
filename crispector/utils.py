@@ -10,7 +10,7 @@ import seaborn as sns
 import numpy as np
 import warnings
 import pandas as pd
-
+from typing import List
 
 class Logger:
     """
@@ -333,3 +333,26 @@ def discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int,
                 file.write("{} - Treatment reads - {:,}. Mock reads - {:,}.\n".format(row[SITE_NAME], row[TX_READ_NUM],
                                                                                       row[MOCK_READ_NUM]))
 
+# Edit read table utils
+def get_read_around_cut_site(read, cut_site, length):
+    return read[cut_site-length:cut_site+length]
+
+def color_edit_background(read_w_ins: List[str], read_w_del: List[str]):
+    colors = []
+    for base_w_ins, base_w_del in zip(read_w_ins, read_w_del):
+        if base_w_ins == "-":
+            colors.append('indianred')
+        elif base_w_del == "-":
+            colors.append('lightgrey')
+        elif base_w_ins != base_w_del:
+            colors.append('royalblue')
+        elif base_w_del == "A":
+            colors.append('#8cb6d6') # light blue
+        elif base_w_del == "T":
+            colors.append('#ffba85') # light orange
+        elif base_w_del == "G":
+            colors.append('#cae6ca') # light green
+        elif base_w_del == "C":
+            colors.append('#c5aeda') # light purple
+
+    return colors

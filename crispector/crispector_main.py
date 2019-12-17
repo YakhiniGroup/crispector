@@ -25,6 +25,7 @@ from typing import Dict
 from modification_types import ModificationTypes
 
 # TODO - coin. when not tx == mock number of reads
+# TODO - split 2 scripts - the new one will support demultiplexed files from the user
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path, amplicons_csv: Path,
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,
         cut_site_position: int, amplicon_min_score: float, min_read_length: int, config: Path,
@@ -142,7 +143,6 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         # Run crispector algorithm on all sites
         for site, row in ref_df.iterrows():
             cut_site = row[CUT_SITE]
-
             # Continue if site was discarded
             if site not in tables_d:
                 # Log the following in the result dict

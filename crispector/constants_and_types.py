@@ -107,7 +107,7 @@ Pr = float
 CigarPath = str
 
 # AlgResult - dictionary with key name_of_property (e.g. 'CI_high') and their value
-AlgResult = Dict[str, float]
+AlgResult = Dict[str, Dict]
 
 # fastp constants
 FASTP_DIR = dict()
@@ -142,7 +142,6 @@ DEL_BASE = "deleted_bases"
 SUB_CNT = "substitution_count"
 SUB_POS = "substitution_position"
 SUB_BASE = "substitution_bases"
-INDEL_COLS = [DEL_LEN, DEL_START, DEL_END, DEL_BASE, INS_LEN, INS_POS, INS_BASE, SUB_CNT, SUB_POS, SUB_BASE]
 REVERSED = "reversed_reads"
 L_SITE = "left_site_name"
 L_REV = "left_site_reversed"
@@ -150,7 +149,8 @@ R_SITE = "right_site_name"
 R_REV = "right_site_reversed"
 R_READ = "right_primer_read"
 L_READ = "left_primer_read"
-
+ALIGN_CUT_SITE = "alignment_cut_site"
+INDEL_COLS = [ALIGN_CUT_SITE, DEL_LEN, DEL_START, DEL_END, DEL_BASE, INS_LEN, INS_POS, INS_BASE, SUB_CNT, SUB_POS, SUB_BASE]
 # TransDf constants
 TRANS_NAME = "translocation_name"
 
@@ -166,6 +166,7 @@ COMPLEMENT = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
 BAD_AMPLICON_THRESHOLD = 500
 CIGAR_LEN_THRESHOLD = 8 # This threshold is applied only if alignment score is low
 MIN_PRIMER_DIMER_THRESH = 10
+READ_LEN_SIDE = 20
 
 # AlgResult columns
 TX_READ_NUM = "Treatment number of reads"
