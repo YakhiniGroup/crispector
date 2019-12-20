@@ -1,8 +1,7 @@
 from constants_and_types import IsEdit, IndelType, AlgResult, Pr, Path, CIGAR, FREQ, IS_EDIT, C_TX, C_MOCK, TX_READ_NUM, \
     MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH, READ_LEN_SIDE, ALIGN_CUT_SITE, ALIGNMENT_W_INS, \
-    ALIGNMENT_W_DEL
+    ALIGNMENT_W_DEL, POS_IDX_E, POS_IDX_S, INDEL_TYPE, ExpType
 from exceptions import ClassificationFailed
-from input_processing import InputProcessing
 from utils import Configurator, Logger, color_edit_background, get_read_around_cut_site
 from modification_tables import ModificationTables
 from modification_types import ModificationTypes
@@ -17,6 +16,7 @@ import seaborn as sns #
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
+
 
 class CrispectorAlgorithm:
     """
@@ -72,7 +72,7 @@ class CrispectorAlgorithm:
             pointers = tables.pointers[table_idx]
             binom_p = self._binom_p_l[table_idx]
             eval_size = (2*self._win_size+1) if indel_type == IndelType.INS else 2*self._win_size
-            self._edit[table_idx] = eval_size*[False]
+            self._edit[table_idx] = np.array(eval_size*[False])
 
             # Run evaluation on every position
             for pos_idx in range(eval_size):
@@ -89,20 +89,36 @@ class CrispectorAlgorithm:
 
         # Site output - Only plot for a valid output
         if self._output is not None:
-            # Create edited read table
-            self._plot_edited_reads_to_table(tables)
+            # Mark all edited modifications as an edit in modification distribution
+            tables.set_tx_dist_is_edit_col(self._edit, self._tables_offset, self._win_size)
 
             # plot modification table
-            tables.plot_tables(self._edit, self._tables_offset, self._output, self._experiment_name)
-            tables.dump_tables(self._edit, self._tables_offset, self._output)
+            # TODO - decide which plots are needed
+            all_table_idx = list(range(self._modifications.size))
+            del_table_idx = [i for i, x in enumerate(self._modifications.types) if x == IndelType.DEL]
+            ins_table_idx = [i for i, x in enumerate(self._modifications.types) if x == IndelType.INS]
+            mix_table_idx = [i for i, x in enumerate(self._modifications.types) if x in [IndelType.MIXED, IndelType.SUB]]
+            tables.plot_tables(self._edit, self._tables_offset, self._output, self._experiment_name, all_table_idx, "all", figsize=(14,20))
+            tables.plot_tables(self._edit, self._tables_offset, self._output, self._experiment_name, del_table_idx, "del")
+            tables.plot_tables(self._edit, self._tables_offset, self._output, self._experiment_name, ins_table_idx, "ins")
+            tables.plot_tables(self._edit, self._tables_offset, self._output, self._experiment_name, mix_table_idx, "mix_and_sub")
+            # TODO - needed? tables.dump_tables(self._edit, self._tables_offset, self._output)
 
             # Dump .csv file with all reads
             self._tx_df.to_csv(os.path.join(self._output, "treatment_aligned_reads.csv.gz"), index=False,
                                compression='gzip')
             self._mock_df.to_csv(os.path.join(self._output, "mock_aligned_reads.csv.gz"), index=False,
                                  compression='gzip')
+
+            # Create edited read table
+            self._plot_edited_reads_to_table(tables)
+
             # Plot mutation distribution
-            self._plot_modification_distribution(tables)
+            self._plot_distribution_of_edit_events(tables)
+            self._plot_distribution_of_all_modifications(tables)
+            self._distribution_of_edit_event_sizes(tables)
+            self._distribution_of_edit_event_sizes_3_plots(tables) # TODO - which one is better
+
             # Plot editing activity
             self._plot_editing_activity(result_dict)
 
@@ -187,27 +203,81 @@ class CrispectorAlgorithm:
         half_len_CI = confidence_inv * np.sqrt((editing_activity*(1-editing_activity))/self._n_reads_tx)
         return max(0, editing_activity - half_len_CI), editing_activity + half_len_CI
 
-    def _plot_modification_distribution(self, tables):
+
+    def _plot_distribution_of_all_modifications(self, tables: ModificationTables):
+        tx_dist_d = dict()
+        mock_dist_d = dict()
+        amplicon_length = len(tables.amplicon)
+        for indel_type in [IndelType.DEL, IndelType.SUB, IndelType.INS]:
+            tx_dist_d[indel_type] = np.zeros(amplicon_length + 1, dtype=np.int)
+            mock_dist_d[indel_type] = np.zeros(amplicon_length + 1, dtype=np.int)
+
+        # Tx - Aggregate modifications
+        for row_idx, row in tables.tx_dist.iterrows():
+            mod_range = range(row[POS_IDX_S], row[POS_IDX_E])
+            tx_dist_d[row[INDEL_TYPE]][mod_range] += row[FREQ]
+
+        # Mock - Aggregate modifications
+        for row_idx, row in tables.mock_dist.iterrows():
+            mod_range = range(row[POS_IDX_S], row[POS_IDX_E])
+            mock_dist_d[row[INDEL_TYPE]][mod_range] += row[FREQ]
+
+        # Find plots heights
+        tx_max_indels = np.array([tx_dist_d[IndelType.INS], tx_dist_d[IndelType.DEL], tx_dist_d[IndelType.SUB]]).max()
+        mock_max_indels = np.array([mock_dist_d[IndelType.INS], mock_dist_d[IndelType.DEL], mock_dist_d[IndelType.SUB]]).max()
+        max_indels = max(tx_max_indels, mock_max_indels)
+
+        # Set font
+        mpl.rcParams.update(mpl.rcParamsDefault)
+        mpl.rcParams['font.size'] = 18
+        mpl.rcParams['axes.labelsize'] = 22
+        mpl.rcParams['axes.titlesize'] = 24
+
+        # Create axes
+        fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(16, 9), sharex=True)
+        plt.subplots_adjust(wspace=0, hspace=0)
+
+        # Plot distributions
+        for exp_type in ExpType:
+            dist_d = tx_dist_d if exp_type == ExpType.TX else mock_dist_d
+            ax = axes[0] if exp_type == ExpType.TX else axes[1]
+            positions = list(range(amplicon_length + 1))
+            ax.axvline(x=self._cut_site, linestyle='-', color="red", label='Expected cut-site', linewidth=2)
+            ax.axvline(x=self._cut_site - self._win_size, linestyle='--', color='k',
+                       label='Quantification window', linewidth=1)
+            ax.axvline(x=self._cut_site + self._win_size, linestyle='--', color='k', linewidth=1)
+            ax.plot(positions, dist_d[IndelType.INS], color='#32b165', label="Insertions", linewidth=3, alpha=0.9)
+            ax.plot(positions, dist_d[IndelType.SUB], color='b', label="Substitutions", linewidth=3, alpha=0.9)
+            ax.plot(positions, dist_d[IndelType.DEL], color='darkviolet', label="Deletions", linewidth=3, alpha=0.9)
+            ax.set_ylim(bottom=0, top=max(int(1.1 * max_indels), 10))
+            ax.set_xlim(left=0, right=amplicon_length)
+            ax.set_ylabel("{}\nIndel count".format(exp_type.name()))
+
+        # Create legend, title and x-label
+        axes[0].legend()
+        axes[0].set_title("Distribution Of All Modifications\n{}".format(self._experiment_name),
+                     weight='bold', family='serif')
+
+        # Remove Tx first y axe label (overlap with mock
+        plt.setp(axes[0].get_yticklabels()[0], visible=False)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            fig.savefig(os.path.join(self._output, 'distribution_of_all_modifications.png'),
+                        bbox_inches='tight', dpi=100)
+            plt.close(fig)
+
+    def _plot_distribution_of_edit_events(self, tables: ModificationTables):
         dist_d = dict()
         amplicon_length = len(tables.amplicon)
         for indel_type in [IndelType.DEL, IndelType.SUB, IndelType.INS]:
             dist_d[indel_type] = np.zeros(amplicon_length + 1, dtype=np.int)
 
         # Aggregate modifications
-        edit_reads = self._tx_df.loc[self._tx_df[IS_EDIT]]
-        for row_idx, row in edit_reads.iterrows():
-            pos_idx = 0  # position index
-            for length, indel_type in InputProcessing.parse_cigar(row[CIGAR]):
-                # For a match - continue
-                if indel_type == IndelType.MATCH:
-                    pos_idx += length
-                # Mismatch or deletions
-                elif indel_type in [IndelType.DEL, IndelType.SUB, IndelType.MIXED]:
-                    dist_d[indel_type][pos_idx:pos_idx + length] += row[FREQ]
-                    pos_idx += length
-                # Insertions
-                elif indel_type == IndelType.INS:
-                    dist_d[indel_type][pos_idx] += row[FREQ]
+        edit_mod = tables.tx_dist.loc[tables.tx_dist[IS_EDIT]]
+        for row_idx, row in edit_mod.iterrows():
+            mod_range = range(row[POS_IDX_S], row[POS_IDX_E])
+            dist_d[row[INDEL_TYPE]][mod_range] += row[FREQ]
 
         # Set font
         mpl.rcParams.update(mpl.rcParamsDefault)
@@ -224,13 +294,13 @@ class CrispectorAlgorithm:
         ax.axvline(x=self._cut_site - self._win_size, linestyle='--', color='k',
                    label='Quantification window', linewidth=1)
         ax.axvline(x=self._cut_site + self._win_size, linestyle='--', color='k', linewidth=1)
-        ax.plot(positions, dist_d[IndelType.INS], color='#32b165', label="Insertions", linewidth=3, alpha=0.9)
-        ax.plot(positions, dist_d[IndelType.SUB], color='b', label="Substitutions", linewidth=3, alpha=0.9)
-        ax.plot(positions, dist_d[IndelType.DEL], color='darkviolet', label="Deletions", linewidth=3, alpha=0.9)
+
+        for indel_type in [IndelType.INS, IndelType.SUB, IndelType.DEL]:
+            ax.plot(positions, dist_d[indel_type], color=indel_type.color, label=indel_type.name, linewidth=3, alpha=0.9)
 
         # Create legend, axes limit and labels
         ax.legend()
-        ax.set_title("Edited Reads Modification Distribution\n{}".format(self._experiment_name),
+        ax.set_title("Distribution Of Edited Events\n{}".format(self._experiment_name),
                      weight='bold', family='serif')
         max_indels = np.array([dist_d[IndelType.INS], dist_d[IndelType.DEL], dist_d[IndelType.SUB]]).max()
         ax.set_ylim(bottom=0, top=max(int(1.1 * max_indels), 10))
@@ -240,12 +310,11 @@ class CrispectorAlgorithm:
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
-            fig.savefig(os.path.join(self._output, 'edited_reads_modification_distribution.png'),
-                        bbox_inches='tight', dpi=200)
+            fig.savefig(os.path.join(self._output, 'distribution_of_edit_events.png'),
+                        bbox_inches='tight', dpi=100)
             plt.close(fig)
-        # TODO - split to plots, with all modification include mock. and one only for tx.
 
-    def _plot_edited_reads_to_table(self, tables):
+    def _plot_edited_reads_to_table(self, tables: ModificationTables):
         """
         Create an HTML page with all the edited reads (aligned to reference)
         :param tables:
@@ -447,4 +516,120 @@ class CrispectorAlgorithm:
                         bbox_inches='tight', dpi=200)
             plt.close(fig)
 
+    def _distribution_of_edit_event_sizes(self, tables: ModificationTables):
+        # Set font
+        mpl.rcParams.update(mpl.rcParamsDefault)
+        mpl.rcParams['font.size'] = 20
+        mpl.rcParams['xtick.labelsize'] = 20
+        mpl.rcParams['ytick.labelsize'] = 20
+        mpl.rcParams['axes.labelsize'] = 24
+        mpl.rcParams['axes.titlesize'] = 26
+        mpl.rcParams['legend.fontsize'] = 24
+        bar_width = 1
 
+        amplicon_length = len(tables.amplicon)
+
+        # Create bin borders & names:
+        bins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, 30, 40, 50, 100, amplicon_length]
+        bins_names = []
+        for l, r in zip(bins[:-1], bins[1:]):
+            if r - l == 1:
+                bins_names.append(str(r))
+            else:
+                bins_names.append("{}-{}".format(l + 1, r))
+        bin_num = len(bins) - 1
+
+        # Get indel size values
+        values = {}
+        edited_mod = tables.tx_dist.loc[tables.tx_dist[IS_EDIT]]
+        for indel in [IndelType.DEL, IndelType.INS, IndelType.SUB]:
+            indel_dist = edited_mod.loc[edited_mod['IndelType'] == indel]
+            df_bins = pd.cut(indel_dist['indel_length'], bins)
+            values[indel] = indel_dist.groupby(df_bins)[FREQ].agg(['sum'])['sum'].values
+
+        # Create the X position of bars
+        r = {}
+        for idx, indel in enumerate([IndelType.DEL, IndelType.INS, IndelType.SUB]):
+            r[indel] = list(range(0 + idx, 4 * bin_num + idx, 4))
+
+        # Create figure
+        fig = plt.figure(figsize=(16, 9))
+        ax = fig.add_axes([0, 0, 1, 1])
+
+        # Create bar plot
+        for indel in [IndelType.DEL, IndelType.INS, IndelType.SUB]:
+            ax.bar(r[indel], values[indel], label=indel.name, color=indel.color, edgecolor='black', alpha=0.9, width=bar_width)
+
+        # Labels, ticks and title
+        plt.xlabel('Edit event length')
+        plt.ylabel('Number of modifications')
+        plt.legend(loc='upper right')
+        ax.set_xticks(r[IndelType.INS])
+        ax.set_xticklabels(bins_names, rotation='vertical')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.set_title("Edit Event Size Distribution\n{}".format(self._experiment_name), weight='bold', family='serif')
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            fig.savefig(os.path.join(self._output, 'distribution_of_edit_events_size.png'),
+                    bbox_inches='tight', dpi=100)
+            plt.close(fig)
+
+    def _distribution_of_edit_event_sizes_3_plots(self, tables: ModificationTables):
+        # Set font
+        mpl.rcParams.update(mpl.rcParamsDefault)
+        mpl.rcParams['font.size'] = 16
+        mpl.rcParams['xtick.labelsize'] = 16
+        mpl.rcParams['ytick.labelsize'] = 16
+        mpl.rcParams['axes.labelsize'] = 18
+        mpl.rcParams['axes.titlesize'] = 26
+        mpl.rcParams['legend.fontsize'] = 18
+        bar_width = 1
+
+        amplicon_length = len(tables.amplicon)
+
+        # Create bin borders & names:
+        bins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, 30, 40, 50, 100, amplicon_length]
+        bins_names = []
+        for l, r in zip(bins[:-1], bins[1:]):
+            if r - l == 1:
+                bins_names.append(str(r))
+            else:
+                bins_names.append("{}-{}".format(l + 1, r))
+        bin_num = len(bins) - 1
+
+        # Get indel size values
+        values = {}
+        edited_mod = tables.tx_dist.loc[tables.tx_dist[IS_EDIT]]
+        for indel in [IndelType.DEL, IndelType.INS, IndelType.SUB]:
+            indel_dist = edited_mod.loc[edited_mod['IndelType'] == indel]
+            df_bins = pd.cut(indel_dist['indel_length'], bins)
+            values[indel] = indel_dist.groupby(df_bins)[FREQ].agg(['sum'])['sum'].values
+
+        # Create the X position of bars
+        r = list(range(0 , bin_num))
+
+        # Create figure
+        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(16, 6), constrained_layout=True)
+
+        # Create bar plot
+        for idx, indel in enumerate([IndelType.DEL, IndelType.INS, IndelType.SUB]):
+            axes[idx].bar(r, values[indel], label=indel.name, color=indel.color, edgecolor='black', alpha=0.9, width=bar_width)
+            axes[idx].set_xticks(r)
+            axes[idx].set_xticklabels(bins_names, rotation='vertical')
+            axes[idx].spines['top'].set_visible(False)
+            axes[idx].spines['right'].set_visible(False)
+
+            # Labels, ticks and title
+            axes[idx].set_xlabel('Edit event length')
+            axes[idx].set_ylabel('Number of modifications')
+            axes[idx].legend(loc='upper right')
+
+        fig.suptitle("Edit Event Size Distribution\n{}".format(self._experiment_name), weight='bold', family='serif')
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            fig.savefig(os.path.join(self._output, 'distribution_of_edit_events_size_3_plots.png'),
+                    bbox_inches='tight', dpi=100)
+            plt.close(fig)

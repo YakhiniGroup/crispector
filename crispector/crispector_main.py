@@ -26,6 +26,7 @@ from modification_types import ModificationTypes
 
 # TODO - coin. when not tx == mock number of reads
 # TODO - split 2 scripts - the new one will support demultiplexed files from the user
+# TODO - Translocation - use circos plot from plotly
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path, amplicons_csv: Path,
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,
         cut_site_position: int, amplicon_min_score: float, min_read_length: int, config: Path,

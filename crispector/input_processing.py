@@ -1146,28 +1146,32 @@ class InputProcessing:
             yield length, indel
 
     @staticmethod
-    def parse_cigar_with_adjacent_indels(cigar: str) -> List[Tuple[int, int, IndelType]]:
+    def parse_cigar_with_mixed_indels(cigar: str) -> List[Tuple[int, int, IndelType, List[Tuple[int, IndelType]]]]:
         """
-        Function returns a list of Tuple[indel length, IndelType] where adjacent indels are aggregated
-        into indel type = Indel.
+        Function returns a list of Tuple[indel length, indel length without insertion, IndelType, Mixed_list] where
+        adjacent indels are aggregated into indel_type = Mixed.
         :param cigar:
-        :return: list of Tuple[indel length, indel length without insertion, IndelType]
+        :return: list of Tuple[indel length, indel length without insertion, IndelType, Mixed list]
         """
         indel_list = []
         prev_indel = IndelType.MATCH
         prev_length = 0
         prev_length_wo_ins = 0  # used to understand with positions are relevant for this modification
+        mixed_list = []  # List of all indels comprising current mixed
+        mixed_count = 0  # Current mixed indel count of comprising modifications
         for length, indel in re.findall(r'(\d+)([{}{}{}{}])'.format(CIGAR_D, CIGAR_I, CIGAR_S, CIGAR_M), cigar):
             indel = IndelType.from_cigar(indel)
             length = int(length)
             length_wo_ins = int(length) if indel != IndelType.INS else 0
+            mixed_list.append((length, indel))
             if (indel != IndelType.MATCH) and (prev_indel != IndelType.MATCH):
-                indel = IndelType.MIXED
+                mixed_count += 1
                 length += prev_length
                 length_wo_ins += prev_length_wo_ins
-                indel_list[-1] = (length, length_wo_ins, indel)
+                indel_list[-1] = (length, length_wo_ins, IndelType.MIXED, mixed_list[-(mixed_count + 1):])
             else:
-                indel_list.append((length, length_wo_ins, indel))
+                indel_list.append((length, length_wo_ins, indel, []))
+                mixed_count = 0
 
             # update prev
             prev_indel = indel

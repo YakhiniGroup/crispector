@@ -63,6 +63,17 @@ class IndelType(Enum):
         else:
             return "Match"
 
+    @property
+    def color(self):
+        if self._name_ == "DEL":
+            return 'darkviolet'
+        elif self._name_ == "INS":
+            return '#32b165'
+        elif self._name_ == "SUB":
+            return 'b'
+        else:
+            return "black"
+
     @classmethod
     def from_cigar(cls, indel_type: str):
         if indel_type == CIGAR_I:
@@ -93,13 +104,17 @@ ModTable = np.ndarray
 # A dict of keys modification table index and value IndelTable
 ModTables = Dict[int, ModTable]
 
+# pandas data frame with all modification. columns - INDEL_TYPE, INDEL_LEN, MOD_TABLE_IDX, FREQ, IS_EDIT, POS_IDX_R
+# R_SITE, L_SITE
+ModDist = pandas.DataFrame
+
 # Dictionary of pointers. The key is position index and the value is row_idx for  ReadsDf
 ModTableP = DefaultDict[int, List]
 # A dict of keys modification table index and value ModTableP
 ModTablesP = Dict[int, ModTableP]
 
 # A dict of keys modification table index and value List of booleans
-IsEdit = Dict[int, List[bool]]
+IsEdit = Dict[int, np.ndarray]
 
 DNASeq = str
 Path = str
@@ -154,6 +169,13 @@ INDEL_COLS = [ALIGN_CUT_SITE, DEL_LEN, DEL_START, DEL_END, DEL_BASE, INS_LEN, IN
 # TransDf constants
 TRANS_NAME = "translocation_name"
 
+# ModDist constants
+INDEL_TYPE = 'IndelType'
+INDEL_LEN = 'indel_length'
+MOD_TABLE_IDX = 'modification_table_index'
+POS_IDX_S = 'position_index_start'
+POS_IDX_E = 'position_index_end'
+
 # Binomial probability estimation
 BINOM_AVERAGE_P = 0.9
 BINOM_PERCENTILE = 0.95
@@ -183,3 +205,4 @@ CIGAR_D, CIGAR_I, CIGAR_S, CIGAR_M = "D", "I", "X", "="
 # AlignedIndel - A Tuple of indel_type, length, and position in alignment coordinates.
 # Only used by input processing module.
 AlignedIndel = Tuple[IndelType, int, int]
+
