@@ -1,12 +1,13 @@
 from constants_and_types import SITE_NAME, IndelType, AlgResult, Path, FREQ, IS_EDIT, TX_READ_NUM, \
     MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH, READ_LEN_SIDE, ALIGN_CUT_SITE, ALIGNMENT_W_INS, \
-    ALIGNMENT_W_DEL, POS_IDX_E, POS_IDX_S, INDEL_TYPE, ExpType, ON_TARGET, IsEdit, ModTables, C_TX, C_MOCK, ReadsDf, \
-    SUMMARY_RESULTS_TITLES, AmpliconDf, OFF_TARGET_COLOR, ON_TARGET_COLOR
+    ALIGNMENT_W_DEL, POS_IDX_E, POS_IDX_S, INDEL_TYPE, ExpType, ON_TARGET, IsEdit, C_TX, C_MOCK, \
+    SUMMARY_RESULTS_TITLES, AmpliconDf, OFF_TARGET_COLOR, ON_TARGET_COLOR, OUTPUT_DIR, DISCARDED_SITES, \
+    EDITING_ACTIVITY, PLOT_PATH, TITLE, W, H, PDF_PATH, PAGE_TITLE, READING_STATS, MAPPING_STATS, MAPPING_PER_SITE, \
+    FASTP_DIR, FASTP_TX_PATH, FASTP_MOCK_PATH, RESULT_TABLE, TAB_DATA, HTML_SITE_NAMES, LOG_PATH
 import math
 import os
 import warnings
 from typing import List, Tuple, Dict
-
 from input_processing import InputProcessing
 from modification_types import ModificationTypes
 from core_algorithm import CoreAlgorithm
@@ -18,10 +19,12 @@ import seaborn as sns #
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
+from utils import Logger
 
 
 def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationTypes, mod_table: ModificationTables,
                        site_result: Dict, site_name: str, experiment_name: str, output: Path):
+    base_path = os.path.join(OUTPUT_DIR, site_name)
 
     title_name = "{} - {}".format(experiment_name, site_name)
 
@@ -65,23 +68,47 @@ def create_experiment_output(ref_df: AmpliconDf, result_d: AlgResult, input_proc
                              confidence_interval: float, editing_threshold: float, experiment_name: str,
                              output: Path):
 
+    # TODO - Don't forget to add PDF's and remove titles.
+    html_d = dict() # html parameters dict
+    html_d[PAGE_TITLE] = experiment_name
+    html_d[READING_STATS] = dict()
+
     # Dump summary results
     summary_result_df = pd.DataFrame.from_dict(result_d, orient='index')
     summary_result_df[SITE_NAME] = summary_result_df.index
     summary_result_df = summary_result_df.reindex(ref_df.index, columns=SUMMARY_RESULTS_TITLES)
     summary_result_to_excel(summary_result_df, confidence_interval, output)
 
-    # Create a text file with all discarded sites
-    discarded_sites_text(summary_result_df, min_num_of_reads, output)
-
     # Create bar plot for editing activity
-    plot_editing_activity(summary_result_df, confidence_interval, editing_threshold, output, experiment_name)
+    plot_editing_activity(summary_result_df, confidence_interval, editing_threshold, html_d, output)
 
     # Dump reads statistics
     tx_input_n, tx_merged_n, tx_aligned_n = input_processing.read_numbers(ExpType.TX)
     mock_input_n, mock_merged_n, mock_aligned_n = input_processing.read_numbers(ExpType.MOCK)
-    create_reads_statistics_report(summary_result_df, min_num_of_reads, tx_input_n, tx_merged_n, tx_aligned_n,
-                                   mock_input_n, mock_merged_n, mock_aligned_n, output, experiment_name)
+    create_reads_statistics_report(summary_result_df, tx_input_n, tx_merged_n, tx_aligned_n,
+                                   mock_input_n, mock_merged_n, mock_aligned_n, html_d, output)
+
+    # Create a text file with all discarded sites
+    discarded_sites_text(summary_result_df, min_num_of_reads, html_d, output)
+
+    # Add summary results to page
+    html_d[RESULT_TABLE] = dict()
+    html_d[RESULT_TABLE][TITLE] = "Results Table"
+    html_d[RESULT_TABLE][TAB_DATA] = dict()
+    for col in SUMMARY_RESULTS_TITLES:
+        html_d[RESULT_TABLE][TAB_DATA][col] = list(summary_result_df[col].values)
+
+    html_d[HTML_SITE_NAMES] = list(summary_result_df.loc[summary_result_df[EDIT_PERCENT].isna(), SITE_NAME].values)
+
+    # Add fastp links
+    if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.TX])):
+        html_d[READING_STATS][FASTP_TX_PATH] = os.path.join(OUTPUT_DIR, "{}/fastp.html".format(FASTP_DIR[ExpType.TX]))
+    if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.MOCK])):
+        html_d[READING_STATS][FASTP_MOCK_PATH] = os.path.join(OUTPUT_DIR, "{}/fastp.html".format(FASTP_DIR[ExpType.MOCK]))
+
+    html_d[LOG_PATH] = os.path.join(OUTPUT_DIR, Logger.logger_name)
+
+    return html_d
 
 #####----------------------#####
 #####----modifications-----#####
@@ -693,8 +720,9 @@ def plot_distribution_of_edit_event_sizes_3_plots(tables: ModificationTables, ex
 #####----------------------#####
 #####------Experiment------#####
 #####----------------------#####
-def plot_editing_activity(result_df: AlgResult, confidence_interval: float, editing_threshold: float, output: Path,
-                          experiment_name: str):
+def plot_editing_activity(result_df: AlgResult, confidence_interval: float, editing_threshold: float, html_d: Dict,
+                          output: Path):
+
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
     mpl.rcParams['font.size'] = 20
@@ -704,10 +732,12 @@ def plot_editing_activity(result_df: AlgResult, confidence_interval: float, edit
     mpl.rcParams['axes.titlesize'] = 26
     mpl.rcParams['legend.fontsize'] = 24
     editing_bar_text_size = 18
+    dpi = 300
+    title = ""
 
     # Filter all low editing activity sites
-    result_df = result_df.dropna()
-    edit_df = result_df.loc[result_df[CI_HIGH] >= editing_threshold]
+    edit_df = result_df.dropna()
+    edit_df = edit_df.loc[edit_df[CI_HIGH] >= editing_threshold]
 
     # Sort experiments
     edit_df = edit_df.sort_values(by=EDIT_PERCENT, ascending=False)
@@ -717,8 +747,9 @@ def plot_editing_activity(result_df: AlgResult, confidence_interval: float, edit
     bar_num = edit_df.shape[0]
     plot_num = math.ceil(bar_num / max_bars)
     # set dynamic bar_width - according to the number of bars
+    fig_w, fig_h = 20, plot_num * 6
     bar_width = 0.9 if plot_num > 1 else 0.9 * (0.5 + 0.5 * bar_num / max_bars)
-    fig, axes = plt.subplots(nrows=plot_num, ncols=1, figsize=(20, plot_num * 6), constrained_layout=True)
+    fig, axes = plt.subplots(nrows=plot_num, ncols=1, figsize=(fig_w, fig_h), constrained_layout=True)
 
     # Create bars and bar names
     editing = edit_df[EDIT_PERCENT].values
@@ -799,22 +830,31 @@ def plot_editing_activity(result_df: AlgResult, confidence_interval: float, edit
                            size=editing_bar_text_size)
 
         if idx == 0:
-            axes[idx].set_title("Editing Activity with {} % CI above {}%\n{}".format(100 * confidence_interval,
-                                                                                     editing_threshold,
-                                                                                     experiment_name), weight='bold',
-                                family='serif')
+            title = "Editing Activity with {} % CI above {}%".format(100 * confidence_interval, editing_threshold)
+            # axes[idx].set_title(title, weight='bold', family='serif')
+
             # Add legend
             axes[idx].bar([0], [y_lim], color=ON_TARGET_COLOR, label="On-Target")
             axes[idx].bar([0], [y_lim], color=OFF_TARGET_COLOR, label="Off-Target")
             axes[idx].legend(loc='upper right')
 
-    fig.savefig(os.path.join(output, 'editing_activity.png'), box_inches='tight', dpi=300)
+    fig.savefig(os.path.join(output, 'editing_activity.png'), box_inches='tight', dpi=dpi)
+    fig.savefig(os.path.join(output, 'editing_activity.pdf'), pad_inches = 1, box_inches='tight')
+
+    html_d[EDITING_ACTIVITY] = dict()
+    html_d[EDITING_ACTIVITY][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.png')
+    html_d[EDITING_ACTIVITY][PDF_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.pdf')
+    html_d[EDITING_ACTIVITY][TITLE] = title
+    html_d[EDITING_ACTIVITY][W] = dpi*fig_w
+    html_d[EDITING_ACTIVITY][H] = dpi*fig_h
+
     plt.close(fig)
 
 
-def create_reads_statistics_report(result_df: AlgResult, reads_min_n: int, tx_in: int, tx_merged: int, tx_aligned: int,
-                                   mock_in: int, mock_merged: int, mock_aligned: int, output: Path,
-                                   experiment_name: str):
+def create_reads_statistics_report(result_df: AlgResult, tx_in: int, tx_merged: int, tx_aligned: int,
+                                   mock_in: int, mock_merged: int, mock_aligned: int, html_d: Dict, output: Path):
+    html_d[READING_STATS] = dict()
+    html_d[READING_STATS][TITLE] = "Reading Statistics"
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
     sns.set(style="whitegrid")
@@ -823,7 +863,8 @@ def create_reads_statistics_report(result_df: AlgResult, reads_min_n: int, tx_in
     mpl.rcParams['xtick.labelsize'] = 18
     mpl.rcParams['axes.labelsize'] = 20
     mpl.rcParams['axes.titlesize'] = 22
-
+    dpi = 200
+    fig_w, fig_h = 14, 8
     bar_width = 0.4
     mock_color = '#3690c0'  # blue
     mock_color_lighter = '#72b1d2'
@@ -832,72 +873,91 @@ def create_reads_statistics_report(result_df: AlgResult, reads_min_n: int, tx_in
     tx_color_lighter = '#f59659'  # orange
     tx_color_lightest = '#f7b488'  # orange
 
-    # Create mapping statistics plot
-    # Create axes
-    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(14, 16), constrained_layout=True)
-
     # set input == merged if input information isn't available
     if tx_in == -1:
         tx_in = tx_merged
     if mock_in == -1:
         mock_in = mock_merged
 
+
+    # Create mapping statistics plot
+    fig = plt.figure(figsize=(fig_w, fig_h))
+    ax = fig.add_axes([0, 0, 1, 1])
+
     bar_ind = np.arange(6)
     bars = np.array([tx_in, tx_merged, tx_aligned, mock_in, mock_merged, mock_aligned])
     colors = [tx_color, tx_color_lighter, tx_color_lightest, mock_color, mock_color_lighter, mock_color_lightest]
 
     # Create bar plot
-    axes[0].bar(bar_ind, bars, width=bar_width, color=colors)
+    ax.bar(bar_ind, bars, width=bar_width, color=colors)
 
     # Add numbers above bars
     text_height = 1.01 * bars
-    axes[0].text(x=bar_ind[0], y=text_height[0],
+    ax.text(x=bar_ind[0], y=text_height[0],
                  s="{:,}".format(tx_in), ha='center', va='bottom')
-    axes[0].text(x=bar_ind[1], y=text_height[1],
+    ax.text(x=bar_ind[1], y=text_height[1],
                  s="{:,}\n({:.2f}%)".format(tx_merged, 100 * tx_merged / tx_in), ha='center', va='bottom')
-    axes[0].text(x=bar_ind[2], y=text_height[2],
+    ax.text(x=bar_ind[2], y=text_height[2],
                  s="{:,}\n({:.2f}%)".format(tx_aligned, 100 * tx_aligned / tx_in), ha='center', va='bottom')
-    axes[0].text(x=bar_ind[3], y=text_height[3],
+    ax.text(x=bar_ind[3], y=text_height[3],
                  s="{:,}".format(mock_in), ha='center', va='bottom')
-    axes[0].text(x=bar_ind[4], y=text_height[4],
+    ax.text(x=bar_ind[4], y=text_height[4],
                  s="{:,}\n({:.2f}%)".format(mock_merged, 100 * mock_merged / mock_in), ha='center', va='bottom')
-    axes[0].text(x=bar_ind[5], y=text_height[5],
+    ax.text(x=bar_ind[5], y=text_height[5],
                  s="{:,}\n({:.2f}%)".format(mock_aligned, 100 * mock_aligned / mock_in), ha='center', va='bottom')
 
     # Set x, y lim & ticks and title
-    axes[0].set_xlim(min(bar_ind) - 0.5, max(bar_ind) + 0.5)
-    axes[0].set_xticks(bar_ind)
-    axes[0].set_xticklabels(['Treatment\nInput', 'Treatment\nMerged', 'Treatment\nAligned',
+    ax.set_xlim(min(bar_ind) - 0.5, max(bar_ind) + 0.5)
+    ax.set_xticks(bar_ind)
+    ax.set_xticklabels(['Treatment\nInput', 'Treatment\nMerged', 'Treatment\nAligned',
                              'Mock\nInput', 'Mock\nMerged', 'Mock\nAligned'])
-    axes[0].set_ylim(0, 1.2 * np.max(bars))
-    axes[0].set_ylabel("Number Of Reads")
-    axes[0].set_title("{}\nMapping Statistics".format(experiment_name), weight='bold', family='serif')
+    ax.set_ylim(0, 1.2 * np.max(bars))
+    ax.set_ylabel("Number Of Reads")
+    title = "Mapping Statistics"
+    # ax.set_title(title, weight='bold', family='serif')
+
+    html_d[READING_STATS][MAPPING_STATS] = dict()
+    html_d[READING_STATS][MAPPING_STATS][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'mapping_statistics.png')
+    html_d[READING_STATS][MAPPING_STATS][PDF_PATH] = os.path.join(OUTPUT_DIR, 'mapping_statistics.pdf')
+    html_d[READING_STATS][MAPPING_STATS][TITLE] = title
+    html_d[READING_STATS][MAPPING_STATS][W] = dpi*fig_w
+    html_d[READING_STATS][MAPPING_STATS][H] = dpi*fig_h
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        fig.savefig(os.path.join(output, 'mapping_statistics.png'), bbox_inches='tight', dpi=dpi)
+        fig.savefig(os.path.join(output, 'mapping_statistics.pdf'), bbox_inches='tight', pad_inches=1)
+        plt.close(fig)
 
     # Create reads box_plot
+    fig = plt.figure(figsize=(fig_w, fig_h))
+    ax = fig.add_axes([0, 0, 1, 1])
+
     bplot = sns.boxplot(x=["Treatment", "Mock"],
                         y=[result_df[TX_READ_NUM], result_df[MOCK_READ_NUM]],
-                        linewidth=2.5, ax=axes[1])
+                        linewidth=2.5, ax=ax)
     txbox = bplot.artists[0]
     txbox.set_facecolor(tx_color)
     mockbox = bplot.artists[1]
     mockbox.set_facecolor(mock_color)
 
     # Set x, y lim & ticks and title
-    axes[1].set_xlim(-1, 2)
-    axes[1].set_ylabel("Number Of Reads")
-    axes[1].set_title("Number of Aligned Reads Per Site", weight='bold', family='serif')
+    ax.set_xlim(-1, 2)
+    ax.set_ylabel("Number Of Reads")
+    title = "Number Of Aligned Reads Per Site"
+    # ax.set_title(,title weight='bold', family='serif')
 
-    # Print information on discarded reads
-    discarded_df = result_df.loc[result_df[EDIT_PERCENT].isna()]
-    if discarded_df.shape[0] > 0:
-        text = "{} sites were discarded due to low number of reads (below {:,}).\n".format(discarded_df.shape[0],
-                                                                                           reads_min_n)
-        text += "See \"result_summary.csv\" for more details."
-        axes[1].text(x=0.1, y=0, s=text, ha='left', va='bottom', transform=fig.transFigure, family='serif')
+    html_d[READING_STATS][MAPPING_PER_SITE] = dict()
+    html_d[READING_STATS][MAPPING_PER_SITE][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'number_of_aligned_reads_per_site.png')
+    html_d[READING_STATS][MAPPING_PER_SITE][PDF_PATH] = os.path.join(OUTPUT_DIR, 'number_of_aligned_reads_per_site.pdf')
+    html_d[READING_STATS][MAPPING_PER_SITE][TITLE] = title
+    html_d[READING_STATS][MAPPING_PER_SITE][W] = dpi*fig_w
+    html_d[READING_STATS][MAPPING_PER_SITE][H] = dpi*fig_h
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        fig.savefig(os.path.join(output, 'reads_statistics.png'), bbox_inches='tight', dpi=200)
+        fig.savefig(os.path.join(output, 'number_of_aligned_reads_per_site.png'), bbox_inches='tight', dpi=dpi)
+        fig.savefig(os.path.join(output, 'number_of_aligned_reads_per_site.pdf'), bbox_inches='tight', pad_inches=1)
         plt.close(fig)
 
 
@@ -916,21 +976,26 @@ def summary_result_to_excel(summary_result_df: pd.DataFrame, confidence_interval
                        CI_HIGH: 'CI high ({}%)'.format(100*confidence_interval)}, inplace=True)
 
     df.to_excel(os.path.join(output, "results_summary.xlsx"), index=False, float_format='%.4f')
-    # TODO - add auto alignment
 
 
-def discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int, output: str):
+def discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int, html_d: Dict, output: str):
     # Print information on discarded reads
     discarded_df = summary_result_df.loc[summary_result_df[EDIT_PERCENT].isna()]
 
     with open(os.path.join(output, "discarded_sites.txt"), 'w') as file:
 
         if discarded_df.shape[0] > 0:
-            file.write("{} sites were discarded due to low number of reads (below {:,}):\n".format(
-                discarded_df.shape[0], min_num_of_reads))
+            opening_line = "{} sites were discarded due to low number of reads (below {:,}):\n".format(
+                discarded_df.shape[0], min_num_of_reads)
+            file.write(opening_line)
+            site_lines = []
             for row_idx, row in discarded_df.iterrows():
-                file.write("{} - Treatment reads - {:,}. Mock reads - {:,}.\n".format(row[SITE_NAME], row[TX_READ_NUM],
-                                                                                      row[MOCK_READ_NUM]))
+                site_lines.append("{} - Treatment reads - {:,}. Mock reads - {:,}.\n".format(row[SITE_NAME],
+                                                                                             row[TX_READ_NUM],
+                                                                                             row[MOCK_READ_NUM]))
+                file.write(site_lines[-1])
+
+            html_d[READING_STATS][DISCARDED_SITES] = opening_line + "".join(site_lines)
 
 # Edit read table utils
 def get_read_around_cut_site(read, cut_site, length):

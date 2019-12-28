@@ -14,6 +14,7 @@ class Logger:
     _OUTPUT_DIR = None
     _logger_level = logging.DEBUG
     _logger_path = None
+    logger_name = 'crispector_main.log'
 
     @classmethod
     def get_logger(cls):
@@ -26,7 +27,7 @@ class Logger:
 
             # Create handlers
             c_handler = logging.StreamHandler()
-            cls._logger_path = os.path.join(cls._OUTPUT_DIR, 'crispector_main.log')
+            cls._logger_path = os.path.join(cls._OUTPUT_DIR, cls.logger_name)
             if os.path.exists(cls._logger_path):
                 os.remove(cls._logger_path)
             f_handler = logging.FileHandler(cls._logger_path)

@@ -189,6 +189,7 @@ BAD_AMPLICON_THRESHOLD = 500
 CIGAR_LEN_THRESHOLD = 8 # This threshold is applied only if alignment score is low
 MIN_PRIMER_DIMER_THRESH = 10
 READ_LEN_SIDE = 20
+OUTPUT_DIR = "crispector_output"
 
 # AlgResult columns
 TX_READ_NUM = "Treatment number of reads"
@@ -209,3 +210,22 @@ AlignedIndel = Tuple[IndelType, int, int]
 # plots colors
 OFF_TARGET_COLOR = "#db5856"
 ON_TARGET_COLOR = "#39ad48"
+
+# html constants
+DISCARDED_SITES = "discarded_sites"
+EDITING_ACTIVITY = "editing_activity"
+W = "width"
+H = "height"
+PLOT_PATH = "plot_path"
+PDF_PATH =  "pdf_path"
+TITLE = "title"
+PAGE_TITLE = "page_title"
+READING_STATS = "reading_statistics"
+MAPPING_STATS = "mapping_stats"
+MAPPING_PER_SITE = "mapping_per_site"
+FASTP_TX_PATH = "fastp_tx_path"
+FASTP_MOCK_PATH = "fastp_mock_path"
+RESULT_TABLE = "result_table"
+TAB_DATA = "tabular_data"
+HTML_SITE_NAMES = "site_names"
+LOG_PATH = "log_path"

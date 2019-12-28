@@ -12,7 +12,7 @@ from exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInRe
     UnknownAlignmentChar, Bowtie2RunTimeError, Bowtie2BuildRunTimeError, CantOpenDemultiplexedSamFile, \
     AlignerSubstitutionDoesntExist, ClassificationFailed, BadSgRNAChar, BadReferenceAmpliconChar
 from constants_and_types import ExpType, Path, FASTP_DIR, welcome_msg, FREQ, TX_READ_NUM, MOCK_READ_NUM, EDIT_PERCENT, \
-    SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE, AlgResult, R_PRIMER, F_PRIMER
+    SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE, AlgResult, R_PRIMER, F_PRIMER, OUTPUT_DIR
 from html_report import create_final_html_report
 from input_processing import InputProcessing
 import traceback
@@ -34,7 +34,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
         experiment_name: str, fastp_threads: int, allow_translocations: bool, max_error_on_primer: int,
         enable_substitutions: bool, ambiguous_cut_site_detection: bool, debug: bool, alignment_input, table_input):
 
-    output = os.path.join(report_output, "crispector_output")
+    output = os.path.join(report_output, OUTPUT_DIR)
     # Create output folder
     if not os.path.exists(output):
         os.makedirs(output)
@@ -167,6 +167,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
         logger.info("Evaluating editing activity for all sites - Done!")
 
         # Create plots & tables for all sites
+        site_param_d = dict()
         if not suppress_site_output:
             logger.info("Start creating plots and tables per site")
             for site, algorithm in algorithm_d.items():
@@ -178,26 +179,29 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
                     os.makedirs(site_output)
 
                 # Create plots and tables
-                create_site_output(algorithm, modifications, tables_d[site], result_summary_d[site], site,
-                                   experiment_name, site_output)
+                site_param_d[site] = create_site_output(algorithm, modifications, tables_d[site], result_summary_d[site],
+                                                        site, experiment_name, site_output)
             logger.info("Creating plots and tables per site - Done!")
 
         logger.info("Start creating experiment plots and tables")
-        create_experiment_output(ref_df, result_summary_d, input_processing, min_num_of_reads, confidence_interval,
-                                 editing_threshold, experiment_name, output)
+        exp_param_d = create_experiment_output(ref_df, result_summary_d, input_processing, min_num_of_reads,
+                                               confidence_interval, editing_threshold, experiment_name, output)
         logger.info("Creating experiment plots and tables - Done!")
 
         # Create final HTML report
-        exp_param_d = dict()
-        site_param_d = dict()
+        with open(os.path.join(output, "exp_param_d.pkl"), "wb") as file:
+            pickle.dump(exp_param_d, file)
+        with open(os.path.join(output, "site_param_d.pkl"), "wb") as file:
+            pickle.dump(site_param_d, file)
         create_final_html_report(exp_param_d, site_param_d, report_output)
 
-        # Remove fastp files # TODO - FIXME
+        # Remove fastp files
         if not keep_fastp_output:
             for exp_type in ExpType:
-                fastp_output = os.path.join(output, FASTP_DIR[exp_type])
+                fastp_output = os.path.join(output, "{}/merged_reads.fastq".format(FASTP_DIR[exp_type]))
                 if os.path.exists(fastp_output):
                     send2trash(fastp_output)
+
 
     # Catch exceptions TODO - Watch errors
     except NoneValuesInAmpliconsCSV:
