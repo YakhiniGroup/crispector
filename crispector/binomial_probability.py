@@ -23,13 +23,13 @@ def compute_binom_p(tables: Dict[str ,ModificationTables], modifications: Modifi
     binom_p_d = dict()
     default_p = cfg["default_binom_p"]
 
-    on_site_name = ref_df.loc[ref_df[ON_TARGET], SITE_NAME].values[0]
-
-    # USe default Binomial probability when can't estimate signal from on target.
-    if ref_df[ON_TARGET].sum() > 1:
+    # Use default Binomial probability when can't estimate signal from on target.
+    if ref_df[ON_TARGET].sum() != 1:
         override_coin = True
-        logger.warning("Multiple on-targets detected. Noise estimation for Binomial probability will use probability\
-                       from config file - default_binom_p")
+        logger.warning("Multiple or non on-targets detected. Noise estimation for Binomial probability will use \
+        probability from config file - default_binom_p")
+
+    on_site_name = ref_df.loc[ref_df[ON_TARGET], SITE_NAME].values[0]
 
     if not on_site_name in tables:
         override_coin = True

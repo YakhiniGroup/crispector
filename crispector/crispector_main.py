@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
 """Main module."""
 
-import sys
 import pickle
 import click
 import logging
 from send2trash import send2trash
-from binomial_p import compute_binom_p
-from crispector_algorithm import CrispectorAlgorithm
+from binomial_probability import compute_binom_p
+from core_algorithm import CoreAlgorithm
 from exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInReferenceSequence, \
     ConfiguratorIsCalledBeforeInitConfigPath, PriorPositionHasWrongLength, \
     UnknownAlignmentChar, Bowtie2RunTimeError, Bowtie2BuildRunTimeError, CantOpenDemultiplexedSamFile, \
     AlignerSubstitutionDoesntExist, ClassificationFailed, BadSgRNAChar, BadReferenceAmpliconChar
 from constants_and_types import ExpType, Path, FASTP_DIR, welcome_msg, FREQ, TX_READ_NUM, MOCK_READ_NUM, EDIT_PERCENT, \
-    SUMMARY_RESULTS_TITLES, SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE, AlgResult, R_PRIMER, F_PRIMER
+    SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE, AlgResult, R_PRIMER, F_PRIMER
+from html_report import create_final_html_report
 from input_processing import InputProcessing
 import traceback
-from utils import Logger, Configurator, plot_editing_activity, create_reads_statistics_report, summary_result_to_excel, \
-    discarded_sites_text
+from utils import Logger, Configurator
+from visualization_and_output import create_site_output, create_experiment_output
 import os
 import pandas as pd
 from modification_tables import ModificationTables
@@ -26,13 +26,19 @@ from modification_types import ModificationTypes
 
 # TODO - coin. when not tx == mock number of reads
 # TODO - split 2 scripts - the new one will support demultiplexed files from the user
-# TODO - Translocation - use circos plot from plotly
-def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path, amplicons_csv: Path,
+# TODO - Translocation
+def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_output: Path, amplicons_csv: Path,
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,
         cut_site_position: int, amplicon_min_score: float, min_read_length: int, config: Path,
         override_binomial_p: bool, confidence_interval: float, editing_threshold: float, suppress_site_output: bool,
         experiment_name: str, fastp_threads: int, allow_translocations: bool, max_error_on_primer: int,
         enable_substitutions: bool, ambiguous_cut_site_detection: bool, debug: bool, alignment_input, table_input):
+
+    output = os.path.join(report_output, "crispector_output")
+    # Create output folder
+    if not os.path.exists(output):
+        os.makedirs(output)
+
 
     # Init the logger
     Logger.set_output_dir(output)
@@ -140,8 +146,10 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
         # Compute binomial coin for all modification types
         binom_p_d = compute_binom_p(tables_d, modifications, override_binomial_p, ref_df)
 
+        # Run crispector core algorithm on all sites
+        logger.info("Start Evaluating editing activity for all sites")
         result_summary_d: AlgResult = dict()  # Algorithm result dictionary
-        # Run crispector algorithm on all sites
+        algorithm_d: Dict[str, CoreAlgorithm] = dict()
         for site, row in ref_df.iterrows():
             cut_site = row[CUT_SITE]
             # Continue if site was discarded
@@ -152,48 +160,46 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, output: Path
                 result_summary_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num, ON_TARGET: row[ON_TARGET]}
                 continue
 
-            # Create output folder
-            if not suppress_site_output:
+            algorithm_d[site] = CoreAlgorithm(cut_site, modifications, binom_p_d[site], confidence_interval, row[ON_TARGET])
+            result_summary_d[site] = algorithm_d[site].evaluate(tables_d[site])
+            result_summary_d[site][ON_TARGET] = row[ON_TARGET]
+            logger.debug("Site {} - Editing activity is {:.2f}".format(site, result_summary_d[site][EDIT_PERCENT]))
+        logger.info("Evaluating editing activity for all sites - Done!")
+
+        # Create plots & tables for all sites
+        if not suppress_site_output:
+            logger.info("Start creating plots and tables per site")
+            for site, algorithm in algorithm_d.items():
+                logger.debug("Site {} - Start creating plots and tables".format(site))
+
+                # Create output folder
                 site_output = os.path.join(output, site)
                 if not os.path.exists(site_output):
                     os.makedirs(site_output)
-            else:
-                site_output = None
 
-            logger.info("Site {} - Evaluate editing activity".format(site))
-            algorithm = CrispectorAlgorithm(site, experiment_name, cut_site, modifications, binom_p_d[site],
-                                            confidence_interval, row[ON_TARGET], site_output)
-            result_summary_d[site] = algorithm.evaluate(tables_d[site])
-            result_summary_d[site][ON_TARGET] = row[ON_TARGET]
-            logger.debug("Site {} - Done! Editing activity is {:.2f}".format(site,
-                                                                             result_summary_d[site][EDIT_PERCENT]))
+                # Create plots and tables
+                create_site_output(algorithm, modifications, tables_d[site], result_summary_d[site], site,
+                                   experiment_name, site_output)
+            logger.info("Creating plots and tables per site - Done!")
 
+        logger.info("Start creating experiment plots and tables")
+        create_experiment_output(ref_df, result_summary_d, input_processing, min_num_of_reads, confidence_interval,
+                                 editing_threshold, experiment_name, output)
+        logger.info("Creating experiment plots and tables - Done!")
 
-        # Dump summary results
-        summary_result_df = pd.DataFrame.from_dict(result_summary_d, orient='index')
-        summary_result_df[SITE_NAME] = summary_result_df.index
-        summary_result_df = summary_result_df.reindex(ref_df.index, columns=SUMMARY_RESULTS_TITLES)
-        summary_result_to_excel(summary_result_df, confidence_interval, output)
+        # Create final HTML report
+        exp_param_d = dict()
+        site_param_d = dict()
+        create_final_html_report(exp_param_d, site_param_d, report_output)
 
-        # Create a text file with all discarded sites
-        discarded_sites_text(summary_result_df, min_num_of_reads, output)
-
-        # Create bar plot for editing activity
-        plot_editing_activity(summary_result_df, confidence_interval, editing_threshold, output, experiment_name)
-
-        # Dump reads statistics
-        tx_input_n, tx_merged_n, tx_aligned_n = input_processing.read_numbers(ExpType.TX)
-        mock_input_n, mock_merged_n, mock_aligned_n = input_processing.read_numbers(ExpType.MOCK)
-        create_reads_statistics_report(summary_result_df, min_num_of_reads, tx_input_n, tx_merged_n, tx_aligned_n,
-                                       mock_input_n, mock_merged_n, mock_aligned_n, output, experiment_name)
-
-        # Remove fastp files
+        # Remove fastp files # TODO - FIXME
         if not keep_fastp_output:
             for exp_type in ExpType:
                 fastp_output = os.path.join(output, FASTP_DIR[exp_type])
                 if os.path.exists(fastp_output):
                     send2trash(fastp_output)
 
+    # Catch exceptions TODO - Watch errors
     except NoneValuesInAmpliconsCSV:
         logger.info("{}".format(traceback.format_exc()))
         logger.error("amplicons_csv file contains None values! Check the input file.")

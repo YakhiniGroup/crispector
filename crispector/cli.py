@@ -23,7 +23,7 @@ import os
               on_target (Bool) - Indicate if the site is on-targer or off-target.\
               All fields are required. No header should be specified.\
               Please check the README file for further details and examples.")
-@click.option('--output', '-o', type=click.Path(), default="CRISPECTOR", show_default=True,
+@click.option('--report_output', '-o', type=click.Path(), default="CRISPECTOR", show_default=True,
               help="Output folder path (string)")
 @click.option('--fastp_options_string', type=click.STRING, default="", help="Try \"fastp --help\" for more details")
 # TODO - Add --length_required 40 to filter anything under 40 (15 is the default). see fastp TODO
@@ -78,7 +78,7 @@ def main(**kwargs):
     override_fastp = kwargs["override_fastp"]
     tx_in2 = kwargs["tx_in2"]
     mock_in2 = kwargs["mock_in2"]
-    output = kwargs["output"]
+    report_output = kwargs["report_output"]
 
     # Input verification
     if override_fastp:
@@ -93,8 +93,8 @@ def main(**kwargs):
             raise click.BadOptionUsage(mock_in2, "--mock_in2 is missing!")
 
     # Create output folder
-    if not os.path.exists(output):
-        os.makedirs(output)
+    if not os.path.exists(report_output):
+        os.makedirs(report_output)
 
     # Run crispector
     run(**kwargs)
