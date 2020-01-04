@@ -95,6 +95,10 @@ ReadsDf = pandas.DataFrame
 # pandas data frame with all reads columns :READ, TRANS_NAME, REFERENCE, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CUT_SITE,
 # R_SITE, L_SITE
 TransDf = pandas.DataFrame
+
+# pandas data frame with columns: SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR
+TransResultDf = pandas.DataFrame
+
 # Others
 # A dictionary with key=SITE_NAME and value=ReadsDf - Dict for all reads in the experiments
 ReadsDict = Dict[str, ReadsDf]
@@ -123,6 +127,7 @@ CigarPath = str
 
 # AlgResult - dictionary with key name_of_property (e.g. 'CI_high') and their value
 AlgResult = Dict[str, Dict]
+AlgResultDf = pandas.DataFrame
 
 # fastp constants
 FASTP_DIR = dict()
@@ -145,6 +150,7 @@ ALIGNMENT_W_DEL = "alignment_w_del"
 CIGAR = 'cigar_path'
 CIGAR_LEN = 'cigar_length'
 ALIGN_SCORE = 'alignment_score'
+NORM_SCORE = "normalized_alignment_score"
 FREQ = "frequency"
 IS_EDIT = "is_edited"
 INS_LEN = "inserted_bases_length"
@@ -166,8 +172,10 @@ R_READ = "right_primer_read"
 L_READ = "left_primer_read"
 ALIGN_CUT_SITE = "alignment_cut_site"
 INDEL_COLS = [ALIGN_CUT_SITE, DEL_LEN, DEL_START, DEL_END, DEL_BASE, INS_LEN, INS_POS, INS_BASE, SUB_CNT, SUB_POS, SUB_BASE]
+
 # TransDf constants
 TRANS_NAME = "translocation_name"
+IS_TRANS = "is_translocation"
 
 # ModDist constants
 INDEL_TYPE = 'IndelType'
@@ -199,6 +207,14 @@ EDIT_PERCENT = "Editing Activity"
 CI_LOW = "CI_low"
 CI_HIGH = "CI_high"
 SUMMARY_RESULTS_TITLES = [SITE_NAME, ON_TARGET, MOCK_READ_NUM, TX_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH]
+
+#TransResultDf columns
+SITE_A = "site_A"
+SITE_B = "site_B"
+TX_TRANS_READ = "treatment_reads"
+MOCK_TRANS_READ = "mock_reads"
+TRANS_PVAL = "p_value"
+TRANS_FDR = "FDR"
 
 # Cigar path constants
 CIGAR_D, CIGAR_I, CIGAR_S, CIGAR_M = "D", "I", "X", "="

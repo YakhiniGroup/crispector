@@ -12,10 +12,13 @@ from exceptions import FastpRunTimeError, NoneValuesInAmpliconsCSV, SgRNANotInRe
     UnknownAlignmentChar, Bowtie2RunTimeError, Bowtie2BuildRunTimeError, CantOpenDemultiplexedSamFile, \
     AlignerSubstitutionDoesntExist, ClassificationFailed, BadSgRNAChar, BadReferenceAmpliconChar
 from constants_and_types import ExpType, Path, FASTP_DIR, welcome_msg, FREQ, TX_READ_NUM, MOCK_READ_NUM, EDIT_PERCENT, \
-    SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE, AlgResult, R_PRIMER, F_PRIMER, OUTPUT_DIR
+    SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE, AlgResult, R_PRIMER, F_PRIMER, OUTPUT_DIR, SUMMARY_RESULTS_TITLES, \
+    AlgResultDf
 from html_report import create_final_html_report
 from input_processing import InputProcessing
 import traceback
+
+from translocations import translocations_test
 from utils import Logger, Configurator
 from visualization_and_output import create_site_output, create_experiment_output
 import os
@@ -29,10 +32,11 @@ from modification_types import ModificationTypes
 # TODO - Translocation
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_output: Path, amplicons_csv: Path,
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,
-        cut_site_position: int, amplicon_min_score: float, min_read_length: int, config: Path,
-        override_binomial_p: bool, confidence_interval: float, editing_threshold: float, suppress_site_output: bool,
-        experiment_name: str, fastp_threads: int, allow_translocations: bool, max_error_on_primer: int,
-        enable_substitutions: bool, ambiguous_cut_site_detection: bool, debug: bool, alignment_input, table_input):
+        cut_site_position: int, amplicon_min_score: float, translocation_amplicon_min_score: float,
+        min_read_length: int, config: Path, override_binomial_p: bool, confidence_interval: float,
+        editing_threshold: float, translocation_p_value: float, suppress_site_output: bool, experiment_name: str,
+        fastp_threads: int, allow_translocations: bool, max_error_on_primer: int, enable_substitutions: bool,
+        ambiguous_cut_site_detection: bool, debug: bool, alignment_input, table_input):
 
     output = os.path.join(report_output, OUTPUT_DIR)
     # Create output folder
@@ -73,7 +77,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
         # TODO - HDR - Change to default coin, delete on-target results and add warning. read HDR and remove.
 
         # Create InputProcessing instance
-        input_processing = InputProcessing(ref_df, output, amplicon_min_score, min_read_length, max_error_on_primer)
+        input_processing = InputProcessing(ref_df, output, amplicon_min_score, translocation_amplicon_min_score,
+                                           min_read_length, max_error_on_primer)
 
         # Find expected cut-site position
         input_processing.convert_sgRNA_to_cut_site_position(cut_site_position)
@@ -105,10 +110,6 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
             # Align reads to the amplicon reference sequences
             tx_reads_d, tx_trans_df = input_processing.align_reads(tx_reads, ExpType.TX, allow_translocations, debug)
             mock_reads_d, mock_trans_df = input_processing.align_reads(mock_reads, ExpType.MOCK, allow_translocations, debug)
-
-            # TODO - remove
-            tx_trans_df.to_csv(os.path.join(output, "tx_translocation_reads.csv"), index=False)
-            mock_trans_df.to_csv(os.path.join(output, "mock_translocation_reads.csv"), index=False)
 
             with open(os.path.join(output, "tx_reads_d.pkl"), "wb") as file:
                 pickle.dump(tx_reads_d, file)
@@ -164,7 +165,20 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
             result_summary_d[site] = algorithm_d[site].evaluate(tables_d[site])
             result_summary_d[site][ON_TARGET] = row[ON_TARGET]
             logger.debug("Site {} - Editing activity is {:.2f}".format(site, result_summary_d[site][EDIT_PERCENT]))
+
+        # Convert result_summary dict to DataFrame
+        summary_df: AlgResultDf = pd.DataFrame.from_dict(result_summary_d, orient='index')
+        summary_df[SITE_NAME] = summary_df.index
+        summary_df = summary_df.reindex(ref_df.index, columns=SUMMARY_RESULTS_TITLES)
+        summary_df = summary_df.reset_index(drop=True)
+
         logger.info("Evaluating editing activity for all sites - Done!")
+
+        # Run translocations test and call translocations reads
+        logger.info("Translocations - Run HG tests")
+        trans_result_df = translocations_test(summary_df, tx_trans_df , mock_trans_df, translocation_p_value,
+                                              editing_threshold)
+        logger.debug("Translocations - HG test - Done!")
 
         # Create plots & tables for all sites
         site_param_d = dict()
@@ -184,8 +198,9 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
             logger.info("Creating plots and tables per site - Done!")
 
         logger.info("Start creating experiment plots and tables")
-        exp_param_d = create_experiment_output(ref_df, result_summary_d, input_processing, min_num_of_reads,
-                                               confidence_interval, editing_threshold, experiment_name, output)
+        exp_param_d = create_experiment_output(summary_df,  tx_trans_df, mock_trans_df, trans_result_df,
+                                               input_processing, min_num_of_reads, confidence_interval,
+                                               editing_threshold, experiment_name, output)
         logger.info("Creating experiment plots and tables - Done!")
 
         # Create final HTML report

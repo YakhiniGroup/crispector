@@ -1,9 +1,10 @@
-from constants_and_types import SITE_NAME, IndelType, AlgResult, Path, FREQ, IS_EDIT, TX_READ_NUM, \
+from constants_and_types import SITE_NAME, IndelType, Path, FREQ, IS_EDIT, TX_READ_NUM, \
     MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH, READ_LEN_SIDE, ALIGN_CUT_SITE, ALIGNMENT_W_INS, \
     ALIGNMENT_W_DEL, POS_IDX_E, POS_IDX_S, INDEL_TYPE, ExpType, ON_TARGET, IsEdit, C_TX, C_MOCK, \
-    SUMMARY_RESULTS_TITLES, AmpliconDf, OFF_TARGET_COLOR, ON_TARGET_COLOR, OUTPUT_DIR, DISCARDED_SITES, \
+    SUMMARY_RESULTS_TITLES, OFF_TARGET_COLOR, ON_TARGET_COLOR, OUTPUT_DIR, DISCARDED_SITES, \
     EDITING_ACTIVITY, PLOT_PATH, TITLE, W, H, PDF_PATH, PAGE_TITLE, READING_STATS, MAPPING_STATS, MAPPING_PER_SITE, \
-    FASTP_DIR, FASTP_TX_PATH, FASTP_MOCK_PATH, RESULT_TABLE, TAB_DATA, HTML_SITE_NAMES, LOG_PATH
+    FASTP_DIR, FASTP_TX_PATH, FASTP_MOCK_PATH, RESULT_TABLE, TAB_DATA, HTML_SITE_NAMES, LOG_PATH, TransDf, AlgResultDf, \
+    TransResultDf
 import math
 import os
 import warnings
@@ -25,6 +26,7 @@ from utils import Logger
 def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationTypes, mod_table: ModificationTables,
                        site_result: Dict, site_name: str, experiment_name: str, output: Path):
     base_path = os.path.join(OUTPUT_DIR, site_name)
+    # TODO - Don't forget to add PDF's and remove titles.
 
     title_name = "{} - {}".format(experiment_name, site_name)
 
@@ -53,8 +55,8 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     # Plot mutation distribution
     plot_distribution_of_edit_events(mod_table, cut_site, win_size, title_name, output)
     plot_distribution_of_all_modifications(mod_table, cut_site, win_size, title_name, output)
-    plot_distribution_of_edit_event_sizes(mod_table, title_name, output)
-    plot_distribution_of_edit_event_sizes_3_plots(mod_table, title_name, output)  # TODO - which one is better
+    # plot_distribution_of_edit_event_sizes(mod_table, title_name, output) TODO - which one is better
+    plot_distribution_of_edit_event_sizes_3_plots(mod_table, title_name, output)
 
     # Plot editing activity
     plot_site_editing_activity(algorithm, site_result, site_name, title_name, output)
@@ -64,41 +66,42 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     mod_table.mock_reads.to_csv(os.path.join(output, "mock_aligned_reads.csv.gz"), index=False, compression='gzip')
 
 
-def create_experiment_output(ref_df: AmpliconDf, result_d: AlgResult, input_processing: InputProcessing, min_num_of_reads: int,
-                             confidence_interval: float, editing_threshold: float, experiment_name: str,
-                             output: Path):
+def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_trans_df: TransDf,
+                             trans_result_df: TransResultDf, input_processing: InputProcessing, min_num_of_reads: int,
+                             confidence_interval: float, editing_threshold: float, experiment_name: str, output: Path):
 
-    # TODO - Don't forget to add PDF's and remove titles.
     html_d = dict() # html parameters dict
     html_d[PAGE_TITLE] = experiment_name
     html_d[READING_STATS] = dict()
 
     # Dump summary results
-    summary_result_df = pd.DataFrame.from_dict(result_d, orient='index')
-    summary_result_df[SITE_NAME] = summary_result_df.index
-    summary_result_df = summary_result_df.reindex(ref_df.index, columns=SUMMARY_RESULTS_TITLES)
-    summary_result_to_excel(summary_result_df, confidence_interval, output)
+    summary_result_to_excel(result_df, confidence_interval, output)
 
     # Create bar plot for editing activity
-    plot_editing_activity(summary_result_df, confidence_interval, editing_threshold, html_d, output)
+    plot_editing_activity(result_df, confidence_interval, editing_threshold, html_d, output)
 
     # Dump reads statistics
     tx_input_n, tx_merged_n, tx_aligned_n = input_processing.read_numbers(ExpType.TX)
     mock_input_n, mock_merged_n, mock_aligned_n = input_processing.read_numbers(ExpType.MOCK)
-    create_reads_statistics_report(summary_result_df, tx_input_n, tx_merged_n, tx_aligned_n,
+    create_reads_statistics_report(result_df, tx_input_n, tx_merged_n, tx_aligned_n,
                                    mock_input_n, mock_merged_n, mock_aligned_n, html_d, output)
 
     # Create a text file with all discarded sites
-    discarded_sites_text(summary_result_df, min_num_of_reads, html_d, output)
+    discarded_sites_text(result_df, min_num_of_reads, html_d, output)
+
+    # TODO - add all translocation outputs....
+    tx_trans_df.to_csv(os.path.join(output, "tx_translocations_reads.csv"), index=False)
+    mock_trans_df.to_csv(os.path.join(output, "mock_translocations_reads.csv"), index=False)
+    trans_result_df.to_csv(os.path.join(output, "translocations_results.csv"), index=False)
 
     # Add summary results to page
     html_d[RESULT_TABLE] = dict()
     html_d[RESULT_TABLE][TITLE] = "Results Table"
     html_d[RESULT_TABLE][TAB_DATA] = dict()
     for col in SUMMARY_RESULTS_TITLES:
-        html_d[RESULT_TABLE][TAB_DATA][col] = list(summary_result_df[col].values)
+        html_d[RESULT_TABLE][TAB_DATA][col] = list(result_df[col].values)
 
-    html_d[HTML_SITE_NAMES] = list(summary_result_df.loc[summary_result_df[EDIT_PERCENT].isna(), SITE_NAME].values)
+    html_d[HTML_SITE_NAMES] = list(result_df.loc[result_df[EDIT_PERCENT].isna(), SITE_NAME].values)
 
     # Add fastp links
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.TX])):
@@ -536,7 +539,8 @@ def plot_edited_reads_to_table(tables: ModificationTables, cut_site: int, output
     fig.write_html(os.path.join(output, 'edited_reads_table.html'))
 
 
-def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_name: str, experiment_name: str, output: Path):
+def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_name: str, experiment_name: str,
+                               output: Path):
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
     sns.set(style="whitegrid")
@@ -720,7 +724,7 @@ def plot_distribution_of_edit_event_sizes_3_plots(tables: ModificationTables, ex
 #####----------------------#####
 #####------Experiment------#####
 #####----------------------#####
-def plot_editing_activity(result_df: AlgResult, confidence_interval: float, editing_threshold: float, html_d: Dict,
+def plot_editing_activity(result_df: AlgResultDf, confidence_interval: float, editing_threshold: float, html_d: Dict,
                           output: Path):
 
     # Set font
@@ -851,7 +855,7 @@ def plot_editing_activity(result_df: AlgResult, confidence_interval: float, edit
     plt.close(fig)
 
 
-def create_reads_statistics_report(result_df: AlgResult, tx_in: int, tx_merged: int, tx_aligned: int,
+def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged: int, tx_aligned: int,
                                    mock_in: int, mock_merged: int, mock_aligned: int, html_d: Dict, output: Path):
     html_d[READING_STATS] = dict()
     html_d[READING_STATS][TITLE] = "Reading Statistics"

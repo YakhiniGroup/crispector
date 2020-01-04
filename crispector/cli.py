@@ -44,10 +44,13 @@ import os
               help="Override binomial coin estimation with default value from config file. It's advisable to set"
               "this flag for low number of sites (< ############)") # TODO - fix this description
 @click.option("--confidence_interval", type=click.FloatRange(min=0, max=1), default=0.95, show_default=True,
-              help="Confidence interval for the evaluted editing activity")
+              help="Confidence interval for the evaluated editing activity")
 @click.option("--editing_threshold", type=click.FloatRange(), default=0.1, show_default=True,
-              help="The editing activity threshold (%). Below this threshold, activity won't be reported at the "
-                   "final bar plot XXXXXXXX")  # TODO - change description
+              help="The editing activity threshold (%). Below this threshold, editing activity won't be"
+                   "displayed at final plots and possible translocation will be filtered out.")
+@click.option("--translocation_p_value", type=click.FloatRange(), default=0.05, show_default=True,
+              help="Translocations statistical significance level. This threshold is applied on the corrected p_value,"
+                   "FDR (false discovery rate).")
 @click.option("--suppress_site_output",  is_flag=True, default=False, show_default=True,
               help="Do not dump plots and reads for all sites")
 # TODO - this values and description should be changed.
@@ -56,6 +59,9 @@ import os
                    "Score is normalized between 0 (not even one bp match) to 100 (the read is identical to"
                    "the reference). Below this alignment threshold, reads are discarded."
                    "This is useful for filtering erroneous reads that do not align to any target amplicon.")
+@click.option('--translocation_amplicon_min_score', type=click.FloatRange(min=0, max=100), default=80, show_default=True,
+              help="Alignment minimum score for translocations reads. Default value is higher due to higher level of" 
+                   "Noise in translocations reads.")
 @click.option('--experiment_name', type=str, default=" ", show_default=True,
               help="Experiment name as will be reported in CRISPECTOR plots")
 @click.option('--allow_translocations', is_flag=True, default=True, show_default=True,

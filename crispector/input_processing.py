@@ -7,7 +7,8 @@ from constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelTy
     DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, COMPLEMENT, REFERENCE, SGRNA, SITE_NAME, CUT_SITE, CIGAR_D, CIGAR_I, \
     CIGAR_S, CIGAR_M, AlignedIndel, DEL_BASE, INS_BASE, SUB_BASE, REVERSED, L_SITE, L_REV, R_SITE, R_REV, \
     L_READ, R_READ, PRIMER_LEN, TransDf, TRANS_NAME, BAD_AMPLICON_THRESHOLD, CIGAR_LEN, CIGAR_LEN_THRESHOLD, MAX_SCORE, \
-    F_PRIMER, R_PRIMER, MIN_PRIMER_DIMER_THRESH, SGRNA_REVERSED, CS_SHIFT_L, CS_SHIFT_L, CS_SHIFT_R, ALIGN_CUT_SITE
+    F_PRIMER, R_PRIMER, MIN_PRIMER_DIMER_THRESH, SGRNA_REVERSED, CS_SHIFT_L, CS_SHIFT_L, CS_SHIFT_R, ALIGN_CUT_SITE, \
+    NORM_SCORE
 from utils import Logger, Configurator
 from typing import List, Tuple, Dict
 import re
@@ -22,8 +23,8 @@ class InputProcessing:
     """
     A helper class with all relevant functions to process crispector input.
     """
-    def __init__(self, ref_df: AmpliconDf, output: Path, min_alignment_score: float, min_read_length: int,
-                 max_error_on_primer: int):
+    def __init__(self, ref_df: AmpliconDf, output: Path, min_alignment_score: float, min_trans_alignment_score: float,
+                 min_read_length: int, max_error_on_primer: int):
         """
         :param ref_df: AmpliconDf type
         :param output: output path
@@ -34,6 +35,8 @@ class InputProcessing:
         self._ref_df = ref_df
         self._output = output
         self._min_score = min_alignment_score
+        self._min_trans_score = min_trans_alignment_score
+
         self._min_read_length = min_read_length
         self._max_error_on_primer = max_error_on_primer
         # Set logger
@@ -98,7 +101,6 @@ class InputProcessing:
         """
         self._ref_df[[CUT_SITE, SGRNA_REVERSED]] = self._ref_df.apply(lambda row: self._get_expected_cut_site(row[REFERENCE],
                                                    row[SGRNA], cut_site_position, row[SITE_NAME]), axis=1, result_type='expand')
-
 
     def detect_ambiguous_cut_site(self, cut_site_pos: int, ambiguous_cut_site_detection: bool):
         """
@@ -568,33 +570,26 @@ class InputProcessing:
                     unmatched_df.at[idx, R_REV] = row[L_REV]
                 re_matched_idx_list.append(idx)
             # If read has high quality alignment, consider it as translocation
-            # TODO - change min score?
-            elif (align_score > (self._min_score / 100) * max_score) or (cigar_len < CIGAR_LEN_THRESHOLD):
+            elif (align_score > (self._min_trans_score / 100) * max_score) or (cigar_len < CIGAR_LEN_THRESHOLD):
                 trans_idx_list.append(idx)
-                trans_d[READ].append(row[READ])
-                trans_d[FREQ].append(row[FREQ])
                 trans_d[TRANS_NAME].append(get_trans_name(l_name, l_rev) + "_" + get_trans_name(r_name, r_rev))
-                trans_d[REFERENCE].append(reference)
-                trans_d[CUT_SITE].append(cut_site)
-                trans_d[ALIGNMENT_W_INS].append(ref_w_ins)
-                trans_d[ALIGNMENT_W_DEL].append(read_w_del)
-                trans_d[CIGAR].append(cigar)
-                trans_d[ALIGN_SCORE].append(align_score)
+                trans_d[FREQ].append(row[FREQ])
                 trans_d[R_SITE].append(l_name)
                 trans_d[L_SITE].append(r_name)
+                trans_d[REFERENCE].append(reference)
+                trans_d[READ].append(row[READ])
+                trans_d[ALIGNMENT_W_INS].append(ref_w_ins)
+                trans_d[ALIGNMENT_W_DEL].append(read_w_del)
+                trans_d[CUT_SITE].append(cut_site)
+                trans_d[CIGAR].append(cigar)
                 trans_d[CIGAR_LEN].append(cigar_len)
-                # TODO - for debug only
-                trans_d['max_score'].append(max_score)
-                trans_d['normalized_score'].append(normalized_score)
-
+                trans_d[ALIGN_SCORE].append(align_score)
+                trans_d[NORM_SCORE].append(normalized_score)
 
         # Convert translocation dictionary to translocation pandas
         if allow_trans:
             self._logger.info("Search possible Translocations - Done.")
             trans_df = pd.DataFrame.from_dict(trans_d, orient='columns')
-            # TODO - for debug only, change to by FREQ
-            if trans_df.shape[0] > 0:
-                trans_df.sort_values(by=['normalized_score'], ascending=False, inplace=True)
 
             # Remove translocation from unmatched reads
             unmatched_df.drop(index=trans_idx_list, inplace=True)
