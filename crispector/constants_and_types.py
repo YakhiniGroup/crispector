@@ -215,7 +215,7 @@ TX_TRANS_READ = "treatment_reads"
 MOCK_TRANS_READ = "mock_reads"
 TRANS_PVAL = "p_value"
 TRANS_FDR = "FDR"
-
+TRANS_RESULTS_TITLES = [SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR]
 # Cigar path constants
 CIGAR_D, CIGAR_I, CIGAR_S, CIGAR_M = "D", "I", "X", "="
 
@@ -245,3 +245,8 @@ RESULT_TABLE = "result_table"
 TAB_DATA = "tabular_data"
 HTML_SITE_NAMES = "site_names"
 LOG_PATH = "log_path"
+TRANSLOCATIONS = "translocations"
+TX_TRANS_PATH = "tx_translocations_path"
+MOCK_TRANS_PATH = "mock_translocations_path"
+TRANS_RES_TAB = "translocations_results_tab"
+TRANS_HEATMAP_TAB = "translocations_heatmap_tab"

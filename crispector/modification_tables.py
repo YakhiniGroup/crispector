@@ -1,18 +1,12 @@
-from constants_and_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, Path, IsEdit, CIGAR, FREQ, \
+from constants_and_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, IsEdit, CIGAR, FREQ, \
     C_TX, C_MOCK, REFERENCE, CS_SHIFT_R, CS_SHIFT_L, ModDist, MOD_TABLE_IDX, INDEL_TYPE, INDEL_LEN, IS_EDIT, \
     POS_IDX_S, POS_IDX_E
 from input_processing import InputProcessing
 from modification_types import ModificationTypes
 import numpy as np
 from collections import defaultdict
-from matplotlib import pyplot as plt
-import matplotlib as mpl
-import os
-import warnings
 import pandas as pd
-from utils import Configurator
 from copy import deepcopy
-from typing import List, Tuple
 
 
 class ModificationTables:

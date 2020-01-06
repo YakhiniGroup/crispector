@@ -4,7 +4,8 @@ from constants_and_types import SITE_NAME, IndelType, Path, FREQ, IS_EDIT, TX_RE
     SUMMARY_RESULTS_TITLES, OFF_TARGET_COLOR, ON_TARGET_COLOR, OUTPUT_DIR, DISCARDED_SITES, \
     EDITING_ACTIVITY, PLOT_PATH, TITLE, W, H, PDF_PATH, PAGE_TITLE, READING_STATS, MAPPING_STATS, MAPPING_PER_SITE, \
     FASTP_DIR, FASTP_TX_PATH, FASTP_MOCK_PATH, RESULT_TABLE, TAB_DATA, HTML_SITE_NAMES, LOG_PATH, TransDf, AlgResultDf, \
-    TransResultDf
+    TransResultDf, TRANS_FDR, SITE_A, SITE_B, TX_TRANS_READ, TRANSLOCATIONS, TX_TRANS_PATH, MOCK_TRANS_PATH, \
+    TRANS_RES_TAB, TRANS_HEATMAP_TAB, TRANS_RESULTS_TITLES
 import math
 import os
 import warnings
@@ -21,7 +22,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
 from utils import Logger
-
+from copy import deepcopy
+from matplotlib.collections import QuadMesh
 
 def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationTypes, mod_table: ModificationTables,
                        site_result: Dict, site_name: str, experiment_name: str, output: Path):
@@ -68,7 +70,8 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
 
 def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_trans_df: TransDf,
                              trans_result_df: TransResultDf, input_processing: InputProcessing, min_num_of_reads: int,
-                             confidence_interval: float, editing_threshold: float, experiment_name: str, output: Path):
+                             confidence_interval: float, editing_threshold: float, translocation_p_value: float,
+                             experiment_name: str, output: Path):
 
     html_d = dict() # html parameters dict
     html_d[PAGE_TITLE] = experiment_name
@@ -89,10 +92,24 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
     # Create a text file with all discarded sites
     discarded_sites_text(result_df, min_num_of_reads, html_d, output)
 
-    # TODO - add all translocation outputs....
+    html_d[TRANSLOCATIONS] = dict()
+    html_d[TRANSLOCATIONS][TITLE] = "Translocations"
+    # Dump all translocations reads
     tx_trans_df.to_csv(os.path.join(output, "tx_translocations_reads.csv"), index=False)
     mock_trans_df.to_csv(os.path.join(output, "mock_translocations_reads.csv"), index=False)
+    html_d[TRANSLOCATIONS][TX_TRANS_PATH] = os.path.join(output, "tx_translocations_reads.csv")
+    html_d[TRANSLOCATIONS][MOCK_TRANS_PATH] = os.path.join(output, "mock_translocations_reads.csv")
+
+    # Save translocations results
     trans_result_df.to_csv(os.path.join(output, "translocations_results.csv"), index=False)
+    html_d[TRANSLOCATIONS][TRANS_RES_TAB] = dict()
+    html_d[TRANSLOCATIONS][TRANS_RES_TAB][TITLE] = "Translocations results sorted by FDR value"
+    html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA] = dict()
+    for col in TRANS_RESULTS_TITLES:
+        html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA][col] = list(trans_result_df[col].values)
+
+    # Translocations Heatmap
+    plot_translocations_heatmap(result_df, trans_result_df, translocation_p_value, html_d, output)
 
     # Add summary results to page
     html_d[RESULT_TABLE] = dict()
@@ -334,7 +351,7 @@ def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site:
     axes[0].set_title("Distribution Of All Modifications\n{}".format(experiment_name),
                       weight='bold', family='serif')
 
-    # Remove Tx first y axe label (overlap with mock
+    # Remove Tx first y axe label (overlap with mock)
     plt.setp(axes[0].get_yticklabels()[0], visible=False)
 
     with warnings.catch_warnings():
@@ -962,6 +979,93 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'number_of_aligned_reads_per_site.png'), bbox_inches='tight', dpi=dpi)
         fig.savefig(os.path.join(output, 'number_of_aligned_reads_per_site.pdf'), bbox_inches='tight', pad_inches=1)
+        plt.close(fig)
+
+
+def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransResultDf, translocation_p_value: float,
+                                html_d: Dict, output: Path):
+
+    # Prepare Heat Map
+    trans_df = trans_result_df.loc[trans_result_df[TRANS_FDR] < translocation_p_value]
+    if trans_df.shape[0] == 0: # create only if there are translocations
+        return
+
+    trans_copy_df = deepcopy(trans_df)
+    trans_copy_df[SITE_A] = trans_df[SITE_B]
+    trans_copy_df[SITE_B] = trans_df[SITE_A]
+    trans_df = pd.concat([trans_df, trans_copy_df])
+    heat_df = trans_df.pivot(SITE_A, SITE_B, TX_TRANS_READ)
+    heat_df[heat_df.isna()] = 0
+    heat_df = heat_df.astype(int)
+    max_trans_n = heat_df.max().max()
+    active_site_n = heat_df.shape[0]
+    heat_df['Total'] = np.zeros(active_site_n, dtype=np.int)
+    heat_df['NHEJ Activity (%)'] = np.zeros(active_site_n, dtype=np.int)
+    total_trans = heat_df.sum()
+
+    # Prepare Heatmap annotations
+    annot_df = deepcopy(heat_df)
+    annot_df['Total'] = total_trans
+    annot_df = annot_df.astype(str)
+    editing = []
+    for site in heat_df.index:
+        editing.append("{:.2f}".format(result_df.loc[result_df[SITE_NAME] == site, EDIT_PERCENT].values[0]))
+    annot_df['NHEJ Activity (%)'] = editing
+
+    dpi = 200
+    grid_kws = {"height_ratios": (.9, .05), "hspace": .1}
+
+    # create diagonal mask
+    mask = np.ones_like(heat_df)
+    mask[np.triu_indices_from(mask)] = False
+    mask[np.diag_indices(active_site_n)] = True
+
+    # Create figure
+    fig_w = active_site_n + 3
+    fig_h = active_site_n + 1
+    fig, (ax, cbar_ax) = plt.subplots(2, gridspec_kw=grid_kws, figsize=(fig_w, fig_h))
+
+    # Create heat map
+    sns.heatmap(heat_df, annot=annot_df.values, linewidths=0.05, linecolor='xkcd:light grey', fmt='s',
+                mask=mask, cmap="Reds", vmax=max_trans_n, annot_kws={"size": 18},
+                cbar_ax=cbar_ax, cbar_kws={"orientation": "horizontal"}, ax=ax)
+
+    # make colors of the last two columns white
+    quadmesh = ax.findobj(QuadMesh)[0]
+    facecolors = quadmesh.get_facecolors()
+    last_col_index = list(range(active_site_n, active_site_n * (active_site_n + 2), active_site_n + 2))
+    last_col_index += list(range(active_site_n + 1, active_site_n * (active_site_n + 2), active_site_n + 2))
+    facecolors[last_col_index] = np.array([1, 1, 1, 1])
+    quadmesh.set_facecolors = facecolors
+
+    # set marked area color
+    ax.set_facecolor('xkcd:light grey')
+
+    # move x ticks and label to the top
+    ax.xaxis.tick_top()
+    ax.xaxis.set_label_position('top')
+
+    # remove labels
+    ax.set_ylabel("")
+    ax.set_xlabel("")
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=-45, ha="right", rotation_mode="anchor", size=20)
+    plt.setp(ax.get_yticklabels(), rotation=0, ha="right", rotation_mode="anchor", size=20)
+    title = "Translocation Heatmap for FDR < {:.2e}".format(translocation_p_value)
+
+    # Add to final report
+    html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB] = dict()
+    html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'translocations_heatmap.png')
+    html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][PDF_PATH] = os.path.join(OUTPUT_DIR, 'translocations_heatmap.pdf')
+    html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][TITLE] = title
+    html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][W] = dpi*fig_w
+    html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][H] = dpi*fig_h
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        fig.savefig(os.path.join(output, "translocations_heatmap.png"), bbox_inches='tight', dpi=dpi)
+        fig.savefig(os.path.join(output, "translocations_heatmap.pdf"), pad_inches=1, box_inches='tight')
         plt.close(fig)
 
 

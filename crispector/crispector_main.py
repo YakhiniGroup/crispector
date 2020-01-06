@@ -29,7 +29,6 @@ from modification_types import ModificationTypes
 
 # TODO - coin. when not tx == mock number of reads
 # TODO - split 2 scripts - the new one will support demultiplexed files from the user
-# TODO - Translocation
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_output: Path, amplicons_csv: Path,
         fastp_options_string: str, override_fastp: bool, keep_fastp_output: bool, verbose: bool, min_num_of_reads: int,
         cut_site_position: int, amplicon_min_score: float, translocation_amplicon_min_score: float,
@@ -200,7 +199,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
         logger.info("Start creating experiment plots and tables")
         exp_param_d = create_experiment_output(summary_df,  tx_trans_df, mock_trans_df, trans_result_df,
                                                input_processing, min_num_of_reads, confidence_interval,
-                                               editing_threshold, experiment_name, output)
+                                               editing_threshold, translocation_p_value, experiment_name, output)
         logger.info("Creating experiment plots and tables - Done!")
 
         # Create final HTML report

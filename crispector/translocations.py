@@ -33,11 +33,11 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
             site_b = row_b[SITE_NAME]
 
             # Get all translocation between site A & B
-            tx_a_b_df = tx_df.loc[(tx_df[R_SITE] == site_a) & (tx_df[L_SITE] == site_b) |
-                                  (tx_df[R_SITE] == site_b) & (tx_df[L_SITE] == site_a)]
+            tx_a_b_df = tx_df.loc[((tx_df[R_SITE] == site_a) & (tx_df[L_SITE] == site_b)) |
+                                  ((tx_df[R_SITE] == site_b) & (tx_df[L_SITE] == site_a))]
 
-            mock_a_b_df = mock_df.loc[(mock_df[R_SITE] == site_a) & (mock_df[L_SITE] == site_b) |
-                                      (mock_df[R_SITE] == site_b) & (mock_df[L_SITE] == site_a)]
+            mock_a_b_df = mock_df.loc[((mock_df[R_SITE] == site_a) & (mock_df[L_SITE] == site_b)) |
+                                      ((mock_df[R_SITE] == site_b) & (mock_df[L_SITE] == site_a))]
             # Get number for HG test
             tx_trans = tx_a_b_df[FREQ].sum()
             mock_trans = mock_a_b_df[FREQ].sum()
@@ -60,14 +60,14 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
             if B == 0:
                 continue
 
-            pval = hypergeometric_cdf(b - 1, N, B, n)
+            p_val = hypergeometric_cdf(b - 1, N, B, n)
 
             # Store values
             trans_d[SITE_A].append(site_a)
             trans_d[SITE_B].append(site_b)
             trans_d[TX_TRANS_READ].append(tx_trans)
             trans_d[MOCK_TRANS_READ].append(mock_trans)
-            trans_d[TRANS_PVAL].append(pval)
+            trans_d[TRANS_PVAL].append(p_val)
 
     # Compute FDR correction
     _, trans_d[TRANS_FDR] = fdrcorrection(trans_d[TRANS_PVAL])
@@ -83,8 +83,8 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
     for _, row in active_trans_df.iterrows():
         site_a = row[SITE_A]
         site_b = row[SITE_B]
-        tx_df.loc[(tx_df[R_SITE] == site_a) & (tx_df[L_SITE] == site_b) |
-                  (tx_df[R_SITE] == site_b) & (tx_df[L_SITE] == site_a), IS_TRANS] = True
+        tx_df.loc[((tx_df[R_SITE] == site_a) & (tx_df[L_SITE] == site_b)) |
+                  ((tx_df[R_SITE] == site_b) & (tx_df[L_SITE] == site_a)), IS_TRANS] = True
 
     return trans_df
 

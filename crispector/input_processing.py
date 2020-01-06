@@ -843,6 +843,11 @@ class InputProcessing:
 
     # TODO - keep only for debug?
     def compute_alignment_score_from_cigar(self, cigar):
+        """
+        Debug function
+        :param cigar:
+        :return:
+        """
         # Get alignment config
         cfg = Configurator.get_cfg()
         align_cfg = cfg["alignment"]
