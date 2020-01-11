@@ -42,7 +42,7 @@ class Alignment:
                 raise AlignerSubstitutionDoesntExist(align_cfg["substitution_matrix"])
 
     def align_reads(self, reads_df: ReadsDf, reference: DNASeq, cut_site: int, primers_len: int,
-                    output: Path, exp_name: str) -> ReadsDf:
+                    output: Path, exp_name: str) -> Tuple[ReadsDf, ReadsDf]:
         """
         - Align each read to his reference and filter noisy alignments.
         - Function add columns to reads_df in place.
@@ -52,8 +52,11 @@ class Alignment:
         :param primers_len: the length of both primers together
         :param output: output path for filtered reads
         :param exp_name: experiment name
-        :return: filtered reads (ReadDf type)
+        :return: reads_df with new columns & filtered reads (ReadDf type)
         """
+
+        if reads_df.shape[0] == 0:
+            return reads_df,  pd.DataFrame()
 
         # Align reads to their amplicon
         self._logger.debug("Alignment for {} - Start Needleman-Wunsch alignment for all reads.".format(exp_name))
@@ -80,7 +83,7 @@ class Alignment:
         reads_df.drop(columns=[REVERSED], inplace=True)
         self._logger.info("Alignment for {} - Done.".format(exp_name))
 
-        return unaligned_df
+        return reads_df, unaligned_df
 
     def needle_wunsch_align(self, reference: DNASeq, read: DNASeq) -> Tuple[DNASeq, DNASeq, CigarPath, int, float]:
         """
@@ -373,7 +376,7 @@ class Alignment:
                     pos_idx += length
                 align_idx += length
 
-        # Add the new
+        # Add the new columns
         for col in INDEL_COLS:
             reads[col] = new_col_d[col]
 

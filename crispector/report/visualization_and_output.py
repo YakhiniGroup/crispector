@@ -71,10 +71,10 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
 def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_trans_df: TransDf,
                              trans_result_df: TransResultDf, input_processing: InputProcessing, min_num_of_reads: int,
                              confidence_interval: float, editing_threshold: float, translocation_p_value: float,
-                             experiment_name: str, output: Path):
+                             output: Path):
 
     html_d = dict() # html parameters dict
-    html_d[PAGE_TITLE] = experiment_name
+    html_d[PAGE_TITLE] = "TODO - remove this title"
     html_d[READING_STATS] = dict()
 
     # Dump summary results
@@ -102,11 +102,12 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
 
     # Save translocations results
     trans_result_df.to_csv(os.path.join(output, "translocations_results.csv"), index=False)
-    html_d[TRANSLOCATIONS][TRANS_RES_TAB] = dict()
-    html_d[TRANSLOCATIONS][TRANS_RES_TAB][TITLE] = "Translocations results sorted by FDR value"
-    html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA] = dict()
-    for col in TRANS_RESULTS_TITLES:
-        html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA][col] = list(trans_result_df[col].values)
+    if trans_result_df.shape[0] > 0:
+        html_d[TRANSLOCATIONS][TRANS_RES_TAB] = dict()
+        html_d[TRANSLOCATIONS][TRANS_RES_TAB][TITLE] = "Translocations results sorted by FDR value"
+        html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA] = dict()
+        for col in TRANS_RESULTS_TITLES:
+            html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA][col] = list(trans_result_df[col].values)
 
     # Translocations Heatmap
     plot_translocations_heatmap(result_df, trans_result_df, translocation_p_value, html_d, output)
@@ -120,7 +121,7 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
 
     html_d[HTML_SITE_NAMES] = list(result_df.loc[result_df[EDIT_PERCENT].isna(), SITE_NAME].values)
 
-    # Add fastp links
+    # Add fastp links TODO - copy and add this to site... Most simple
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.TX])):
         html_d[READING_STATS][FASTP_TX_PATH] = os.path.join(OUTPUT_DIR, "{}/fastp.html".format(FASTP_DIR[ExpType.TX]))
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.MOCK])):
@@ -859,8 +860,9 @@ def plot_editing_activity(result_df: AlgResultDf, confidence_interval: float, ed
             axes[idx].bar([0], [y_lim], color=OFF_TARGET_COLOR, label="Off-Target")
             axes[idx].legend(loc='upper right')
 
-    fig.savefig(os.path.join(output, 'editing_activity.png'), box_inches='tight', dpi=dpi)
-    fig.savefig(os.path.join(output, 'editing_activity.pdf'), pad_inches = 1, box_inches='tight')
+    if edit_df.shape[0] > 0:
+        fig.savefig(os.path.join(output, 'editing_activity.png'), box_inches='tight', dpi=dpi)
+        fig.savefig(os.path.join(output, 'editing_activity.pdf'), pad_inches = 1, box_inches='tight')
 
     html_d[EDITING_ACTIVITY] = dict()
     html_d[EDITING_ACTIVITY][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.png')

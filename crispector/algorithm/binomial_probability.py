@@ -29,13 +29,12 @@ def compute_binom_p(tables: Dict[str ,ModificationTables], modifications: Modifi
         override_coin = True
         logger.warning("Multiple or non on-targets detected. Noise estimation for Binomial probability will use \
         probability from config file - default_binom_p")
-
-    on_site_name = ref_df.loc[ref_df[ON_TARGET], SITE_NAME].values[0]
-
-    if not on_site_name in tables:
-        override_coin = True
-        logger.warning("On-target was Discarded from evaluation. Noise estimation for\
-                       Binomial probability will use probability from config file - default_binom_p")
+    else:
+        on_site_name = ref_df.loc[ref_df[ON_TARGET], SITE_NAME].values[0]
+        if not on_site_name in tables:
+            override_coin = True
+            logger.warning("On-target was Discarded from evaluation. Noise estimation for\
+                           Binomial probability will use probability from config file - default_binom_p")
 
     # Use default_p if override_coin is True
     if override_coin:

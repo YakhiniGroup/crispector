@@ -73,8 +73,14 @@ class InputProcessing:
 
         self._ref_df.loc[self._ref_df[R_PRIMER].isna(), R_PRIMER] = self._ref_df.loc[self._ref_df[R_PRIMER].isna(),
                                                                                      REFERENCE].apply(reverse_complement).str[0:PRIMER_LEN]
+        # Find expected cut-site position
+        self._convert_sgRNA_to_cut_site_position()
+
+        # Detect ambiguous cut-sites
+        self._detect_ambiguous_cut_site()
+
         # Prepare donor experiment variables
-        self._donor = (~self._ref_df[DONOR].isna()).any()
+        self._donor = self._ref_df[DONOR].notnull().any()
         if self._donor:
             self._donor_list = self._ref_df.loc[~self._ref_df[DONOR].isna(), DONOR].values
             self._donor_names = self._ref_df.loc[~self._ref_df[DONOR].isna(), SITE_NAME].values + "_donor"
@@ -96,12 +102,6 @@ class InputProcessing:
     ######### Public methods #########
     # -------------------------------#
     def run(self, tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path):
-        # Find expected cut-site position
-        self._convert_sgRNA_to_cut_site_position()
-
-        # Detect ambiguous cut-sites
-        self._detect_ambiguous_cut_site()
-
         # Input is a multiplexed FASTQ file
         demultiplexed_input = not tx_in1 is None
 
@@ -111,10 +111,8 @@ class InputProcessing:
 
             # Filter low quality reads and merge pair-end reads with fastp
             if not override_fastp:
-                tx_merged, tx_read_n, tx_merged_n = self._fastp(tx_in1, tx_in2, self._output, ExpType.TX.name,
-                                                                ExpType.TX)
-                mock_merged, mock_read_n, mock_merged_n = self._fastp(mock_in1, mock_in2, self._output,
-                                                                      ExpType.MOCK.name, ExpType.MOCK)
+                tx_merged, tx_read_n, tx_merged_n = self._fastp(tx_in1, tx_in2, self._output, ExpType.TX)
+                mock_merged, mock_read_n, mock_merged_n = self._fastp(mock_in1, mock_in2, self._output, ExpType.MOCK)
                 self._input_n[ExpType.TX] += tx_read_n
                 self._merged_n[ExpType.TX] += tx_merged_n
                 self._input_n[ExpType.MOCK] += mock_read_n
@@ -159,11 +157,11 @@ class InputProcessing:
                 tx_merged_l = []
                 mock_merged_l = []
                 for _, row in self._ref_df.iterrows():
+                    self._logger.info("fastp for {} - May take a few minutes.".format(row[SITE_NAME]))
                     site_output = os.path.join(self._output, row[SITE_NAME])
-                    tx_merged, tx_read_n, tx_merged_n = self._fastp(row[TX_IN1], row[TX_IN2], site_output,
-                                                                    ExpType.TX.name, ExpType.TX)
+                    tx_merged, tx_read_n, tx_merged_n = self._fastp(row[TX_IN1], row[TX_IN2], site_output, ExpType.TX)
                     mock_merged, mock_read_n, mock_merged_n = self._fastp(row[MOCK_IN1], row[MOCK_IN2], site_output,
-                                                                          ExpType.MOCK.name, ExpType.MOCK)
+                                                                          ExpType.MOCK)
                     tx_merged_l.append(tx_merged)
                     mock_merged_l.append(mock_merged)
                     self._input_n[ExpType.TX] += tx_read_n
@@ -186,7 +184,7 @@ class InputProcessing:
             # Split read_df to all the different sites
             tx_reads_d: ReadsDict = dict()
             mock_reads_d: ReadsDict = dict()
-            for row in self._ref_df.iterrows():
+            for _, row in self._ref_df.iterrows():
                 for reads_d, merged_fastq in zip([tx_reads_d, mock_reads_d], [row[TX_MERGED], row[MOCK_MERGED]]):
                     if self._donor and row[ON_TARGET]:
                         reads_d[row[SITE_NAME]] = pd.DataFrame(columns=[READ, FREQ])
@@ -194,7 +192,7 @@ class InputProcessing:
                     reads = parse_fastq_file(merged_fastq)
                     reads_df = pd.DataFrame(data=reads, columns=[READ])
                     # Group identical reads together
-                    reads_df = reads_df.groupby(READ).size().to_frame(FREQ).reset_index(drop=True)
+                    reads_df = reads_df.groupby(READ).size().to_frame(FREQ).reset_index()
                     reads_d[row[SITE_NAME]] = reads_df
 
             # Remove fastp files
@@ -214,8 +212,9 @@ class InputProcessing:
             # Align Treatment
             reads_df = tx_reads_d[row[SITE_NAME]]
             exp_name = "{}_{}".format(row[SITE_NAME], ExpType.TX.name)
-            unaligned_df = self._aligner.align_reads(reads_df, row[REFERENCE], row[CUT_SITE], primers_len, site_output,
-                                                     exp_name)
+            reads_df, unaligned_df = self._aligner.align_reads(reads_df, row[REFERENCE], row[CUT_SITE], primers_len,
+                                                               site_output, exp_name)
+            tx_reads_d[row[SITE_NAME]] = reads_df
             self._aligned_n[ExpType.TX] += reads_df[FREQ].sum()
             tx_filtered_df = pd.concat([tx_filtered_df, unaligned_df], sort=False)
             tx_filtered_df.reset_index(inplace=True, drop=True)
@@ -223,8 +222,9 @@ class InputProcessing:
             # Align Mock
             reads_df = mock_reads_d[row[SITE_NAME]]
             exp_name = "{}_{}".format(row[SITE_NAME], ExpType.MOCK.name)
-            unaligned_df = self._aligner.align_reads(reads_df, row[REFERENCE], row[CUT_SITE], primers_len, site_output,
+            reads_df, unaligned_df = self._aligner.align_reads(reads_df, row[REFERENCE], row[CUT_SITE], primers_len, site_output,
                                                      exp_name)
+            mock_reads_d[row[SITE_NAME]] = reads_df
             self._aligned_n[ExpType.MOCK] += reads_df[FREQ].sum()
             mock_filtered_df = pd.concat([mock_filtered_df, unaligned_df], sort=True)
             mock_filtered_df.reset_index(inplace=True, drop=True)
@@ -234,19 +234,24 @@ class InputProcessing:
             self._create_filtered_reads_debug_table(tx_filtered_df, ExpType.TX)
             self._create_filtered_reads_debug_table(mock_filtered_df, ExpType.MOCK)
 
+        # Warning if the number of reads isn't balanced
+        if (self._aligned_n[ExpType.TX] > 3 * self._aligned_n[ExpType.MOCK]) or \
+           (self._aligned_n[ExpType.MOCK] > 3 * self._aligned_n[ExpType.TX]):
+            self._logger.warning("Number of reads (Tx={:,}, Mock={:,}) is high unbalanced! CRISPECTOR wasn't tested"
+                                 "in these scenarios. Consider to retake the experiments")
+
         return tx_reads_d, mock_reads_d, tx_trans_df, mock_trans_df
 
     #-------------------------------#
     ######### Private methods #######
     #-------------------------------#
     ######### Merging ###########
-    def _fastp(self, in1: Path, in2: Path, output: Path, exp_name: str, exp_type: ExpType) -> Tuple[Path, int, int]:
+    def _fastp(self, in1: Path, in2: Path, output: Path, exp_type: ExpType) -> Tuple[Path, int, int]:
         """
         Wrapper for fastp SW.
         :param in1: read1 input
         :param in2: read2 input
         :param output: output directory
-        :param exp_name:
         :param exp_type
         :return: path to merged fastq file, reads_numbers, reads_merged_numbers
         """
@@ -268,8 +273,8 @@ class InputProcessing:
 
         command = " ".join(command)
 
-        self._logger.debug("fastp for {} - Command {}".format(exp_name, command))
-        self._logger.info("fastp for {} - Run (may take a few minutes).".format(exp_name))
+        self._logger.debug("fastp for {} - Command {}".format(exp_type.name, command))
+        self._logger.info("fastp for {} - Run (may take a few minutes).".format(exp_type.name))
         try:
             subprocess.run(command, shell=True, check=True)
         except subprocess.CalledProcessError:
@@ -286,7 +291,7 @@ class InputProcessing:
             reads_in_input_num = -1
             merged_reads_num =-1
 
-        self._logger.info("fastp for {} - Done.".format(exp_name))
+        self._logger.info("fastp for {} - Done.".format(exp_type.name))
 
         return merged_path, reads_in_input_num, merged_reads_num
 

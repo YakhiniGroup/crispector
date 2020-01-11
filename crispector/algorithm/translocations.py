@@ -21,6 +21,9 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
     :param edit_thresh: Threshold to count NHEJ activity as active
     :return: TransResultDf - translocation result
     """
+    if tx_df.shape[0] == 0 or mock_df.shape[0] == 0:
+        return pd.DataFrame(columns=[SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR])
+
     trans_d = defaultdict(list)
 
     # Check translocation only for active editing site.

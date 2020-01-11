@@ -3,26 +3,14 @@ class FastpRunTimeError(Exception):
     pass
 
 
-class Bowtie2BuildRunTimeError(Exception):
-    pass
-
-
-class Bowtie2RunTimeError(Exception):
-    pass
-
-
-class NoneValuesInAmpliconsCSV(Exception):
-    pass
+class BadInputError(Exception):
+    def __init__(self, msg):
+        self.msg = msg
 
 
 class SgRNANotInReferenceSequence(Exception):
     def __init__(self, site_name):
         self.site_name = site_name
-
-
-class CantOpenDemultiplexedSamFile(Exception):
-    def __init__(self, path):
-        self.path = path
 
 
 class CantOpenMergedFastqFile(Exception):
