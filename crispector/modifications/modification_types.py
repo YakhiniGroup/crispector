@@ -1,9 +1,9 @@
-from exceptions import PriorPositionHasWrongLength
-from constants_and_types import IndelType
-from typing import List, Dict
+from utils.exceptions import PriorPositionHasWrongLength
+from utils.constants_and_types import IndelType
+from typing import List
 from collections import defaultdict
+from utils.configurator import Configurator
 
-from utils import Configurator
 
 
 class ModificationTypes:

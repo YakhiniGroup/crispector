@@ -24,6 +24,7 @@ class ExpType(Enum):
     TX = 0
     MOCK = 1
 
+    @property
     def name(self):
         if self._name_ == "TX":
             return "treatment"
@@ -135,9 +136,13 @@ FASTP_DIR[ExpType.TX] = "treatment_fastp"
 FASTP_DIR[ExpType.MOCK] = "mock_fastp"
 
 # AmpliconDf constants
-SITE_NAME, REFERENCE, SGRNA, ON_TARGET, CUT_SITE = 'site_name', 'reference', 'sgRNA', 'Site type', 'cut-site'
-F_PRIMER = 'forward_primer'
-R_PRIMER = 'reverse_primer'
+SITE_NAME, REFERENCE, SGRNA, ON_TARGET = 'SiteName', 'AmpliconReference', 'sgRNA', 'OnTarget'
+F_PRIMER = 'ForwardPrimer'
+R_PRIMER = 'ReversePrimer'
+TX_IN1, TX_IN2, MOCK_IN1, MOCK_IN2 = "TxInput1Path", "TxInput2Path", "MockInput1Path", "MockInput2Path"
+TX_MERGED, MOCK_MERGED = "TxMerged", "MockMerged"
+DONOR = "DonorReference"
+CUT_SITE = 'cut-site'
 MAX_SCORE = 'max_score'
 CS_SHIFT_R = 'possible_cut_site_shift_to_right'
 CS_SHIFT_L = 'possible_cut_site_shift_to_left'
@@ -198,6 +203,9 @@ CIGAR_LEN_THRESHOLD = 8 # This threshold is applied only if alignment score is l
 MIN_PRIMER_DIMER_THRESH = 10
 READ_LEN_SIDE = 20
 OUTPUT_DIR = "crispector_output"
+
+# DEBUG purpose constant
+ALIGNMENT_HUMAN = 'alignment_human_readable'
 
 # AlgResult columns
 TX_READ_NUM = "Treatment number of reads"

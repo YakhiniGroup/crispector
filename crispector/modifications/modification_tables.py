@@ -1,8 +1,8 @@
-from constants_and_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, IsEdit, CIGAR, FREQ, \
+from input_processing.utils import parse_cigar_with_mixed_indels
+from utils.constants_and_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, IsEdit, CIGAR, FREQ, \
     C_TX, C_MOCK, REFERENCE, CS_SHIFT_R, CS_SHIFT_L, ModDist, MOD_TABLE_IDX, INDEL_TYPE, INDEL_LEN, IS_EDIT, \
     POS_IDX_S, POS_IDX_E
-from input_processing import InputProcessing
-from modification_types import ModificationTypes
+from modifications.modification_types import ModificationTypes
 import numpy as np
 from collections import defaultdict
 import pandas as pd
@@ -114,7 +114,7 @@ class ModificationTables:
 
         for row_idx, row in read.iterrows():
             pos_idx = 0  # position index
-            for length, length_wo_ins, indel_type, mixed_l in InputProcessing.parse_cigar_with_mixed_indels(row[CIGAR]):
+            for length, length_wo_ins, indel_type, mixed_l in parse_cigar_with_mixed_indels(row[CIGAR]):
                 table_idx = self._modifications.find_index(indel_type, length)
                 # For a match - continue
                 if indel_type == IndelType.MATCH:

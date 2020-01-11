@@ -1,21 +1,22 @@
-from constants_and_types import Pr, IndelType, C_TX, C_MOCK, ON_TARGET, CUT_SITE, SITE_NAME, R_PRIMER, F_PRIMER, \
-    BINOM_PERCENTILE, BINOM_AVERAGE_P
-from utils import Configurator, Logger
+from utils.constants_and_types import Pr, IndelType, C_TX, C_MOCK, ON_TARGET, CUT_SITE, SITE_NAME, R_PRIMER, F_PRIMER, \
+    BINOM_PERCENTILE, BINOM_AVERAGE_P, AmpliconDf
+from utils.logger import Logger
+from utils.configurator import Configurator
 from typing import Dict, List
-from modification_tables import ModificationTables
-from modification_types import ModificationTypes
+from modifications.modification_tables import ModificationTables
+from modifications.modification_types import ModificationTypes
 import numpy as np
-import pandas as pd
-import os
+
 
 def compute_binom_p(tables: Dict[str ,ModificationTables], modifications: ModificationTypes,
-                    override_coin: bool, ref_df) -> Dict[str, List[Pr]]:
+                    override_coin: bool, ref_df: AmpliconDf) -> Dict[str, List[Pr]]:
     """
     Compute binomial probability for each site.
     :param tables: Modification tables
     :param modifications: Modification Types
     :param override_coin:
     :param ref_df:
+    :param donor: is donor experiment flag
     :return: Dict[SITE_NAME, LIST of probability for each modification type]
     """
     logger = Logger.get_logger()
@@ -33,7 +34,7 @@ def compute_binom_p(tables: Dict[str ,ModificationTables], modifications: Modifi
 
     if not on_site_name in tables:
         override_coin = True
-        logger.warning("On-target was Discarded from evaluation due to low number of reads. Noise estimation for\
+        logger.warning("On-target was Discarded from evaluation. Noise estimation for\
                        Binomial probability will use probability from config file - default_binom_p")
 
     # Use default_p if override_coin is True

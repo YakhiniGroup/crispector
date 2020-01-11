@@ -6,7 +6,7 @@ from scipy.special import logsumexp
 from scipy import stats
 from statsmodels.stats.multitest import fdrcorrection
 import pandas as pd
-from constants_and_types import TransDf, AlgResultDf, EDIT_PERCENT, TransResultDf, SITE_NAME, R_SITE, L_SITE, FREQ, \
+from utils.constants_and_types import TransDf, AlgResultDf, EDIT_PERCENT, TransResultDf, SITE_NAME, R_SITE, L_SITE, FREQ, \
     TX_READ_NUM, MOCK_READ_NUM, SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR, IS_TRANS
 
 
@@ -71,8 +71,11 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
 
     # Compute FDR correction
     _, trans_d[TRANS_FDR] = fdrcorrection(trans_d[TRANS_PVAL])
+    if len(trans_d) != 0:
+        trans_df: TransResultDf = pd.DataFrame.from_dict(trans_d)
+    else:
+        trans_df = pd.DataFrame(columns=[SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR])
 
-    trans_df: TransResultDf = pd.DataFrame.from_dict(trans_d)
     trans_df = trans_df.sort_values(by=[TRANS_FDR]).reset_index(drop=True)
 
     # Set Is_translocation column in tx_read and mock_read

@@ -1,9 +1,10 @@
-from constants_and_types import IsEdit, IndelType, AlgResult, Pr, FREQ, IS_EDIT, C_TX, C_MOCK, TX_READ_NUM, \
+from utils.constants_and_types import IsEdit, IndelType, AlgResult, Pr, FREQ, IS_EDIT, C_TX, C_MOCK, TX_READ_NUM, \
     MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH, ReadsDf
-from exceptions import ClassificationFailed
-from utils import Configurator, Logger
-from modification_tables import ModificationTables
-from modification_types import ModificationTypes
+from utils.exceptions import ClassificationFailed
+from utils.logger import Logger
+from utils.configurator import Configurator
+from modifications.modification_tables import ModificationTables
+from modifications.modification_types import ModificationTypes
 from typing import List, Tuple, Dict
 from scipy.stats import norm, binom, hypergeom
 import numpy as np

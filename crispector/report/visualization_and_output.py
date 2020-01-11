@@ -1,4 +1,4 @@
-from constants_and_types import SITE_NAME, IndelType, Path, FREQ, IS_EDIT, TX_READ_NUM, \
+from utils.constants_and_types import SITE_NAME, IndelType, Path, FREQ, IS_EDIT, TX_READ_NUM, \
     MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH, READ_LEN_SIDE, ALIGN_CUT_SITE, ALIGNMENT_W_INS, \
     ALIGNMENT_W_DEL, POS_IDX_E, POS_IDX_S, INDEL_TYPE, ExpType, ON_TARGET, IsEdit, C_TX, C_MOCK, \
     SUMMARY_RESULTS_TITLES, OFF_TARGET_COLOR, ON_TARGET_COLOR, OUTPUT_DIR, DISCARDED_SITES, \
@@ -10,10 +10,10 @@ import math
 import os
 import warnings
 from typing import List, Tuple, Dict
-from input_processing import InputProcessing
-from modification_types import ModificationTypes
-from core_algorithm import CoreAlgorithm
-from modification_tables import ModificationTables
+from input_processing.input_processing import InputProcessing
+from modifications.modification_types import ModificationTypes
+from algorithm.core_algorithm import CoreAlgorithm
+from modifications.modification_tables import ModificationTables
 import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -21,7 +21,7 @@ import seaborn as sns #
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
-from utils import Logger
+from utils.logger import Logger
 from copy import deepcopy
 from matplotlib.collections import QuadMesh
 
@@ -344,7 +344,7 @@ def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site:
         ax.plot(positions, dist_d[IndelType.DEL], color=IndelType.DEL.color, label="Deletions", linewidth=3, alpha=0.9)
         ax.set_ylim(bottom=0, top=max(int(1.1 * max_indels), 10))
         ax.set_xlim(left=0, right=amplicon_length)
-        ax.set_ylabel("{}\nIndel count".format(exp_type.name()))
+        ax.set_ylabel("{}\nIndel count".format(exp_type.name))
 
     # Create legend, title and x-label
     axes[0].legend()
@@ -895,11 +895,16 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
     tx_color_lightest = '#f7b488'  # orange
 
     # set input == merged if input information isn't available
-    if tx_in == -1:
-        tx_in = tx_merged
-    if mock_in == -1:
-        mock_in = mock_merged
-
+    if tx_in == 0:
+        if tx_merged == 0:
+            tx_in, tx_merged = 1, 1
+        else:
+            tx_in = tx_merged
+    if mock_in == 0:
+        if mock_merged == 0:
+            mock_in, mock_merged = 1, 1
+        else:
+            mock_in = mock_merged
 
     # Create mapping statistics plot
     fig = plt.figure(figsize=(fig_w, fig_h))
