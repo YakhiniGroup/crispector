@@ -1,0 +1,113 @@
+{% extends 'layout.html' %}
+
+{% block experiment_title %}
+		{{exp_param_d.PAGE_TITLE}}
+{% endblock %}
+
+{% block editing_activity_title %}
+		{{exp_param_d.EDITING_ACTIVITY.TITLE}}
+{% endblock %}
+
+{% block editing_activity_plot_path %}
+		{{exp_param_d.EDITING_ACTIVITY.PLOT_PATH}}
+{% endblock %}
+
+{% block editing_activity_pdf_path %}
+		{{exp_param_d.EDITING_ACTIVITY.PDF_PATH}}
+{% endblock %}
+
+{% block reading_stats_title %}
+		{{exp_param_d.READING_STATS.TITLE}}
+{% endblock %}
+
+{% block reading_stats_mapping_stats_title %}
+		{{exp_param_d.READING_STATS.MAPPING_STATS.TITLE}}
+{% endblock %}
+
+{% block reading_stats_mapping_stats_plot_path %}
+		{{exp_param_d.READING_STATS.MAPPING_STATS.PLOT_PATH}}
+{% endblock %}
+
+{% block reading_stats_mapping_stats_pdf_path %}
+		{{exp_param_d.READING_STATS.MAPPING_STATS.PDF_PATH}}
+{% endblock %}
+
+{% block reading_stats_mapping_per_site_title %}
+		{{exp_param_d.READING_STATS.MAPPING_PER_SITE.TITLE}}
+{% endblock %}
+
+{% block reading_stats_mapping_per_site_plot_path %}
+		{{exp_param_d.READING_STATS.MAPPING_PER_SITE.PLOT_PATH}}
+{% endblock %}
+
+{% block reading_stats_mapping_per_site_pdf_path %}
+		{{exp_param_d.READING_STATS.MAPPING_PER_SITE.PDF_PATH}}
+{% endblock %}
+
+{% block reading_stats_discarded_sites %}
+	{% if reading_stats_discarded_sites is not none %}
+		{{exp_param_d.READING_STATS.DISCARDED_SITES}}
+	{% else %}
+		{{ super() }}
+	{% endif %}
+{% endblock reading_stats_discarded_sites %}
+
+{% block reading_stats_fastp_tx_path %}
+	{% if reading_stats_fastp_tx_path is not none %}
+		{{exp_param_d.READING_STATS.FASTP_TX_PATH}}
+	{% else %}
+		{{ super() }}
+	{% endif %}
+{% endblock reading_stats_fastp_tx_path %}
+
+{% block reading_stats_fastp_tx_text %}
+	{% if reading_stats_fastp_tx_text is not none %}
+		{{exp_param_d.READING_STATS.FASTP_TX_TEXT}}
+	{% else %}
+		{{ super() }}
+	{% endif %}
+{% endblock reading_stats_fastp_tx_text %}
+
+{% block reading_stats_fastp_mock_path %}
+	{% if reading_stats_fastp_mock_path is not none %}
+		{{exp_param_d.READING_STATS.FASTP_MOCK_PATH}}
+	{% else %}
+		{{ super() }}
+	{% endif %}
+{% endblock reading_stats_fastp_mock_path %}
+
+{% block reading_stats_fastp_mock_text %}
+	{% if reading_stats_fastp_mock_text is not none %}
+		{{exp_param_d.READING_STATS.FASTP_MOCK_TEXT}}
+	{% else %}
+		{{ super() }}
+	{% endif %}
+{% endblock reading_stats_fastp_mock_text %}
+
+{% block result_table_title %}
+		{{exp_param_d.RESULT_TABLE.TITLE}}
+{% endblock %}
+
+{% block result_table %}
+		{{result_table_html}}
+{% endblock %}
+
+{% block site_name_menu %}
+	{% for site in exp_param_d.HTML_SITE_NAMES -%}
+	<li><a href="#{{ site }}">{{ site }}</a></li>
+	{% endfor %}
+{% endblock %}
+
+{% block site_name %}
+	{% for site in exp_param_d.HTML_SITE_NAMES -%}
+            <li class="list-group-item">
+            <div id="{{ site }}">         
+                    <a href="">{{ site }}</a>
+            </div>
+            </li>
+	{% endfor %}
+{% endblock %}
+
+{% block log_path %}
+		{{exp_param_d.LOG_PATH}}
+{% endblock %}
