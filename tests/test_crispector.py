@@ -8,12 +8,11 @@ from Bio import Align
 
 from click.testing import CliRunner
 
-from constants_and_types import CIGAR, SITE_NAME, ALIGNMENT_W_INS, ALIGNMENT_W_DEL
-from crispector import crispector_main
-from crispector import cli
+from utils.constants_and_types import CIGAR, SITE_NAME, ALIGNMENT_W_INS, ALIGNMENT_W_DEL
+from crispector import arg_parser
 from input_processing import InputProcessing
 from utils import Configurator
-from fixtures import rag1_amplicons
+
 
 @pytest.fixture
 def response():
@@ -34,10 +33,10 @@ def test_content(response):
 def test_command_line_interface():
     """Test the CLI."""
     runner = CliRunner()
-    result = runner.invoke(cli.main)
+    result = runner.invoke(arg_parser.main)
     assert result.exit_code == 0
     assert 'crispector.cli.main' in result.output
-    help_result = runner.invoke(cli.main, ['--help'])
+    help_result = runner.invoke(arg_parser.main, ['--help'])
     assert help_result.exit_code == 0
     assert '--help  Show this message and exit.' in help_result.output
 
