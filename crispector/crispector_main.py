@@ -29,7 +29,7 @@ from modifications.modification_types import ModificationTypes
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_output: Path, experiment_config: Path,
         fastp_options_string: str, verbose: bool, min_num_of_reads: int,
         cut_site_position: int, amplicon_min_score: float, translocation_amplicon_min_score: float,
-        min_read_length: int, config: Path, override_binomial_p: bool, confidence_interval: float,
+        min_read_length: int, crispector_config: Path, override_binomial_p: bool, confidence_interval: float,
         editing_threshold: float, translocation_p_value: float, suppress_site_output: bool,
         disable_translocations: bool, enable_substitutions: bool,
         ambiguous_cut_site_detection: bool, debug: bool, table_input: Path, keep_fastp_output: bool):
@@ -52,7 +52,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
         click.echo(welcome_msg)
 
         # Set config path and get configuration
-        Configurator.set_cfg_path(config)
+        Configurator.set_cfg_path(crispector_config)
 
         ref_df = read_exp_config_and_check_input(experiment_config, tx_in1, tx_in2, mock_in1, mock_in2)
 
@@ -122,8 +122,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
             # Continue if site was discarded
             if site not in tables_d:
                 # Log the following in the result dict
-                tx_reads_num = tx_reads_d[site][FREQ].sum().astype(int)
-                mock_reads_num = mock_reads_d[site][FREQ].sum().astype(int)
+                tx_reads_num = 0 #tx_reads_d[site][FREQ].sum().astype(int) TODO - change back
+                mock_reads_num = 0 #mock_reads_d[site][FREQ].sum().astype(int) TODO - change back
                 result_summary_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num, ON_TARGET: row[ON_TARGET]}
                 continue
 

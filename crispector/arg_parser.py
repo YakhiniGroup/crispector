@@ -21,7 +21,7 @@ import os
               help="Path to output folder (string)")
 @click.option("--cut_site_position", type=click.INT, default=-3, show_default=True,
               help="Cut-site position relative to PAM (minus sign for upstream)")
-@click.option("--config", '-c', type=click.Path(),
+@click.option("--crispector_config", type=click.Path(),
               help="Path YAML configuration file. See README on GitHub (####) for more details.") #TODO - add description
 @click.option('--fastp_options_string', type=click.STRING, default="-w 2", help="Try \"fastp --help\" for more details")
 @click.option("--min_num_of_reads", type=click.INT, default=500, show_default=True,
