@@ -159,7 +159,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
                 # Create plots and tables
                 site_output = os.path.join(output, site)
                 site_param_d[site] = create_site_output(algorithm, modifications, tables_d[site], result_summary_d[site],
-                                                        site, "", site_output)
+                                                        site, site_output)
         logger.info("Creating experiment plots and tables - Done!")
 
         # Create final HTML report

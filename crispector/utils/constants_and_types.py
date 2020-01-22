@@ -135,6 +135,11 @@ FASTP_DIR = dict()
 FASTP_DIR[ExpType.TX] = "treatment_fastp"
 FASTP_DIR[ExpType.MOCK] = "mock_fastp"
 
+# Filter constants
+FILTERED_PATH = dict()
+FILTERED_PATH[ExpType.TX.name] = "treatment_filtered_reads.fasta"
+FILTERED_PATH[ExpType.MOCK.name] = "mock_filtered_reads.fasta"
+
 # AmpliconDf constants
 SITE_NAME, REFERENCE, SGRNA, ON_TARGET = 'SiteName', 'AmpliconReference', 'sgRNA', 'OnTarget'
 F_PRIMER = 'ForwardPrimer'
@@ -237,6 +242,7 @@ ON_TARGET_COLOR = "#39ad48"
 
 # html constants
 DISCARDED_SITES = "discarded_sites"
+EDIT_SECTION = "edit_section"
 EDITING_ACTIVITY = "editing_activity"
 W = "width"
 H = "height"
@@ -258,3 +264,19 @@ TX_TRANS_PATH = "tx_translocations_path"
 MOCK_TRANS_PATH = "mock_translocations_path"
 TRANS_RES_TAB = "translocations_results_tab"
 TRANS_HEATMAP_TAB = "translocations_heatmap_tab"
+
+# html site constants
+MOD_SECTION = "modification_section"
+MOD_DIST = "modification_distribution"
+EDIT_DIST = "edit_distribution"
+EDIT_SIZE_DIST = "edit_size_distribution"
+CLS_RES_SECTION = "classifier_results_section"
+CLS_RES_INS = "classifier_results_ins"
+CLS_RES_DEL = "classifier_results_del"
+CLS_RES_MIX = "classifier_results_mix"
+READ_SECTION = "read_section"
+READ_EDIT = "edited_reads"
+READ_TX_ALL = "treatment_aligned_reads"
+READ_MOCK_ALL = "mock_aligned_reads"
+READ_TX_FILTER = "treatment_filtered_reads"
+READ_MOCK_FILTER = "mock_filtered_reads"

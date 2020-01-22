@@ -5,7 +5,9 @@ from utils.constants_and_types import SITE_NAME, IndelType, Path, FREQ, IS_EDIT,
     EDITING_ACTIVITY, PLOT_PATH, TITLE, W, H, PDF_PATH, PAGE_TITLE, READING_STATS, MAPPING_STATS, MAPPING_PER_SITE, \
     FASTP_DIR, FASTP_TX_PATH, FASTP_MOCK_PATH, RESULT_TABLE, TAB_DATA, HTML_SITE_NAMES, LOG_PATH, TransDf, AlgResultDf, \
     TransResultDf, TRANS_FDR, SITE_A, SITE_B, TX_TRANS_READ, TRANSLOCATIONS, TX_TRANS_PATH, MOCK_TRANS_PATH, \
-    TRANS_RES_TAB, TRANS_HEATMAP_TAB, TRANS_RESULTS_TITLES
+    TRANS_RES_TAB, TRANS_HEATMAP_TAB, TRANS_RESULTS_TITLES, EDIT_SECTION, MOD_SECTION, CLS_RES_SECTION, CLS_RES_INS, \
+    CLS_RES_DEL, CLS_RES_MIX, MOD_DIST, EDIT_DIST, EDIT_SIZE_DIST, READ_SECTION, READ_EDIT, READ_MOCK_ALL, READ_TX_ALL, \
+    FILTERED_PATH, READ_TX_FILTER, READ_MOCK_FILTER
 import math
 import os
 import warnings
@@ -26,47 +28,67 @@ from copy import deepcopy
 from matplotlib.collections import QuadMesh
 
 def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationTypes, mod_table: ModificationTables,
-                       site_result: Dict, site_name: str, experiment_name: str, output: Path):
-    base_path = os.path.join(OUTPUT_DIR, site_name)
-    # TODO - Don't forget to add PDF's and remove titles.
+                       site_result: Dict, site_name: str, output: Path):
 
-    title_name = "{} - {}".format(experiment_name, site_name)
+    html_d = dict() # HTML parameters dict
+    html_d[TITLE] = "{}".format(site_name)
+
+    base_path = os.path.join(OUTPUT_DIR, site_name)
 
     cut_site = algorithm.cut_site
     win_size = algorithm.win_size
 
+    # Plot editing activity
+    plot_site_editing_activity(algorithm, site_result, site_name, output, html_d, base_path)
+
+    # Plot mutation distribution
+    html_d[MOD_SECTION] = dict()
+    html_d[MOD_SECTION][TITLE] = "Modifications"
+    plot_distribution_of_edit_events(mod_table, cut_site, win_size, output, html_d, base_path)
+    plot_distribution_of_all_modifications(mod_table, cut_site, win_size, output, html_d, base_path)
+    plot_distribution_of_edit_event_sizes(mod_table, output, html_d, base_path)
+
     # plot modification table
-    # TODO - decide which plots are needed
-    # TODO - needed? tables.dump_tables(self._edit, self._tables_offset, self._output)
+    # TODO - remove all table
+    html_d[CLS_RES_SECTION] = dict()
+    html_d[CLS_RES_SECTION][TITLE] = "Classifier Results"
     all_table_idx = list(range(modifications.size))
     del_table_idx = [i for i, x in enumerate(modifications.types) if x == IndelType.DEL]
     ins_table_idx = [i for i, x in enumerate(modifications.types) if x == IndelType.INS]
     mix_table_idx = [i for i, x in enumerate(modifications.types) if x in [IndelType.MIXED, IndelType.SUB]]
-    plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset, title_name,
-                             all_table_idx, output, "all", figsize=(14, 20))
-    plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset, title_name,
-                             del_table_idx, output, "del")
-    plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset, title_name,
-                             ins_table_idx, output, "ins")
-    plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset, title_name,
-                             mix_table_idx, output, "mix_and_sub")
+    plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
+                             all_table_idx, output, html_d, base_path, "all", figsize=(14, 20))
+    plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
+                             del_table_idx, output, html_d, base_path, "del", figsize=(12, 10))
+    plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
+                             ins_table_idx, output, html_d, base_path, "ins", figsize=(12, 8))
+    plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
+                             mix_table_idx, output, html_d, base_path, "mix_and_sub", figsize=(12, 12))
 
     # Create edited read table
-    plot_edited_reads_to_table(mod_table, cut_site, output)
-
-    # Plot mutation distribution
-    plot_distribution_of_edit_events(mod_table, cut_site, win_size, title_name, output)
-    plot_distribution_of_all_modifications(mod_table, cut_site, win_size, title_name, output)
-    # plot_distribution_of_edit_event_sizes(mod_table, title_name, output) TODO - which one is better
-    plot_distribution_of_edit_event_sizes_3_plots(mod_table, title_name, output)
-
-    # Plot editing activity
-    plot_site_editing_activity(algorithm, site_result, site_name, title_name, output)
+    html_d[READ_SECTION] = dict()
+    html_d[READ_SECTION][TITLE] = "Reads"
+    plot_edited_reads_to_table(mod_table, cut_site, output, html_d, base_path)
 
     # Dump .csv file with all reads
     mod_table.tx_reads.to_csv(os.path.join(output, "treatment_aligned_reads.csv.gz"), index=False, compression='gzip')
     mod_table.mock_reads.to_csv(os.path.join(output, "mock_aligned_reads.csv.gz"), index=False, compression='gzip')
+    html_d[READ_SECTION][READ_TX_ALL] = os.path.join(base_path, "treatment_aligned_reads.csv.gz")
+    html_d[READ_SECTION][READ_MOCK_ALL] = os.path.join(base_path, "mock_aligned_reads.csv.gz")
 
+    # Add fastp links
+    if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.TX])):
+        html_d[READ_SECTION][FASTP_TX_PATH] = os.path.join(base_path, "{}/fastp.html".format(FASTP_DIR[ExpType.TX]))
+    if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.MOCK])):
+        html_d[READ_SECTION][FASTP_MOCK_PATH] = os.path.join(base_path, "{}/fastp.html".format(FASTP_DIR[ExpType.MOCK]))
+
+    # Add filtered reads link
+    if os.path.exists(os.path.join(output, FILTERED_PATH[ExpType.TX.name])):
+        html_d[READ_SECTION][READ_TX_FILTER] = os.path.join(base_path, FILTERED_PATH[ExpType.TX.name])
+    if os.path.exists(os.path.join(output, FILTERED_PATH[ExpType.MOCK.name])):
+        html_d[READ_SECTION][READ_MOCK_FILTER] = os.path.join(base_path, FILTERED_PATH[ExpType.MOCK.name])
+
+    return html_d
 
 def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_trans_df: TransDf,
                              trans_result_df: TransResultDf, input_processing: InputProcessing, min_num_of_reads: int,
@@ -74,18 +96,19 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
                              output: Path):
 
     html_d = dict() # html parameters dict
-    html_d[PAGE_TITLE] = "TODO - remove this title"
-    html_d[READING_STATS] = dict()
 
     # Dump summary results
     summary_result_to_excel(result_df, confidence_interval, output)
 
     # Create bar plot for editing activity
+    html_d[EDIT_SECTION]  = dict()
+    html_d[EDIT_SECTION][TITLE] = "Editing Activity"
     plot_editing_activity(result_df, confidence_interval, editing_threshold, html_d, output)
 
     # Dump reads statistics
     tx_input_n, tx_merged_n, tx_aligned_n = input_processing.read_numbers(ExpType.TX)
     mock_input_n, mock_merged_n, mock_aligned_n = input_processing.read_numbers(ExpType.MOCK)
+    html_d[READING_STATS] = dict()
     create_reads_statistics_report(result_df, tx_input_n, tx_merged_n, tx_aligned_n,
                                    mock_input_n, mock_merged_n, mock_aligned_n, html_d, output)
 
@@ -106,22 +129,24 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
         html_d[TRANSLOCATIONS][TRANS_RES_TAB] = dict()
         html_d[TRANSLOCATIONS][TRANS_RES_TAB][TITLE] = "Translocations results sorted by FDR value"
         html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA] = dict()
-        for col in TRANS_RESULTS_TITLES:
-            html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA][col] = list(trans_result_df[col].values)
+        html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA][0] = list(trans_result_df.columns.values)
+        for row_idx, row in trans_result_df.iterrows():
+            html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA][row_idx+1] = list(row.values)
 
     # Translocations Heatmap
     plot_translocations_heatmap(result_df, trans_result_df, translocation_p_value, html_d, output)
 
     # Add summary results to page
-    html_d[RESULT_TABLE] = dict()
-    html_d[RESULT_TABLE][TITLE] = "Results Table"
-    html_d[RESULT_TABLE][TAB_DATA] = dict()
-    for col in SUMMARY_RESULTS_TITLES:
-        html_d[RESULT_TABLE][TAB_DATA][col] = list(result_df[col].values)
+    html_d[EDIT_SECTION][RESULT_TABLE] = dict()
+    html_d[EDIT_SECTION][RESULT_TABLE][TITLE] = "Results Table"
+    html_d[EDIT_SECTION][RESULT_TABLE][TAB_DATA] = dict()
+    html_d[EDIT_SECTION][RESULT_TABLE][TAB_DATA][0] = list(result_df.columns.values)
+    for row_idx, row in result_df.iterrows():
+        html_d[EDIT_SECTION][RESULT_TABLE][TAB_DATA][row_idx+1] = list(row.values)
 
     html_d[HTML_SITE_NAMES] = list(result_df.loc[result_df[EDIT_PERCENT].isna(), SITE_NAME].values)
 
-    # Add fastp links TODO - copy and add this to site... Most simple
+    # Add fastp links
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.TX])):
         html_d[READING_STATS][FASTP_TX_PATH] = os.path.join(OUTPUT_DIR, "{}/fastp.html".format(FASTP_DIR[ExpType.TX]))
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.MOCK])):
@@ -135,7 +160,7 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
 #####----modifications-----#####
 #####----------------------#####
 def plot_modification_tables(mod_table: ModificationTables, modifications: ModificationTypes, edit_table: IsEdit,
-                             table_offset: int, experiment_name: str, table_indexes: List[int], output: Path,
+                             table_offset: int, table_indexes: List[int], output: Path, html_d: Dict, base_output: Path,
                              name_suffix = "", figsize: Tuple = (16, 11)):
     """
     Plot all modification tables around cut-site.
@@ -157,12 +182,14 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
     mpl.rcParams['ytick.labelsize'] = 12
     indel_size = 12
     bar_width = 0.4
+    dpi = 200
     mock_color = '#3690c0'  # blue
     tx_color = '#f16a13'  # orange
     edit_color = '#dcdcdc'  # light grey
     cut_site_color = "red"
     grid_color = 'grey'
     # Create axes
+    fig_w, fig_h = figsize
     fig, axes = plt.subplots(nrows=len(table_indexes), ncols=1, figsize=figsize, sharex=True)
 
     for axes_idx, table_idx in enumerate(table_indexes):
@@ -227,10 +254,6 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
 
         # Add the reference sequence in the position of the title
         if axes_idx == 0:
-            axes[axes_idx].text(0.5, 0.95,
-                                "CRISPECTOR classifier results, by position\n{}".format(experiment_name),
-                                ha="center", va="bottom", weight='bold', size=35,
-                                transform=fig.transFigure, family='serif')
             ref = mod_table.amplicon[table_offset:table_offset + len(positions)]
             for pos_idx, ii in enumerate(bar_ind):
                 axes[axes_idx].text(ii, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
@@ -251,54 +274,42 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'classifier_results_by_position_{}.png'.format(name_suffix)),
-                    bbox_inches='tight', dpi=200)
+                    bbox_inches='tight', dpi=dpi)
+        fig.savefig(os.path.join(output, 'classifier_results_by_position_{}.pdf'.format(name_suffix)),
+                    pad_inches = 1, box_inches='tight')
+
         plt.close(fig)
 
-def dump_tables(mod_table: ModificationTables, modifications: ModificationTypes,
-                edit_table: IsEdit, table_offset: int, win_size: int, output: Path):
-    """
-    Dump all modification tables around cut-site to a csv.
-    Also display edit events.
-    :param mod_table: ModificationTables
-    :param modifications: ModificationTypes
-    :param edit_table: edit as marked by crispector algorithm
-    :param table_offset: reference offset (in bp) to the start of the qualification window
-    :param output: output path
-    :return:
-    """
-    ref = mod_table.amplicon[table_offset:table_offset + 2*win_size]
-    tables_dict = dict()
-    new_cols = []
-    tables_df = pd.DataFrame()
+    if name_suffix == "all":
+        return
 
-    for table_idx in range(modifications.size):
-        # Gather data
-        is_ins = modifications.types[table_idx] == IndelType.INS
-        edit = edit_table[table_idx]
-        pos_len = len(edit)  # length of positions
-        tx = mod_table.tables[table_idx][C_TX, table_offset:table_offset + pos_len]
-        mock = mod_table.tables[table_idx][C_MOCK, table_offset:table_offset + pos_len]
-        cut_site = np.zeros(pos_len, dtype=np.int)
-        cut_site[(pos_len // 2) - 1 * (not is_ins):(pos_len // 2) + 1] = 1
+    if name_suffix == "ins":
+        tab_name = CLS_RES_INS
+        title = "Insertions"
+    elif name_suffix == "del":
+        tab_name = CLS_RES_DEL
+        title = "deletions"
+    else:
+        tab_name = CLS_RES_MIX
+        title = "Mixed & Substitutions"
 
-        # Insert to dictionary
-        table_name = modifications.name_at_idx(table_idx)
-        tables_dict[table_name + " Tx"] = np.insert(tx, 0, mod_table.n_reads_tx)
-        tables_dict[table_name + " Mock"] = np.insert(mock, 0, mod_table.n_reads_mock)
-        tables_dict[table_name + " Is edited"] = [None] + edit
-        tables_dict[table_name + " Is cut site"] = [None] + list(cut_site)
+    html_d[CLS_RES_SECTION][tab_name] = dict()
+    html_d[CLS_RES_SECTION][tab_name][PLOT_PATH] = os.path.join(base_output,'classifier_results_by'
+                                                                            '_position_{}.png'.format(name_suffix))
+    html_d[CLS_RES_SECTION][tab_name][PDF_PATH] = os.path.join(base_output, 'classifier_results_by'
+                                                                            '_position_{}.pdf'.format(name_suffix))
+    html_d[CLS_RES_SECTION][tab_name][TITLE] = title
+    html_d[CLS_RES_SECTION][tab_name][W] = dpi * fig_w
+    html_d[CLS_RES_SECTION][tab_name][H] = dpi * fig_h
 
-        tables_df = pd.DataFrame.from_dict(tables_dict, orient='index')
-        new_cols = ['number of reads'] + [c for c in ref] + ['insertion at the end']
-
-    tables_df.set_axis(new_cols, axis=1, inplace=True)
-    tables_df.to_csv(os.path.join(output, "modification_tables.csv"))
 
 #####----------------------#####
 #####---------Site---------#####
 #####----------------------#####
-def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site: int, win_size: int, experiment_name: str,
-                                           output: Path):
+def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site: int, win_size: int,
+                                           output: Path, html_d: Dict, base_path: Path):
+    dpi = 200
+
     tx_dist_d = dict()
     mock_dist_d = dict()
     amplicon_length = len(tables.amplicon)
@@ -329,7 +340,8 @@ def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site:
     mpl.rcParams['axes.titlesize'] = 24
 
     # Create axes
-    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(16, 9), sharex=True)
+    fig_w, fig_h = 16, 9
+    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(fig_w, fig_h), sharex=True)
     plt.subplots_adjust(wspace=0, hspace=0)
 
     # Plot distributions
@@ -349,21 +361,25 @@ def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site:
 
     # Create legend, title and x-label
     axes[0].legend()
-    axes[0].set_title("Distribution Of All Modifications\n{}".format(experiment_name),
-                      weight='bold', family='serif')
 
     # Remove Tx first y axe label (overlap with mock)
     plt.setp(axes[0].get_yticklabels()[0], visible=False)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        fig.savefig(os.path.join(output, 'distribution_of_all_modifications.png'),
-                    bbox_inches='tight', dpi=100)
+        fig.savefig(os.path.join(output, 'distribution_of_all_modifications.png'), bbox_inches='tight', dpi=dpi)
+        fig.savefig(os.path.join(output, 'distribution_of_all_modifications.pdf'), pad_inches = 1, box_inches='tight')
         plt.close(fig)
 
+    html_d[MOD_SECTION][MOD_DIST] = dict()
+    html_d[MOD_SECTION][MOD_DIST][PLOT_PATH] = os.path.join(base_path, 'distribution_of_all_modifications.png')
+    html_d[MOD_SECTION][MOD_DIST][PDF_PATH] = os.path.join(base_path, 'distribution_of_all_modifications.pdf')
+    html_d[MOD_SECTION][MOD_DIST][TITLE] = "All Modifications Distribution"
+    html_d[MOD_SECTION][MOD_DIST][W] = dpi*fig_w
+    html_d[MOD_SECTION][MOD_DIST][H] = dpi*fig_h
 
-def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, win_size: int, experiment_name: str,
-                                     output: Path):
+def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, win_size: int,
+                                     output: Path, html_d: Dict, base_path: Path):
     dist_d = dict()
     amplicon_length = len(tables.amplicon)
     for indel_type in [IndelType.DEL, IndelType.SUB, IndelType.INS]:
@@ -380,9 +396,11 @@ def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, 
     mpl.rcParams['font.size'] = 22
     mpl.rcParams['axes.labelsize'] = 30
     mpl.rcParams['axes.titlesize'] = 26
+    dpi = 100
+    fig_w, fig_h = 16, 9
 
     # Create axes
-    fig = plt.figure(figsize=(16, 9))
+    fig = plt.figure(figsize=(fig_w, fig_h))
     ax = fig.add_axes([0, 0, 1, 1])
 
     positions = list(range(amplicon_length + 1))
@@ -396,8 +414,6 @@ def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, 
 
     # Create legend, axes limit and labels
     ax.legend()
-    ax.set_title("Distribution Of Edited Events\n{}".format(experiment_name),
-                 weight='bold', family='serif')
     max_indels = np.array([dist_d[IndelType.INS], dist_d[IndelType.DEL], dist_d[IndelType.SUB]]).max()
     ax.set_ylim(bottom=0, top=max(int(1.1 * max_indels), 10))
     ax.set_xlim(left=0, right=amplicon_length)
@@ -406,12 +422,86 @@ def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, 
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        fig.savefig(os.path.join(output, 'distribution_of_edit_events.png'),
-                    bbox_inches='tight', dpi=100)
+        fig.savefig(os.path.join(output, 'distribution_of_edit_events.png'), bbox_inches='tight', dpi=dpi)
+        fig.savefig(os.path.join(output, 'distribution_of_edit_events.pdf'), pad_inches = 1, box_inches='tight')
         plt.close(fig)
 
+    html_d[MOD_SECTION][EDIT_DIST] = dict()
+    html_d[MOD_SECTION][EDIT_DIST][PLOT_PATH] = os.path.join(base_path, 'distribution_of_edit_events.png')
+    html_d[MOD_SECTION][EDIT_DIST][PDF_PATH] = os.path.join(base_path, 'distribution_of_edit_events.pdf')
+    html_d[MOD_SECTION][EDIT_DIST][TITLE] = "Edited Events Distribution"
+    html_d[MOD_SECTION][EDIT_DIST][W] = dpi*fig_w
+    html_d[MOD_SECTION][EDIT_DIST][H] = dpi*fig_h
 
-def plot_edited_reads_to_table(tables: ModificationTables, cut_site: int, output: Path):
+
+def plot_distribution_of_edit_event_sizes(tables: ModificationTables, output: Path, html_d: Dict, base_path: Path):
+    # Set font
+    mpl.rcParams.update(mpl.rcParamsDefault)
+    mpl.rcParams['font.size'] = 16
+    mpl.rcParams['xtick.labelsize'] = 16
+    mpl.rcParams['ytick.labelsize'] = 16
+    mpl.rcParams['axes.labelsize'] = 18
+    mpl.rcParams['axes.titlesize'] = 26
+    mpl.rcParams['legend.fontsize'] = 18
+    bar_width = 1
+    dpi = 100
+    amplicon_length = len(tables.amplicon)
+
+    # Create bin borders & names:
+    bins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, 30, 40, 50, 100, amplicon_length]
+    bins_names = []
+    for l, r in zip(bins[:-1], bins[1:]):
+        if r - l == 1:
+            bins_names.append(str(r))
+        else:
+            bins_names.append("{}-{}".format(l + 1, r))
+    bin_num = len(bins) - 1
+
+    # Get indel size values
+    values = {}
+    edited_mod = tables.tx_dist.loc[tables.tx_dist[IS_EDIT]]
+    for indel in [IndelType.DEL, IndelType.INS, IndelType.SUB]:
+        indel_dist = edited_mod.loc[edited_mod['IndelType'] == indel]
+        df_bins = pd.cut(indel_dist['indel_length'], bins)
+        values[indel] = indel_dist.groupby(df_bins)[FREQ].agg(['sum'])['sum'].values
+
+    # Create the X position of bars
+    r = list(range(0, bin_num))
+
+    # Create figure
+    fig_w, fig_h = 16, 6
+    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(fig_w, fig_h), constrained_layout=True)
+
+    # Create bar plot
+    for idx, indel in enumerate([IndelType.DEL, IndelType.INS, IndelType.SUB]):
+        axes[idx].bar(r, values[indel], label=indel.name, color=indel.color, edgecolor='black', alpha=0.9,
+                      width=bar_width)
+        axes[idx].set_xticks(r)
+        axes[idx].set_xticklabels(bins_names, rotation='vertical')
+        axes[idx].spines['top'].set_visible(False)
+        axes[idx].spines['right'].set_visible(False)
+
+        # Labels, ticks and title
+        axes[idx].set_xlabel('Edit event length')
+        axes[idx].set_ylabel('Number of modifications')
+        axes[idx].legend(loc='upper right')
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        fig.savefig(os.path.join(output, 'distribution_of_edit_events_size.png'), bbox_inches='tight', dpi=dpi)
+        fig.savefig(os.path.join(output, 'distribution_of_edit_events_size.pdf'), pad_inches = 1, box_inches='tight')
+        plt.close(fig)
+
+    html_d[MOD_SECTION][EDIT_SIZE_DIST] = dict()
+    html_d[MOD_SECTION][EDIT_SIZE_DIST][PLOT_PATH] = os.path.join(base_path, 'distribution_of_edit_events_size.png')
+    html_d[MOD_SECTION][EDIT_SIZE_DIST][PDF_PATH] = os.path.join(base_path, 'distribution_of_edit_events_size.pdf')
+    html_d[MOD_SECTION][EDIT_SIZE_DIST][TITLE] = "Edit Event Size Distribution"
+    html_d[MOD_SECTION][EDIT_SIZE_DIST][W] = dpi*fig_w
+    html_d[MOD_SECTION][EDIT_SIZE_DIST][H] = dpi*fig_h
+
+
+def plot_edited_reads_to_table(tables: ModificationTables, cut_site: int, output: Path, html_d: Dict,
+                               base_path: Path):
     """
     Create an HTML page with all the edited reads (aligned to reference)
     """
@@ -555,10 +645,11 @@ def plot_edited_reads_to_table(tables: ModificationTables, cut_site: int, output
 
     # Dump to static HTML
     fig.write_html(os.path.join(output, 'edited_reads_table.html'))
+    html_d[READ_SECTION][READ_EDIT] = os.path.join(base_path, 'edited_reads_table.html')
 
 
-def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_name: str, experiment_name: str,
-                               output: Path):
+def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_name: str, output: Path, html_d: Dict,
+                               base_path: Path):
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
     sns.set(style="whitegrid")
@@ -567,7 +658,7 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
     mpl.rcParams['ytick.labelsize'] = 14
     mpl.rcParams['axes.labelsize'] = 16
     mpl.rcParams['axes.titlesize'] = 16
-
+    dpi = 200
     bar_width = 0.8
 
     if algorithm.is_on_target:
@@ -576,7 +667,8 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
         bar_color = OFF_TARGET_COLOR
 
     # Define fix and axes
-    fig = plt.figure(figsize=(4, 4))
+    fig_w, fig_h = 4, 4
+    fig = plt.figure(figsize=(fig_w, fig_h))
     ax = fig.add_axes([0, 0, 1, 1])
 
     # Get bar data
@@ -600,9 +692,6 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
     ax.set_xticks([0])
     ax.set_xticklabels([site_name])
 
-    ax.set_title("Editing Activity with {} % CI\n{}".format(100 * algorithm.confidence, experiment_name),
-                 weight='bold', family='serif')
-
     ax.text(x=-0.1, y=-0.3, s="Number of edited reads\nEditing activity",
             ha='left', va='bottom', transform=fig.transFigure, family='serif')
     ax.text(x=0.55, y=-0.3, s="- {:,} (out of {:,} reads).\n"
@@ -613,131 +702,17 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        fig.savefig(os.path.join(output, 'site_editing_activity.png'),
-                    bbox_inches='tight', dpi=200)
+        fig.savefig(os.path.join(output, 'site_editing_activity.png'), bbox_inches='tight', dpi=dpi)
+        fig.savefig(os.path.join(output, 'site_editing_activity.pdf'), pad_inches = 1, box_inches='tight')
         plt.close(fig)
 
+    html_d[EDITING_ACTIVITY] = dict()
+    html_d[EDITING_ACTIVITY][PLOT_PATH] = os.path.join(base_path, 'site_editing_activity.png')
+    html_d[EDITING_ACTIVITY][PDF_PATH] = os.path.join(base_path, 'site_editing_activity.pdf')
+    html_d[EDITING_ACTIVITY][TITLE] = "Editing Activity"
+    html_d[EDITING_ACTIVITY][W] = dpi*fig_w
+    html_d[EDITING_ACTIVITY][H] = dpi*fig_h
 
-def plot_distribution_of_edit_event_sizes(tables: ModificationTables, experiment_name: str, output: Path):
-    # Set font
-    mpl.rcParams.update(mpl.rcParamsDefault)
-    mpl.rcParams['font.size'] = 20
-    mpl.rcParams['xtick.labelsize'] = 20
-    mpl.rcParams['ytick.labelsize'] = 20
-    mpl.rcParams['axes.labelsize'] = 24
-    mpl.rcParams['axes.titlesize'] = 26
-    mpl.rcParams['legend.fontsize'] = 24
-    bar_width = 1
-
-    amplicon_length = len(tables.amplicon)
-
-    # Create bin borders & names:
-    bins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, 30, 40, 50, 100, amplicon_length]
-    bins_names = []
-    for l, r in zip(bins[:-1], bins[1:]):
-        if r - l == 1:
-            bins_names.append(str(r))
-        else:
-            bins_names.append("{}-{}".format(l + 1, r))
-    bin_num = len(bins) - 1
-
-    # Get indel size values
-    values = {}
-    edited_mod = tables.tx_dist.loc[tables.tx_dist[IS_EDIT]]
-    for indel in [IndelType.DEL, IndelType.INS, IndelType.SUB]:
-        indel_dist = edited_mod.loc[edited_mod['IndelType'] == indel]
-        df_bins = pd.cut(indel_dist['indel_length'], bins)
-        values[indel] = indel_dist.groupby(df_bins)[FREQ].agg(['sum'])['sum'].values
-
-    # Create the X position of bars
-    r = {}
-    for idx, indel in enumerate([IndelType.DEL, IndelType.INS, IndelType.SUB]):
-        r[indel] = list(range(0 + idx, 4 * bin_num + idx, 4))
-
-    # Create figure
-    fig = plt.figure(figsize=(16, 9))
-    ax = fig.add_axes([0, 0, 1, 1])
-
-    # Create bar plot
-    for indel in [IndelType.DEL, IndelType.INS, IndelType.SUB]:
-        ax.bar(r[indel], values[indel], label=indel.name, color=indel.color, edgecolor='black', alpha=0.9,
-               width=bar_width)
-
-    # Labels, ticks and title
-    plt.xlabel('Edit event length')
-    plt.ylabel('Number of modifications')
-    plt.legend(loc='upper right')
-    ax.set_xticks(r[IndelType.INS])
-    ax.set_xticklabels(bins_names, rotation='vertical')
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.set_title("Edit Event Size Distribution\n{}".format(experiment_name), weight='bold', family='serif')
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        fig.savefig(os.path.join(output, 'distribution_of_edit_events_size.png'),
-                    bbox_inches='tight', dpi=100)
-        plt.close(fig)
-
-
-def plot_distribution_of_edit_event_sizes_3_plots(tables: ModificationTables, experiment_name: str, output: Path):
-    # Set font
-    mpl.rcParams.update(mpl.rcParamsDefault)
-    mpl.rcParams['font.size'] = 16
-    mpl.rcParams['xtick.labelsize'] = 16
-    mpl.rcParams['ytick.labelsize'] = 16
-    mpl.rcParams['axes.labelsize'] = 18
-    mpl.rcParams['axes.titlesize'] = 26
-    mpl.rcParams['legend.fontsize'] = 18
-    bar_width = 1
-
-    amplicon_length = len(tables.amplicon)
-
-    # Create bin borders & names:
-    bins = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 20, 30, 40, 50, 100, amplicon_length]
-    bins_names = []
-    for l, r in zip(bins[:-1], bins[1:]):
-        if r - l == 1:
-            bins_names.append(str(r))
-        else:
-            bins_names.append("{}-{}".format(l + 1, r))
-    bin_num = len(bins) - 1
-
-    # Get indel size values
-    values = {}
-    edited_mod = tables.tx_dist.loc[tables.tx_dist[IS_EDIT]]
-    for indel in [IndelType.DEL, IndelType.INS, IndelType.SUB]:
-        indel_dist = edited_mod.loc[edited_mod['IndelType'] == indel]
-        df_bins = pd.cut(indel_dist['indel_length'], bins)
-        values[indel] = indel_dist.groupby(df_bins)[FREQ].agg(['sum'])['sum'].values
-
-    # Create the X position of bars
-    r = list(range(0, bin_num))
-
-    # Create figure
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(16, 6), constrained_layout=True)
-
-    # Create bar plot
-    for idx, indel in enumerate([IndelType.DEL, IndelType.INS, IndelType.SUB]):
-        axes[idx].bar(r, values[indel], label=indel.name, color=indel.color, edgecolor='black', alpha=0.9,
-                      width=bar_width)
-        axes[idx].set_xticks(r)
-        axes[idx].set_xticklabels(bins_names, rotation='vertical')
-        axes[idx].spines['top'].set_visible(False)
-        axes[idx].spines['right'].set_visible(False)
-
-        # Labels, ticks and title
-        axes[idx].set_xlabel('Edit event length')
-        axes[idx].set_ylabel('Number of modifications')
-        axes[idx].legend(loc='upper right')
-
-    fig.suptitle("Edit Event Size Distribution\n{}".format(experiment_name), weight='bold', family='serif')
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        fig.savefig(os.path.join(output, 'distribution_of_edit_events_size_3_plots.png'),
-                    bbox_inches='tight', dpi=100)
-        plt.close(fig)
 
 #####----------------------#####
 #####------Experiment------#####
@@ -864,12 +839,12 @@ def plot_editing_activity(result_df: AlgResultDf, confidence_interval: float, ed
         fig.savefig(os.path.join(output, 'editing_activity.png'), box_inches='tight', dpi=dpi)
         fig.savefig(os.path.join(output, 'editing_activity.pdf'), pad_inches = 1, box_inches='tight')
 
-    html_d[EDITING_ACTIVITY] = dict()
-    html_d[EDITING_ACTIVITY][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.png')
-    html_d[EDITING_ACTIVITY][PDF_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.pdf')
-    html_d[EDITING_ACTIVITY][TITLE] = title
-    html_d[EDITING_ACTIVITY][W] = dpi*fig_w
-    html_d[EDITING_ACTIVITY][H] = dpi*fig_h
+    html_d[EDIT_SECTION][EDITING_ACTIVITY] = dict()
+    html_d[EDIT_SECTION][EDITING_ACTIVITY][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.png')
+    html_d[EDIT_SECTION][EDITING_ACTIVITY][PDF_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.pdf')
+    html_d[EDIT_SECTION][EDITING_ACTIVITY][TITLE] = title
+    html_d[EDIT_SECTION][EDITING_ACTIVITY][W] = dpi*fig_w
+    html_d[EDIT_SECTION][EDITING_ACTIVITY][H] = dpi*fig_h
 
     plt.close(fig)
 

@@ -4,7 +4,7 @@ from utils.constants_and_types import ReadsDf, IndelType, Path, DNASeq, CigarPat
     READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, ALIGN_SCORE, FREQ, INS_LEN, INS_POS, DEL_LEN, DEL_START, \
     DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, CIGAR_D, CIGAR_I, MIN_PRIMER_DIMER_THRESH, \
     CIGAR_S, CIGAR_M, AlignedIndel, DEL_BASE, INS_BASE, SUB_BASE, REVERSED, CIGAR_LEN, CIGAR_LEN_THRESHOLD, \
-    ALIGN_CUT_SITE, ALIGNMENT_HUMAN
+    ALIGN_CUT_SITE, ALIGNMENT_HUMAN, FILTERED_PATH
 from input_processing.utils import reverse_complement, parse_cigar
 from utils.logger import Logger
 from utils.configurator import Configurator
@@ -189,7 +189,7 @@ class Alignment:
         self._logger.info("Alignment for {} - {:,} reads were filtered out ({:.2f}% of all reads)".format(exp_name,
                           unaligned_reads_num, 100*unaligned_reads_num/total_reads_num))
 
-        with open(os.path.join(output, "{}_filtered_reads.fasta".format(exp_name)), 'w') as file:
+        with open(os.path.join(output, FILTERED_PATH[exp_name]), 'w') as file:
             for _, row in unaligned_df.iterrows():
                 file.write("> filtered read with {} copies in the original fastq file.".format(row[FREQ]))
                 file.write("{}\n".format(row[READ]))
