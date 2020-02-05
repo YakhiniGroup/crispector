@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>Crispector Report</title>
+
+  <!--Bootstrap CSS library-->
+  <link rel="stylesheet" href=
+"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" 
+integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+   crossorigin="anonymous">
+
+  <!--jQuery library-->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity=
+  "sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" 
+  crossorigin="anonymous"></script>
+
+  <!--JS library-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" 
+  integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" 
+  crossorigin="anonymous"></script>
+
+  <!--Latest compiled JavaScript library-->
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" 
+  integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" 
+  crossorigin="anonymous"></script>
+
+    
+</head>
+
+<body>
+   
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+    <div class="container">
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarResponsive">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item active">
+            <a class="nav-link" href="#">Home
+              <span class="sr-only">(current)</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">About</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">Contact</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page Content -->
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-12 text-center">
+        <img src="img/crispector_logo.jpg" width="65%">
+        <div class="hr-divider">
+          <h5 class="hr-divider-content hr-divider-heading">
+            Accurate analysis of CRISPR-CAS9 Off-Target editing activity from NGS data
+          </h5>
+        </div>
+      </div>
+      <div data-spy="scroll" data-target="#myScrollspy" data-offset="20">
+        <div class="container">
+          <div class="row">
+            <nav class="col-sm-3" id="myScrollspy">
+              <ul class="nav nav-pills nav-stacked">
+                <li class="active"><a href="#edit_activity">{% block editing_activity_title %}{% endblock %}</a></li>
+                <li><a href="#mod_section">{% block modification_section_title %}{% endblock %}</a></li>
+                <li><a href="#cls_res_section">{% block classifier_results_section_title %}{% endblock %}</a></li>
+                <li><a href="#read_section">{% block read_section_title %}{% endblock %}</a></li>
+              </ul>
+            </nav>
+            <div class="col-sm-9">
+              <div class="card text-center">
+                <div class="card-header" style="height:100%">
+                  <h5 class="text-center">{% block title %}{% endblock %}</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                  <li class="list-group-item">
+                    <div id="edit_activity">
+                    <h5 style="text-align:center">{{ self.editing_activity_title() }}</h5>
+                    <a href="{% block editing_activity_pdf_path %}{% endblock %}"><img src="{% block editing_activity_plot_path %}{% endblock %}" width='80%' ></a>
+                  </li>  
+                  <li class="list-group-item">
+                    <div id="mod_section">
+                    <h5 style="text-align:center">{{ self.modification_section_title() }}</h5>
+                    <ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
+                      <li class="nav-item">
+                        <a class="nav-link active" id="edit_dist" data-toggle="tab" href="#edit_distribution" role="tab" aria-controls="" aria-selected="true">{% block modification_section_edit_distribution_title %}{% endblock %}</a>
+                      </li>
+                      <li class="nav-item">
+                        <a class="nav-link" id="mod_dist" data-toggle="tab" href="#mod_distribution" role="tab" aria-controls="" aria-selected="false">{% block modification_section_modification_distribution_title %}{% endblock %}</a>
+                      </li>
+                      <li class="nav-item">
+                        <a class="nav-link" id="edit_size_dist" data-toggle="tab" href="#edit_size_distribution" role="tab" aria-controls="" aria-selected="false">{% block modification_section_edit_size_distribution_title %}{% endblock %}</a>
+                      </li>
+                    </ul>
+                    <div class="tab-content" id="myTabContent">
+                      <div class="tab-pane fade show active" id="edit_distribution" role="tabpanel" aria-labelledby="mapping_stats-tab">
+                        <a href="{% block modification_section_edit_distribution_pdf_path %}{% endblock %}"><img src="{% block modification_section_edit_distribution_plot_path %}{% endblock %}" width='80%' ></a>
+                      </div>
+                      <div class="tab-pane fade" id="mod_distribution" role="tabpanel" aria-labelledby="mapping_stats-tab">
+                        <a href="{% block modification_section_modification_distribution_pdf_path %}{% endblock %}"><img src="{% block modification_section_modification_distribution_plot_path %}{% endblock %}" width='80%' ></a>
+                      </div>
+                      <div class="tab-pane fade" id="edit_size_distribution" role="tabpanel" aria-labelledby="mapping_stats-tab">
+                        <a href="{% block modification_section_edit_size_distribution_pdf_path %}{% endblock %}"><img src="{% block modification_section_edit_size_distribution_plot_path %}{% endblock %}" width='80%' ></a>
+                      </div>
+                    </div>
+                    </div>
+                  </li> 
+                  <li class="list-group-item">
+                    <div id="cls_res_section">
+                    <h5 style="text-align:center">{{ self.classifier_results_section_title() }}</h5>
+                    <ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
+                      <li class="nav-item">
+                        <a class="nav-link active" id="classifier_results_del" data-toggle="tab" href="#del" role="tab" aria-controls="" aria-selected="true">{% block classifier_results_section_classifier_results_del_title %}{% endblock %}</a>
+                      </li>
+                      <li class="nav-item">
+                        <a class="nav-link" id="classifier_results_ins" data-toggle="tab" href="#ins" role="tab" aria-controls="" aria-selected="false">{% block classifier_results_section_classifier_results_ins_title %}{% endblock %}</a>
+                      </li>
+                      <li class="nav-item">
+                        <a class="nav-link" id="classifier_results_mix" data-toggle="tab" href="#mix" role="tab" aria-controls="" aria-selected="false">{% block classifier_results_section_classifier_results_mix_title %}{% endblock %}</a>
+                      </li>
+                    </ul>
+                    <div class="tab-content" id="myTabContent">
+                      <div class="tab-pane fade show active" id="del" role="tabpanel" aria-labelledby="">
+                        <a href="{% block classifier_results_section_classifier_results_del_pdf_path %}{% endblock %}"><img src="{% block classifier_results_section_classifier_results_del_plot_path %}{% endblock %}" width='80%' ></a>
+                      </div>
+                      <div class="tab-pane fade" id="ins" role="tabpanel" aria-labelledby="">
+                        <a href="{% block classifier_results_section_classifier_results_ins_pdf_path %}{% endblock %}"><img src="{% block classifier_results_section_classifier_results_ins_plot_path %}{% endblock %}" width='80%' ></a>
+                      </div>
+                      <div class="tab-pane fade" id="mix" role="tabpanel" aria-labelledby="">
+                        <a href="{% block classifier_results_section_classifier_results_mix_pdf_path %}{% endblock %}"><img src="{% block classifier_results_section_classifier_results_mix_plot_path %}{% endblock %}" width='80%' ></a>
+                      </div>
+                    </div>
+                    </div>
+                  </li> 
+                  <li class="list-group-item">   
+                  <div id="read_section">         
+                    <h5>{{ self.read_section_title() }}</h5>
+                    {% block read_section_edited_reads %}{% endblock read_section_edited_reads %}
+                    {% block read_section_treatment_aligned_reads %}{% endblock read_section_treatment_aligned_reads %}
+                    {% block read_section_mock_aligned_reads %}{% endblock read_section_mock_aligned_reads %}
+                    {% block read_section_treatment_filtered_reads %}{% endblock read_section_treatment_filtered_reads %}
+                    {% block read_section_mock_filtered_reads %}{% endblock read_section_mock_filtered_reads %}
+                    {% block read_section_fastp_tx_path %}{% endblock read_section_fastp_tx_path %}
+                    {% block read_section_fastp_mock_path %}{% endblock read_section_fastp_mock_path %}
+                </div>
+                  </li>   
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</body>
+</html>
