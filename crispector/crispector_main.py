@@ -32,7 +32,12 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
         min_read_length: int, crispector_config: Path, override_binomial_p: bool, confidence_interval: float,
         editing_threshold: float, translocation_p_value: float, suppress_site_output: bool,
         disable_translocations: bool, enable_substitutions: bool,
-        ambiguous_cut_site_detection: bool, debug: bool, table_input: Path, keep_fastp_output: bool):
+        ambiguous_cut_site_detection: bool, debug: bool, table_input: Path, keep_fastp_output: bool,
+        pickle_output: Path):
+
+    if pickle_output is not None:
+        if not os.path.exists(pickle_output):
+            os.makedirs(pickle_output)
 
     output = os.path.join(report_output, OUTPUT_DIR)
     # Create output folder
@@ -104,11 +109,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
                                 "mock={}).".format(site, tx_reads_num, mock_reads_num))
                 else:
                     tables_d[site] = ModificationTables(tx_reads_d[site], mock_reads_d[site], modifications, row)
-                    logger.debug(
-                        "Site {} - Converted. Number of reads (treatment={}, mock={}).".format(site, tx_reads_num,
-                                                                                               mock_reads_num))
-            with open(os.path.join(output, "tables_d.pkl"), "wb") as file:
-                pickle.dump(tables_d, file)
+                    logger.debug("Site {} - Converted. Number of reads (treatment={}, mock={}).".format(site,
+                                                                                                        tx_reads_num,mock_reads_num))
 
         # Compute binomial coin for all modification types
         binom_p_d = compute_binom_p(tables_d, modifications, override_binomial_p, ref_df)
@@ -122,8 +124,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
             # Continue if site was discarded
             if site not in tables_d:
                 # Log the following in the result dict
-                tx_reads_num = 0 #tx_reads_d[site][FREQ].sum().astype(int) TODO - change back
-                mock_reads_num = 0 #mock_reads_d[site][FREQ].sum().astype(int) TODO - change back
+                tx_reads_num = tx_reads_d[site][FREQ].sum().astype(int) #TODO - bug, no tx_reads[site]
+                mock_reads_num = mock_reads_d[site][FREQ].sum().astype(int) #TODO - bug, no tx_reads[site]
                 result_summary_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num, ON_TARGET: row[ON_TARGET]}
                 continue
 
@@ -145,6 +147,18 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
         trans_result_df = translocations_test(summary_df, tx_trans_df , mock_trans_df, translocation_p_value,
                                               editing_threshold)
         logger.debug("Translocations - HG test - Done!")
+
+        # TODO - delete - Add keep_intermediate_files
+        if pickle_output is not None:
+            with open(os.path.join(pickle_output, "tables_d.pkl"), "wb") as file:
+                pickle.dump(tables_d, file)
+            for _, algorithm in algorithm_d.items():
+                algorithm._cfg = None
+                algorithm._logger = None
+            with open(os.path.join(pickle_output, "algorithm_d.pkl"), "wb") as file:
+                pickle.dump(algorithm_d, file)
+            with open(os.path.join(pickle_output, "ref_df.pkl"), "wb") as file:
+                pickle.dump(ref_df, file)
 
         # Create plots & tables for all sites
         logger.info("Start creating experiment plots and tables")

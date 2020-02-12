@@ -4,7 +4,7 @@ from utils.constants_and_types import ReadsDf, IndelType, Path, DNASeq, CigarPat
     READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, ALIGN_SCORE, FREQ, INS_LEN, INS_POS, DEL_LEN, DEL_START, \
     DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, CIGAR_D, CIGAR_I, MIN_PRIMER_DIMER_THRESH, \
     CIGAR_S, CIGAR_M, AlignedIndel, DEL_BASE, INS_BASE, SUB_BASE, REVERSED, CIGAR_LEN, CIGAR_LEN_THRESHOLD, \
-    ALIGN_CUT_SITE, ALIGNMENT_HUMAN, FILTERED_PATH
+    ALIGN_CUT_SITE, ALIGNMENT_HUMAN, FILTERED_PATH, ExpType
 from input_processing.utils import reverse_complement, parse_cigar
 from utils.logger import Logger
 from utils.configurator import Configurator
@@ -42,7 +42,7 @@ class Alignment:
                 raise AlignerSubstitutionDoesntExist(align_cfg["substitution_matrix"])
 
     def align_reads(self, reads_df: ReadsDf, reference: DNASeq, cut_site: int, primers_len: int,
-                    output: Path, exp_name: str) -> Tuple[ReadsDf, ReadsDf]:
+                    output: Path, exp_name: str, exp_type: ExpType) -> Tuple[ReadsDf, ReadsDf]:
         """
         - Align each read to his reference and filter noisy alignments.
         - Function add columns to reads_df in place.
@@ -52,6 +52,7 @@ class Alignment:
         :param primers_len: the length of both primers together
         :param output: output path for filtered reads
         :param exp_name: experiment name
+        :param exp_type:
         :return: reads_df with new columns & filtered reads (ReadDf type)
         """
 
@@ -64,7 +65,7 @@ class Alignment:
         self._align_reads_to_amplicon(reads_df, reference)
 
         # Filter reads with low alignment score
-        unaligned_df = self._filter_low_score_reads(reads_df, primers_len, output, exp_name)
+        unaligned_df = self._filter_low_score_reads(reads_df, primers_len, output, exp_name, exp_type)
 
         self._logger.debug("Alignment for {} - Needleman-Wunsch alignment done.".format(exp_name))
 
@@ -159,7 +160,8 @@ class Alignment:
     #-------------------------------#
     ######### Private methods #######
     #-------------------------------#
-    def _filter_low_score_reads(self, reads_df: ReadsDf, primers_len: int, output: Path, exp_name: str):
+    def _filter_low_score_reads(self, reads_df: ReadsDf, primers_len: int, output: Path, exp_name: str,
+                                exp_type: ExpType):
         """
         - Filter low alignment score reads
         - Store all unaligned reads in a fasta format.
@@ -167,6 +169,7 @@ class Alignment:
         :param primers_len: the length of both primers together
         :param output: output path for filtered reads
         :param exp_name: experiment name
+        :param exp_type:
         :return:
         """
         # Find all indexes with lower score than the threshold
@@ -178,7 +181,7 @@ class Alignment:
         low_score_df = reads_df.loc[(reads_df[ALIGN_SCORE] < score_threshold) & (reads_df[CIGAR_LEN] > CIGAR_LEN_THRESHOLD)]
 
         # Filter PRIMER-DIMER affect
-        min_len = primers_len + MIN_PRIMER_DIMER_THRESH
+        min_len = primers_len + MIN_PRIMER_DIMER_THRESH # TODO - make configuartion
         short_reads_df = reads_df.loc[reads_df[READ].str.len() < min_len]
 
         unaligned_indexes += list(low_score_df.index) + list(short_reads_df.index)
@@ -189,7 +192,7 @@ class Alignment:
         self._logger.info("Alignment for {} - {:,} reads were filtered out ({:.2f}% of all reads)".format(exp_name,
                           unaligned_reads_num, 100*unaligned_reads_num/total_reads_num))
 
-        with open(os.path.join(output, FILTERED_PATH[exp_name]), 'w') as file:
+        with open(os.path.join(output, FILTERED_PATH[exp_type]), 'w') as file:
             for _, row in unaligned_df.iterrows():
                 file.write("> filtered read with {} copies in the original fastq file.".format(row[FREQ]))
                 file.write("{}\n".format(row[READ]))

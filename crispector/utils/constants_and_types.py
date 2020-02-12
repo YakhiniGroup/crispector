@@ -137,8 +137,8 @@ FASTP_DIR[ExpType.MOCK] = "mock_fastp"
 
 # Filter constants
 FILTERED_PATH = dict()
-FILTERED_PATH[ExpType.TX.name] = "treatment_filtered_reads.fasta"
-FILTERED_PATH[ExpType.MOCK.name] = "mock_filtered_reads.fasta"
+FILTERED_PATH[ExpType.TX] = "treatment_filtered_reads.fasta"
+FILTERED_PATH[ExpType.MOCK] = "mock_filtered_reads.fasta"
 
 # AmpliconDf constants
 SITE_NAME, REFERENCE, SGRNA, ON_TARGET = 'SiteName', 'AmpliconReference', 'sgRNA', 'OnTarget'

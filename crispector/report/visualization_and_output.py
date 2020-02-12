@@ -59,11 +59,11 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
                              all_table_idx, output, html_d, base_path, "all", figsize=(14, 20))
     plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
-                             del_table_idx, output, html_d, base_path, "del", figsize=(12, 10))
+                             del_table_idx, output, html_d, base_path, "del", figsize=(12, 8))
     plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
                              ins_table_idx, output, html_d, base_path, "ins", figsize=(12, 8))
     plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
-                             mix_table_idx, output, html_d, base_path, "mix_and_sub", figsize=(12, 12))
+                             mix_table_idx, output, html_d, base_path, "mix_and_sub", figsize=(12, 8))
 
     # Create edited read table
     html_d[READ_SECTION] = dict()
@@ -83,10 +83,10 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
         html_d[READ_SECTION][FASTP_MOCK_PATH] = os.path.join(base_path, "{}/fastp.html".format(FASTP_DIR[ExpType.MOCK]))
 
     # Add filtered reads link
-    if os.path.exists(os.path.join(output, FILTERED_PATH[ExpType.TX.name])):
-        html_d[READ_SECTION][READ_TX_FILTER] = os.path.join(base_path, FILTERED_PATH[ExpType.TX.name])
-    if os.path.exists(os.path.join(output, FILTERED_PATH[ExpType.MOCK.name])):
-        html_d[READ_SECTION][READ_MOCK_FILTER] = os.path.join(base_path, FILTERED_PATH[ExpType.MOCK.name])
+    if os.path.exists(os.path.join(output, FILTERED_PATH[ExpType.TX])):
+        html_d[READ_SECTION][READ_TX_FILTER] = os.path.join(base_path, FILTERED_PATH[ExpType.TX])
+    if os.path.exists(os.path.join(output, FILTERED_PATH[ExpType.MOCK])):
+        html_d[READ_SECTION][READ_MOCK_FILTER] = os.path.join(base_path, FILTERED_PATH[ExpType.MOCK])
 
     return html_d
 
@@ -240,8 +240,8 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
         axes[axes_idx].set_ylim(0, y_max)
 
         # Set y_label - Use text due to alignment issues
-        axes[axes_idx].text(x=positions[0] - 5 - 0.5 * (not is_ins), y=y_max / 2,
-                             s=modifications.plot_name_at_idx(table_idx), ha="left", va="center")
+        axes[axes_idx].text(x=positions[0] - 1 - 0.5 * (not is_ins), y=y_max / 2,
+                             s=modifications.plot_name_at_idx(table_idx), ha="right", va="center")
 
         # Create legend in the middle of the plot
         if axes_idx == ((len(table_indexes) // 2) - 1):

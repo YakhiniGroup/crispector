@@ -213,7 +213,7 @@ class InputProcessing:
             reads_df = tx_reads_d[row[SITE_NAME]]
             exp_name = "{}_{}".format(row[SITE_NAME], ExpType.TX.name)
             reads_df, unaligned_df = self._aligner.align_reads(reads_df, row[REFERENCE], row[CUT_SITE], primers_len,
-                                                               site_output, exp_name)
+                                                               site_output, exp_name, ExpType.TX)
             tx_reads_d[row[SITE_NAME]] = reads_df
             self._aligned_n[ExpType.TX] += reads_df[FREQ].sum()
             tx_filtered_df = pd.concat([tx_filtered_df, unaligned_df], sort=False)
@@ -223,7 +223,7 @@ class InputProcessing:
             reads_df = mock_reads_d[row[SITE_NAME]]
             exp_name = "{}_{}".format(row[SITE_NAME], ExpType.MOCK.name)
             reads_df, unaligned_df = self._aligner.align_reads(reads_df, row[REFERENCE], row[CUT_SITE], primers_len, site_output,
-                                                     exp_name)
+                                                     exp_name, ExpType.TX)
             mock_reads_d[row[SITE_NAME]] = reads_df
             self._aligned_n[ExpType.MOCK] += reads_df[FREQ].sum()
             mock_filtered_df = pd.concat([mock_filtered_df, unaligned_df], sort=True)
