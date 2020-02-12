@@ -1,0 +1,159 @@
+{% extends 'final_layout.html' %}
+
+{% block experiment_title %}
+		{{exp_param_d.page_title}}{{exp_param_d.page_title}}
+{% endblock %}
+
+{% block edit_section_title %}
+		{{exp_param_d.edit_section.title}}
+{% endblock %}	
+
+{% block edit_section_editing_activity_title %}
+		{{exp_param_d.edit_section.editing_activity.title}}
+{% endblock %}
+
+{% block edit_section_editing_activity_plot_path %}
+		{{exp_param_d.edit_section.editing_activity.plot_path}}
+{% endblock %}
+
+{% block edit_section_editing_activity_pdf_path %}
+		{{exp_param_d.edit_section.editing_activity.pdf_path}}
+{% endblock %}
+
+{% block edit_section_result_table_title %}
+		{{exp_param_d.edit_section.result_table.title}}
+{% endblock %}
+
+{% block edit_section_result_table %}
+		{{edit_section_result_table_html}}
+{% endblock %}
+
+{% block translocations_menu %}
+	{% if exp_param_d.translocations.title != '' %}
+	<li class="active"><a href="#translocations">Translocations</a></li>
+	{% endif %}	
+{% endblock translocations_menu %}
+
+{% block translocations %}
+	{% if exp_param_d.translocations.title != '' %}
+	<li class="list-group-item">
+		<div id="translocations">
+			<h5 style="text-align:center">{{exp_param_d.translocations.title}}</h5>
+			<ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
+	{% endif %}	
+			{% if exp_param_d.translocations.translocations_heatmap_tab.title != '' %}
+					<li class="nav-item">
+				  	<a class="nav-link active" id="heatmap_tab" data-toggle="tab" href="#heatmap" role="tab" aria-controls="" aria-selected="true">{{exp_param_d.translocations.translocations_heatmap_tab.title}}</a>
+					</li>
+			{% endif %}
+
+			{% if exp_param_d.translocations.translocations_results_tab.title != '' %}
+					<li class="nav-item">
+					<a class="nav-link active" id="mapping_stats-tab" data-toggle="tab" href="#result_table" role="tab" aria-controls="" aria-selected="true">{{exp_param_d.translocations.translocations_results_tab.title}}</a>
+					</li>
+				</ul>
+			{% endif %}
+				<div class="tab-content" id="myTabContent">
+			{% if exp_param_d.translocations.translocations_heatmap_tab.title != '' %}	
+					<div class="tab-pane fade show active" id="heatmap" role="tabpanel" aria-labelledby="mapping_stats-tab">
+				  		<a href="{{exp_param_d.translocations.translocations_heatmap_tab.pdf_path}}"><img src="{exp_param_d.translocations.translocations_heatmap_tab.plot_path}" width='80%' ></a>
+					</div>	
+			{% endif %}
+
+			{% if exp_param_d.translocations.translocations_results_tab.title != '' and exp_param_d.translocations.translocations_heatmap_tab.title != '' %}
+				<div class="tab-pane fade" id="result_table" role="tabpanel" aria-labelledby="">
+					<table class="table table-hover">
+				  		{{translocations_trans_res_tab_tab_data_html}}
+					</table>
+			  	</div>
+			{% endif %}	
+
+			{% if exp_param_d.translocations.translocations_results_tab.title != '' and exp_param_d.translocations.translocations_heatmap_tab.title == '' %}
+				<div class="tab-pane fade show active" id="result_table" role="tabpanel" aria-labelledby="">
+					<table class="table table-hover">
+				  		{{translocations_trans_res_tab_tab_data_html}}
+					</table>
+			  	</div>
+			{% endif %}		
+			</div>	  
+		</div>
+  	</li> 
+{% endblock translocations %}
+
+{% block reading_stats_title %}
+		{{exp_param_d.reading_statistics.title}}
+{% endblock %}
+
+{% block reading_stats_mapping_stats_title %}
+		{{exp_param_d.reading_statistics.mapping_stats.title}}
+{% endblock %}
+
+{% block reading_stats_mapping_stats_plot_path %}
+		{{exp_param_d.reading_statistics.mapping_stats.plot_path}}
+{% endblock %}
+
+{% block reading_stats_mapping_stats_pdf_path %}
+		{{exp_param_d.reading_statistics.mapping_stats.pdf_path}}
+{% endblock %}
+
+{% block reading_stats_mapping_per_site_title %}
+		{{exp_param_d.reading_statistics.mapping_per_site.title}}
+{% endblock %}
+
+{% block reading_stats_mapping_per_site_plot_path %}
+		{{exp_param_d.reading_statistics.mapping_per_site.plot_path}}
+{% endblock %}
+
+{% block reading_stats_mapping_per_site_pdf_path %}
+		{{exp_param_d.reading_statistics.mapping_per_site.pdf_path}}
+{% endblock %}
+
+{% block reading_stats_discarded_sites %}
+	{% if reading_stats_discarded_sites != '' %}
+		{{exp_param_d.reading_statistics.discarded_sites}}
+	{% endif %}
+{% endblock reading_stats_discarded_sites %}
+
+{% block reading_stats_fastp_tx_path %}
+	{% if exp_param_d.reading_statistics.fastp_tx_path != '' %}
+		{{exp_param_d.reading_statistics.fastp_tx_path}}
+	{% endif %}
+{% endblock reading_stats_fastp_tx_path %}
+
+{% block reading_stats_fastp_tx_text %}
+	{% if exp_param_d.reading_statistics.fastp_tx_text != '' %}
+		{{exp_param_d.reading_statistics.fastp_tx_text}}
+	{% endif %}
+{% endblock reading_stats_fastp_tx_text %}
+
+{% block reading_stats_fastp_mock_path %}
+	{% if exp_param_d.reading_statistics.fastp_mock_path != '' %}
+		{{exp_param_d.reading_statistics.fastp_mock_path}}
+	{% endif %}
+{% endblock reading_stats_fastp_mock_path %}
+
+{% block reading_stats_fastp_mock_text %}
+	{% if exp_param_d.reading_statistics.fastp_mock_text != '' %}
+		{{exp_param_d.reading_statistics.fastp_mock_text}}
+	{% endif %}
+{% endblock reading_stats_fastp_mock_text %}
+
+{% block site_name_menu %}
+	{% for site in exp_param_d.site_names -%}
+	<li><a href="#{{ site }}">{{ site }}</a></li>
+	{% endfor %}
+{% endblock %}
+
+{% block site_name %}
+	{% for site in exp_param_d.site_names -%}
+            <li class="list-group-item">
+            <div id="{{ site }}">         
+                    <a href="{{site}}_report.html">{{ site }}</a>
+            </div>
+            </li>
+	{% endfor %}
+{% endblock %}
+
+{% block log_path %}
+		{{exp_param_d.log_path}}
+{% endblock %}
