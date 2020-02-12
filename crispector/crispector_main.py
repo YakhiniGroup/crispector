@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-"""Main module."""
-
 import pickle
 import click
 import logging
@@ -26,33 +23,33 @@ from modifications.modification_tables import ModificationTables
 from typing import Dict
 from modifications.modification_types import ModificationTypes
 
+# TODO - handle only on-target experiments
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_output: Path, experiment_config: Path,
         fastp_options_string: str, verbose: bool, min_num_of_reads: int,
         cut_site_position: int, amplicon_min_score: float, translocation_amplicon_min_score: float,
         min_read_length: int, crispector_config: Path, override_binomial_p: bool, confidence_interval: float,
         editing_threshold: float, translocation_p_value: float, suppress_site_output: bool,
-        disable_translocations: bool, enable_substitutions: bool,
-        ambiguous_cut_site_detection: bool, debug: bool, table_input: Path, keep_fastp_output: bool,
-        pickle_output: Path):
-
-    if pickle_output is not None:
-        if not os.path.exists(pickle_output):
-            os.makedirs(pickle_output)
-
-    output = os.path.join(report_output, OUTPUT_DIR)
-    # Create output folder
-    if not os.path.exists(output):
-        os.makedirs(output)
-
-    # Init the logger
-    Logger.set_output_dir(output)
-    if verbose:
-        Logger.set_logger_level(logging.DEBUG)
-    else:
-        Logger.set_logger_level(logging.INFO)
-    logger = Logger.get_logger()
+        disable_translocations: bool, enable_substitutions: bool, keep_intermediate_files: bool):
 
     try:
+        # Create report output folder
+        if not os.path.exists(report_output):
+            os.makedirs(report_output)
+
+        output = os.path.join(report_output, OUTPUT_DIR)
+
+        # Create output folder
+        if not os.path.exists(output):
+            os.makedirs(output)
+
+        # Init the logger
+        Logger.set_output_dir(output)
+        if verbose:
+            Logger.set_logger_level(logging.DEBUG)
+        else:
+            Logger.set_logger_level(logging.INFO)
+        logger = Logger.get_logger()
+
         # Display welcome msg
         click.echo(welcome_msg)
 
@@ -73,44 +70,33 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
 
         # Create InputProcessing instance
         input_processing = InputProcessing(ref_df, output, amplicon_min_score, translocation_amplicon_min_score,
-                                           min_read_length, cut_site_position, ambiguous_cut_site_detection,
-                                           disable_translocations, fastp_options_string, debug, keep_fastp_output)
-        if table_input is None:
-            tx_reads_d, mock_reads_d, tx_trans_df, mock_trans_df = input_processing.run(tx_in1, tx_in2, mock_in1, mock_in2)
+                                           min_read_length, cut_site_position, disable_translocations,
+                                           fastp_options_string, keep_intermediate_files)
+
+        # process input
+        tx_reads_d, mock_reads_d, tx_trans_df, mock_trans_df = input_processing.run(tx_in1, tx_in2, mock_in1, mock_in2)
 
         # Get modification types and positions priors
         modifications = ModificationTypes.init_from_cfg(enable_substitutions)
 
         # Convert alignment to modification tables
         logger.info("Convert alignment tables to algorithm input")
+
         tables_d: Dict[str, ModificationTables] = dict()
-
-
-        if table_input is not None: # TODO - delete dump to pickle files.
-            with open(os.path.join(table_input, "tables_d.pkl"), "rb") as file:
-                tables_d = pickle.load(file)
-            if os.path.exists(os.path.join(table_input, "tx_translocations_reads.csv")):
-                tx_trans_df = pd.read_csv(os.path.join(table_input, "tx_translocations_reads.csv"))
+        for site, row in ref_df.iterrows():
+            tx_reads_num = tx_reads_d[site][FREQ].sum().astype(int)
+            mock_reads_num = mock_reads_d[site][FREQ].sum().astype(int)
+            if donor and row[ON_TARGET]:
+                logger.info("Site {} - Discarded from evaluation. On-target site with donor (HDR) evaluation is not"
+                            "supported by crispector.".format(site))
+            elif min(tx_reads_num, mock_reads_num) < min_num_of_reads:
+                logger.info("Site {} - Discarded from evaluation due to low number of reads (treatment={}, "
+                            "mock={}).".format(site, tx_reads_num, mock_reads_num))
             else:
-                tx_trans_df = pd.DataFrame()
-            if os.path.exists(os.path.join(table_input, "mock_translocations_reads.csv")):
-                mock_trans_df = pd.read_csv(os.path.join(table_input, "mock_translocations_reads.csv"))
-            else:
-                mock_trans_df  = pd.DataFrame()
-        else:
-            for site, row in ref_df.iterrows():
-                tx_reads_num = tx_reads_d[site][FREQ].sum().astype(int)
-                mock_reads_num = mock_reads_d[site][FREQ].sum().astype(int)
-                if donor and row[ON_TARGET]:
-                    logger.info("Site {} - Discarded from evaluation. On-target site with donor (HDR) evaluation is not"
-                                "supported by crispector.".format(site))
-                elif min(tx_reads_num, mock_reads_num) < min_num_of_reads:
-                    logger.info("Site {} - Discarded from evaluation due to low number of reads (treatment={}, "
-                                "mock={}).".format(site, tx_reads_num, mock_reads_num))
-                else:
-                    tables_d[site] = ModificationTables(tx_reads_d[site], mock_reads_d[site], modifications, row)
-                    logger.debug("Site {} - Converted. Number of reads (treatment={}, mock={}).".format(site,
-                                                                                                        tx_reads_num,mock_reads_num))
+                tables_d[site] = ModificationTables(tx_reads_d[site], mock_reads_d[site], modifications, row)
+                logger.debug("Site {} - Converted. Number of reads (treatment={}, mock={}).".format(site,
+                                                                                                    tx_reads_num,
+                                                                                                    mock_reads_num))
 
         # Compute binomial coin for all modification types
         binom_p_d = compute_binom_p(tables_d, modifications, override_binomial_p, ref_df)
@@ -124,8 +110,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
             # Continue if site was discarded
             if site not in tables_d:
                 # Log the following in the result dict
-                tx_reads_num = tx_reads_d[site][FREQ].sum().astype(int) #TODO - bug, no tx_reads[site]
-                mock_reads_num = mock_reads_d[site][FREQ].sum().astype(int) #TODO - bug, no tx_reads[site]
+                tx_reads_num = tx_reads_d[site][FREQ].sum().astype(int)
+                mock_reads_num = mock_reads_d[site][FREQ].sum().astype(int)
                 result_summary_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num, ON_TARGET: row[ON_TARGET]}
                 continue
 
@@ -148,40 +134,38 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
                                               editing_threshold)
         logger.debug("Translocations - HG test - Done!")
 
-        # TODO - delete - Add keep_intermediate_files
-        if pickle_output is not None:
-            with open(os.path.join(pickle_output, "tables_d.pkl"), "wb") as file:
-                pickle.dump(tables_d, file)
-            for _, algorithm in algorithm_d.items():
-                algorithm._cfg = None
-                algorithm._logger = None
-            with open(os.path.join(pickle_output, "algorithm_d.pkl"), "wb") as file:
-                pickle.dump(algorithm_d, file)
-            with open(os.path.join(pickle_output, "ref_df.pkl"), "wb") as file:
-                pickle.dump(ref_df, file)
-
         # Create plots & tables for all sites
         logger.info("Start creating experiment plots and tables")
-        exp_param_d = create_experiment_output(summary_df,  tx_trans_df, mock_trans_df, trans_result_df,
-                                               input_processing, min_num_of_reads, confidence_interval,
-                                               editing_threshold, translocation_p_value, output)
-        site_param_d = dict()
+        html_param_d = create_experiment_output(summary_df,  tx_trans_df, mock_trans_df, trans_result_df,
+                                                input_processing, min_num_of_reads, confidence_interval,
+                                                editing_threshold, translocation_p_value, output)
+
         if not suppress_site_output:
             for site, algorithm in algorithm_d.items():
                 logger.debug("Site {} - Start creating plots and tables".format(site))
 
                 # Create plots and tables
                 site_output = os.path.join(output, site)
-                site_param_d[site] = create_site_output(algorithm, modifications, tables_d[site], result_summary_d[site],
-                                                        site, site_output)
+                create_site_output(algorithm, modifications, tables_d[site], html_param_d, result_summary_d[site],
+                                   site, site_output)
         logger.info("Creating experiment plots and tables - Done!")
 
+        # Keep intermediate files
+        if keep_intermediate_files:
+            with open(os.path.join(output, "tables_d.pkl"), "wb") as file:
+                pickle.dump(tables_d, file)
+            for _, algorithm in algorithm_d.items():
+                algorithm._cfg = None
+                algorithm._logger = None
+            with open(os.path.join(output, "algorithm_d.pkl"), "wb") as file:
+                pickle.dump(algorithm_d, file)
+            with open(os.path.join(output, "ref_df.pkl"), "wb") as file:
+                pickle.dump(ref_df, file)
+            with open(os.path.join(output, "html_param_d.pkl"), "wb") as file:
+                pickle.dump(html_param_d, file)
+
         # Create final HTML report
-        with open(os.path.join(output, "exp_param_d.pkl"), "wb") as file:
-            pickle.dump(exp_param_d, file)
-        with open(os.path.join(output, "site_param_d.pkl"), "wb") as file:
-            pickle.dump(site_param_d, file)
-        create_final_html_report(exp_param_d, site_param_d, report_output)
+        create_final_html_report(html_param_d, report_output)
 
     # Catch exceptions
     except BadInputError as e:

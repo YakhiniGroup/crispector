@@ -3,11 +3,11 @@ from utils.constants_and_types import SITE_NAME, IndelType, Path, FREQ, IS_EDIT,
     ALIGNMENT_W_DEL, POS_IDX_E, POS_IDX_S, INDEL_TYPE, ExpType, ON_TARGET, IsEdit, C_TX, C_MOCK, \
     SUMMARY_RESULTS_TITLES, OFF_TARGET_COLOR, ON_TARGET_COLOR, OUTPUT_DIR, DISCARDED_SITES, \
     EDITING_ACTIVITY, PLOT_PATH, TITLE, W, H, PDF_PATH, PAGE_TITLE, READING_STATS, MAPPING_STATS, MAPPING_PER_SITE, \
-    FASTP_DIR, FASTP_TX_PATH, FASTP_MOCK_PATH, RESULT_TABLE, TAB_DATA, HTML_SITE_NAMES, LOG_PATH, TransDf, AlgResultDf, \
+    FASTP_DIR, FASTP_TX_PATH, FASTP_MOCK_PATH, RESULT_TABLE, TAB_DATA, HTML_SITES, LOG_PATH, TransDf, AlgResultDf, \
     TransResultDf, TRANS_FDR, SITE_A, SITE_B, TX_TRANS_READ, TRANSLOCATIONS, TX_TRANS_PATH, MOCK_TRANS_PATH, \
     TRANS_RES_TAB, TRANS_HEATMAP_TAB, TRANS_RESULTS_TITLES, EDIT_SECTION, MOD_SECTION, CLS_RES_SECTION, CLS_RES_INS, \
     CLS_RES_DEL, CLS_RES_MIX, MOD_DIST, EDIT_DIST, EDIT_SIZE_DIST, READ_SECTION, READ_EDIT, READ_MOCK_ALL, READ_TX_ALL, \
-    FILTERED_PATH, READ_TX_FILTER, READ_MOCK_FILTER
+    FILTERED_PATH, READ_TX_FILTER, READ_MOCK_FILTER, HTML_SITES, HTML_SITES_NAME_LIST, REPORT_PATH, LOGO_PATH
 import math
 import os
 import warnings
@@ -26,14 +26,18 @@ import pandas as pd
 from utils.logger import Logger
 from copy import deepcopy
 from matplotlib.collections import QuadMesh
+import shutil
 
 def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationTypes, mod_table: ModificationTables,
-                       site_result: Dict, site_name: str, output: Path):
+                       html_param_d: Dict, site_result: Dict, site_name: str, output: Path):
 
-    html_d = dict() # HTML parameters dict
+    html_param_d[HTML_SITES][HTML_SITES_NAME_LIST] += [site_name]
+    html_param_d[HTML_SITES][site_name] = dict() # HTML parameters dict
+    html_d = html_param_d[HTML_SITES][site_name]
     html_d[TITLE] = "{}".format(site_name)
+    html_d[REPORT_PATH] = os.path.join(OUTPUT_DIR, site_name, "report.html")
 
-    base_path = os.path.join(OUTPUT_DIR, site_name)
+    base_path = "" # TODO - remove mechanism
 
     cut_site = algorithm.cut_site
     win_size = algorithm.win_size
@@ -88,7 +92,6 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     if os.path.exists(os.path.join(output, FILTERED_PATH[ExpType.MOCK])):
         html_d[READ_SECTION][READ_MOCK_FILTER] = os.path.join(base_path, FILTERED_PATH[ExpType.MOCK])
 
-    return html_d
 
 def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_trans_df: TransDf,
                              trans_result_df: TransResultDf, input_processing: InputProcessing, min_num_of_reads: int,
@@ -144,7 +147,9 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
     for row_idx, row in result_df.iterrows():
         html_d[EDIT_SECTION][RESULT_TABLE][TAB_DATA][row_idx+1] = list(row.values)
 
-    html_d[HTML_SITE_NAMES] = list(result_df.loc[result_df[EDIT_PERCENT].isna(), SITE_NAME].values)
+    # Will be filled for each site
+    html_d[HTML_SITES] = dict()
+    html_d[HTML_SITES][HTML_SITES_NAME_LIST] = []
 
     # Add fastp links
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.TX])):
@@ -153,6 +158,11 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
         html_d[READING_STATS][FASTP_MOCK_PATH] = os.path.join(OUTPUT_DIR, "{}/fastp.html".format(FASTP_DIR[ExpType.MOCK]))
 
     html_d[LOG_PATH] = os.path.join(OUTPUT_DIR, Logger.logger_name)
+    # copy logo to user directory
+    user_path = os.path.join(output, "crispector_logo.jpg")
+    package_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'html_templates/crispector_logo.jpg')
+    shutil.copy2(package_path, user_path)
+    html_d[LOGO_PATH] = os.path.join(OUTPUT_DIR, "crispector_logo.jpg")
 
     return html_d
 
@@ -170,7 +180,6 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
     :param edit_table: edit as marked by crispector algorithm
     :param table_offset: reference offset (in bp) to the start of the qualification window
     :param output: output path
-    :param experiment_name
     :param table_indexes - list indexes for table plot
     :param name_suffix - prefix for file name
     :param figsize
@@ -250,16 +259,17 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
             handles, labels = axes[axes_idx].get_legend_handles_labels()
             order = [1, 2, 3, 0]
             axes[axes_idx].legend([handles[idx] for idx in order], [labels[idx] for idx in order],
-                                   bbox_to_anchor=(1.48, 0))
+                                   bbox_to_anchor=(1.51, 0))
 
         # Add the reference sequence in the position of the title
         if axes_idx == 0:
             ref = mod_table.amplicon[table_offset:table_offset + len(positions)]
+            offset = 0.5 if name_suffix == "ins" else 0
             for pos_idx, ii in enumerate(bar_ind):
-                axes[axes_idx].text(ii, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
-                axes[axes_idx].text(ii, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
+                axes[axes_idx].text(ii-offset, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
+                axes[axes_idx].text(ii-offset, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
             # red cute-site
-            axes[axes_idx].text(cut_site, 1.1 * y_max, "|", ha="center", va="bottom", weight='bold', size=20,
+            axes[axes_idx].text(cut_site-offset, 1.1 * y_max, "|", ha="center", va="bottom", weight='bold', size=20,
                                 color=cut_site_color)
 
         # Add bars values (numbers) as text
@@ -275,6 +285,7 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'classifier_results_by_position_{}.png'.format(name_suffix)),
                     bbox_inches='tight', dpi=dpi)
+        plt.tight_layout(w_pad=0.1)
         fig.savefig(os.path.join(output, 'classifier_results_by_position_{}.pdf'.format(name_suffix)),
                     pad_inches = 1, box_inches='tight')
 
@@ -401,7 +412,7 @@ def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, 
 
     # Create axes
     fig = plt.figure(figsize=(fig_w, fig_h))
-    ax = fig.add_axes([0, 0, 1, 1])
+    ax = fig.add_axes([0.01, 0.01, 0.99, 0.99])
 
     positions = list(range(amplicon_length + 1))
     ax.axvline(x=cut_site, linestyle='-', color="red", label='Expected cut-site', linewidth=2)
@@ -423,7 +434,7 @@ def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'distribution_of_edit_events.png'), bbox_inches='tight', dpi=dpi)
-        fig.savefig(os.path.join(output, 'distribution_of_edit_events.pdf'), pad_inches = 1, box_inches='tight')
+        fig.savefig(os.path.join(output, 'distribution_of_edit_events.pdf'), box_inches='tight')
         plt.close(fig)
 
     html_d[MOD_SECTION][EDIT_DIST] = dict()
@@ -668,8 +679,7 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
 
     # Define fix and axes
     fig_w, fig_h = 4, 4
-    fig = plt.figure(figsize=(fig_w, fig_h))
-    ax = fig.add_axes([0, 0, 1, 1])
+    plt.tight_layout(pad=1.5, w_pad=4, h_pad=3)
 
     # Get bar data
     editing = result_d[EDIT_PERCENT]
@@ -703,7 +713,7 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'site_editing_activity.png'), bbox_inches='tight', dpi=dpi)
-        fig.savefig(os.path.join(output, 'site_editing_activity.pdf'), pad_inches = 1, box_inches='tight')
+        fig.savefig(os.path.join(output, 'site_editing_activity.pdf'), box_inches='tight')
         plt.close(fig)
 
     html_d[EDITING_ACTIVITY] = dict()

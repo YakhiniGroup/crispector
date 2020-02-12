@@ -4,7 +4,7 @@ from utils.exceptions import FastpRunTimeError, SgRNANotInReferenceSequence
 from utils.constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelType, Path, DNASeq, FASTP_DIR, \
     READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, ALIGN_SCORE, FREQ, REFERENCE, SGRNA, SITE_NAME, CUT_SITE, REVERSED, \
     L_SITE, L_REV, R_SITE, R_REV, L_READ, R_READ, PRIMER_LEN, TransDf, TRANS_NAME, BAD_AMPLICON_THRESHOLD, CIGAR_LEN, \
-    CIGAR_LEN_THRESHOLD, MAX_SCORE, F_PRIMER, R_PRIMER, SGRNA_REVERSED, CS_SHIFT_L, CS_SHIFT_R, \
+    CIGAR_LEN_THRESHOLD, MAX_SCORE, F_PRIMER, R_PRIMER, SGRNA_REVERSED, \
     NORM_SCORE, TX_IN2, TX_IN1, MOCK_IN1, TX_MERGED, MOCK_MERGED, MOCK_IN2, DONOR, ON_TARGET, ALIGNMENT_HUMAN
 from input_processing.alignment import Alignment
 from input_processing.utils import reverse_complement, parse_fastq_file, parse_cigar
@@ -21,16 +21,14 @@ class InputProcessing:
     A helper class with all relevant functions to process crispector input.
     """
     def __init__(self, ref_df: AmpliconDf, output: Path, min_alignment_score: float, min_trans_alignment_score: float,
-                 min_read_length: int, cut_site_position: int, ambiguous_cut_site_detection: bool,
-                 disable_translocations: bool, fastp_options_string: str, debug_filtered_reads: bool,
-                 keep_fastp_output: bool):
+                 min_read_length: int, cut_site_position: int, disable_translocations: bool, fastp_options_string: str,
+                 keep_intermediate_files: bool):
         """
         :param ref_df: AmpliconDf type
         :param output: output path
         :param min_alignment_score: user min alignment score (0-100)
         :param min_read_length:  minimum read length
         :param cut_site_position: position relative to the PAM
-        :param ambiguous_cut_site_detection: Flag
         :param disable_translocations : Flag
         :param fastp_options_string: string
         :return:
@@ -39,12 +37,11 @@ class InputProcessing:
         self._output = output
         self._min_trans_score = min_trans_alignment_score
         self._cut_site_pos = cut_site_position
-        self._ambiguous_cut_site = ambiguous_cut_site_detection
         self._min_read_length = min_read_length
         self._fastp_options = fastp_options_string
         self._dis_trans = disable_translocations
-        self._debug_filtered_reads = debug_filtered_reads
-        self._keep_fastp = keep_fastp_output
+        self._debug_filtered_reads = keep_intermediate_files
+        self._keep_fastp = keep_intermediate_files
 
         # Set logger
         logger = Logger.get_logger()
@@ -75,9 +72,6 @@ class InputProcessing:
                                                                                      REFERENCE].apply(reverse_complement).str[0:PRIMER_LEN]
         # Find expected cut-site position
         self._convert_sgRNA_to_cut_site_position()
-
-        # Detect ambiguous cut-sites
-        self._detect_ambiguous_cut_site()
 
         # Prepare donor experiment variables
         self._donor = self._ref_df[DONOR].notnull().any()
@@ -553,37 +547,6 @@ class InputProcessing:
     def _convert_sgRNA_to_cut_site_position(self):
         self._ref_df[[CUT_SITE, SGRNA_REVERSED]] = self._ref_df.apply(lambda row: self._get_expected_cut_site(row[REFERENCE],
                                                    row[SGRNA], self._cut_site_pos, row[SITE_NAME]), axis=1, result_type='expand')
-
-    def _detect_ambiguous_cut_site(self):
-        """
-        # Check if there is an alternative PAM
-        :return:
-        """
-        self._ref_df[CS_SHIFT_L] = False
-        self._ref_df[CS_SHIFT_R] = False
-
-        if not self._ambiguous_cut_site:
-            return
-
-        for idx, row in self._ref_df.iterrows():
-            reverse = row[SGRNA_REVERSED]
-            ref = reverse_complement(row[REFERENCE]) if reverse else row[REFERENCE]
-            cut_site = len(row[REFERENCE]) - row[CUT_SITE] if reverse else row[CUT_SITE]
-            PAM_start = cut_site-self._cut_site_pos
-
-            # cut-site can possibly shift to the right
-            if ref[PAM_start+2:PAM_start+4] == "GG":
-                if not reverse:
-                    self._ref_df.at[idx, CS_SHIFT_R] = True
-                else: # right is left for 3'->5' reference
-                    self._ref_df.at[idx, CS_SHIFT_L] = True
-
-            # cut-site can possibly shift to the left
-            if ref[PAM_start:PAM_start+2] == "GG":
-                if not reverse:
-                    self._ref_df.at[idx, CS_SHIFT_L] = True
-                else:  # left is right for 3'->5' reference
-                    self._ref_df.at[idx, CS_SHIFT_R] = True
 
     @staticmethod
     def _get_expected_cut_site(reference: DNASeq, sgRNA: DNASeq, cut_site_position: int, site_name: str = '') \

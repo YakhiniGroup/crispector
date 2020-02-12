@@ -26,6 +26,8 @@ class Alignment:
         logger = Logger.get_logger()
         self._logger = logger
 
+        self._min_primer_dimer_thresh = align_cfg["min_primer_dimer_thresh"]
+
         # Create Aligner
         # Init biopython aligner
         self._aligner = Align.PairwiseAligner()
@@ -181,7 +183,7 @@ class Alignment:
         low_score_df = reads_df.loc[(reads_df[ALIGN_SCORE] < score_threshold) & (reads_df[CIGAR_LEN] > CIGAR_LEN_THRESHOLD)]
 
         # Filter PRIMER-DIMER affect
-        min_len = primers_len + MIN_PRIMER_DIMER_THRESH # TODO - make configuartion
+        min_len = primers_len + self._min_primer_dimer_thresh
         short_reads_df = reads_df.loc[reads_df[READ].str.len() < min_len]
 
         unaligned_indexes += list(low_score_df.index) + list(short_reads_df.index)

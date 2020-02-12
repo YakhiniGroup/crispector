@@ -3,8 +3,6 @@ from enum import Enum
 import pandas
 import numpy as np
 
-
-version = "0.1.0"
 welcome_msg = "\n\
  CCCCC  RRRRRR  IIIII  SSSSS  PPPPPP  EEEEEEE  CCCCC  TTTTTTT  OOOOO  RRRRRR\n\
 CC    C RR   RR  III  SS      PP   PP EE      CC    C   TTT   OO   OO RR   RR\n\
@@ -12,9 +10,7 @@ CC      RRRRRR   III   SSSSS  PPPPPP  EEEEE   CC        TTT   OO   OO RRRRRR\n\
 CC    C RR  RR   III       SS PP      EE      CC    C   TTT   OO   OO RR  RR\n\
  CCCCC  RR   RR IIIII  SSSSS  PP      EEEEEEE  CCCCC    TTT    OOOOO  RR   RR\n\
 \n\
-              CRISPR/CAS9 Off-Target Analysis From NGS Data\n\
-                            version={}\n".format(version)
-# TODO -  Need to read version from setup tools just like CRISPRESSO2
+              CRISPR/CAS9 Off-Target Analysis From NGS Data\n"
 
 
 # Enums
@@ -248,6 +244,7 @@ W = "width"
 H = "height"
 PLOT_PATH = "plot_path"
 PDF_PATH =  "pdf_path"
+REPORT_PATH = "report_path"
 TITLE = "title"
 PAGE_TITLE = "page_title"
 READING_STATS = "reading_statistics"
@@ -257,8 +254,10 @@ FASTP_TX_PATH = "fastp_tx_path"
 FASTP_MOCK_PATH = "fastp_mock_path"
 RESULT_TABLE = "result_table"
 TAB_DATA = "tabular_data"
-HTML_SITE_NAMES = "site_names"
+HTML_SITES = "html_sites"
+HTML_SITES_NAME_LIST = "sites_name_list"
 LOG_PATH = "log_path"
+LOGO_PATH = "logo_path"
 TRANSLOCATIONS = "translocations"
 TX_TRANS_PATH = "tx_translocations_path"
 MOCK_TRANS_PATH = "mock_translocations_path"

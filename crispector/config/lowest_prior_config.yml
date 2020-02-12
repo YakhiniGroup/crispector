@@ -109,6 +109,7 @@ alignment:
     mismatch_score: -4 # mismatch score. -4 is EMBOSS needle default
     open_gap_score: -25 # open_gap_score score. -10 is EMBOSS needle default
     extend_gap_score: 0 # extend_gap_score score. -0.5 is EMBOSS needle default
+    min_primer_dimer_thresh: 10 # Alignment - read length shorter than 2*primer+min_primer_dimer_thresh will be deleted
 max_edit_distance_on_primers: 8 # Demultiplexing - Maximum edit distance to consider a primer as a match for a read
 
 

@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-
 """Console script for crispector."""
 import sys
 import click
 from crispector_main import run
-import os
 
 @click.command()
 @click.option('--tx_in1', '-t_r1', type=click.Path(exists=True), help="Treatment read 1 input path or treatment merged FASTQ file")
@@ -19,7 +16,6 @@ import os
               "Please check the README file for further details and examples.")
 @click.option('--report_output', '-o', type=click.Path(), default="CRISPECTOR", show_default=True, required=True,
               help="Path to output folder (string)")
-@click.option('--pickle_output', type=click.Path(), default="CRISPECTOR", show_default=True, required=True) # TODO - Delete
 @click.option("--cut_site_position", type=click.INT, default=-3, show_default=True,
               help="Cut-site position relative to PAM (minus sign for upstream)")
 @click.option("--crispector_config", type=click.Path(),
@@ -57,25 +53,14 @@ import os
               help="Disable translocations search")
 @click.option('--enable_substitutions', is_flag=True, default=False, show_default=True, help="Enable substitutions"
               "events for the quantification of edit events")
-@click.option('--ambiguous_cut_site_detection', is_flag=True, default=False, show_default=True,
-              help="Detect ambiguous cut-site (e.g. PAM is GGG, so cut-site can be shift one base to the left."
-              "Set False if this isn't a CAS9 experiment") # TODO - remove this option
+@click.option('--keep_intermediate_files', is_flag=True, default=False, show_default=True, required=True,
+              help="Keep intermediate files for debug purposes")
 @click.option('--verbose', is_flag=True, default=False, show_default=True, help="Higher verbosity")
-@click.option('--debug', is_flag=True, default=False, show_default=True, help="Delete...") # TODO - remove this option
-@click.option('--table_input', type=click.Path(), required=False, help="") # TODO - delete
-@click.option('--keep_fastp_output', is_flag=True, default=False, show_default=True, help="Keep fastp merged FASTQ output")
 def main(**kwargs):
     """CRISPECTOR - Console script"""
-    report_output = kwargs["report_output"]
-    if not 'debug' in kwargs:
-        kwargs['debug'] = False
-
-    # Create output folder
-    if not os.path.exists(report_output):
-        os.makedirs(report_output)
 
     # Run crispector
     run(**kwargs)
 
 if __name__ == "__main__":
-    sys.exit(main())  # pragma: no cover
+    sys.exit(main())

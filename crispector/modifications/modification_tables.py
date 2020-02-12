@@ -27,19 +27,6 @@ class ModificationTables:
         self._n_reads_mock = self._mock_reads[FREQ].sum()
         self._priors = deepcopy(self._modifications.priors)
 
-        # if cut-site location is ambiguous, use cute-site priors in ambiguous locations as well
-        for idx, prior in enumerate(self._priors):
-            cut_site_idx = int(len(prior)//2)
-            is_ins = self._modifications.types[idx] == IndelType.INS
-            if ref_df_row[CS_SHIFT_R]:
-                self._priors[idx][cut_site_idx+1] = self._priors[idx][cut_site_idx]
-            if ref_df_row[CS_SHIFT_L]:
-                # cut-site is left to cut-site index for non insertions, and on cut-site for insertions
-                if is_ins:
-                    self._priors[idx][cut_site_idx-1] = self._priors[idx][cut_site_idx]
-                else:
-                    self._priors[idx][cut_site_idx-2] = self._priors[idx][cut_site_idx-1]
-
     # Getters
     @property
     def priors(self):
