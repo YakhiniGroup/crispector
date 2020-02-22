@@ -36,6 +36,11 @@ def compute_binom_p(tables: Dict[str ,ModificationTables], modifications: Modifi
             logger.warning("On-target was Discarded from evaluation. Noise estimation for\
                            Binomial probability will use probability from config file - default_binom_p")
 
+    if ref_df.shape[0] == 1:
+        override_coin = True
+        logger.warning("No off-target. Noise estimation for Binomial probability will use \
+        probability from config file - default_binom_p")
+
     # Use default_p if override_coin is True
     if override_coin:
         for site_name in tables.keys():

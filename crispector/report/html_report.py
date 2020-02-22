@@ -23,6 +23,7 @@ def create_final_html_report(html_param_d: Dict, report_output: Path):
     crispector_output = env.get_template('file_to_render.html')
 
     edit_section_result_table_html = create_edit_section_result_table(html_param_d)
+    # TODO - not created by default!
     translocations_trans_res_tab_tab_data_html = create_translocations_trans_res_tab_tab_data(html_param_d)
 
     for site in html_param_d[HTML_SITES][HTML_SITES_NAME_LIST]:

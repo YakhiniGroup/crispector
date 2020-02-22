@@ -225,8 +225,12 @@ class InputProcessing:
 
         # create filtered reads table for debug purposes
         if self._debug_filtered_reads:
-            self._create_filtered_reads_debug_table(tx_filtered_df, ExpType.TX)
-            self._create_filtered_reads_debug_table(mock_filtered_df, ExpType.MOCK)
+            # Only used in debug mode. Doesn't terminate program
+            try:
+                self._create_filtered_reads_debug_table(tx_filtered_df, ExpType.TX)
+                self._create_filtered_reads_debug_table(mock_filtered_df, ExpType.MOCK)
+            except: # catch *all* exceptions
+                pass
 
         # Warning if the number of reads isn't balanced
         if (self._aligned_n[ExpType.TX] > 3 * self._aligned_n[ExpType.MOCK]) or \
@@ -436,12 +440,12 @@ class InputProcessing:
         # Left part of the reference
         l_ref = self._ref_df[REFERENCE][l_name]
         l_cut_site = self._ref_df[CUT_SITE][l_name]
-        l_ref = reverse_complement(l_ref)[l_cut_site:] if l_rev else l_ref[:l_cut_site]
+        l_ref = reverse_complement(l_ref[l_cut_site:]) if l_rev else l_ref[:l_cut_site]
 
         # Right part of the reference
         r_ref = self._ref_df[REFERENCE][r_name]
         r_cut_site = self._ref_df[CUT_SITE][r_name]
-        r_ref = reverse_complement(r_ref)[:r_cut_site] if r_rev else r_ref[r_cut_site:]
+        r_ref = reverse_complement(r_ref[:r_cut_site]) if r_rev else r_ref[r_cut_site:]
 
         reference = l_ref + r_ref
         _, _, _, _, max_score = self._aligner.needle_wunsch_align(reference=reference, read=reference)
@@ -468,9 +472,13 @@ class InputProcessing:
             possible_trans_df = possible_trans_df.loc[~possible_trans_df[L_SITE].isin(sites) |
                                                       ~possible_trans_df[R_SITE].isin(sites)]
 
-        def get_trans_name(name, rev):
-            direction = '5\'_to_3\'' if not rev else '3\'_to_5\''
-            return name + "_" + direction
+        def get_trans_name(name, rev, left):
+            if left:
+                direction = 'L' if not rev else 'R'
+                return name + "_" + direction
+            else:
+                direction = 'R' if not rev else 'L'
+                return name + "_" + direction
 
         if not self._dis_trans:
             self._logger.debug("Search possible Translocations for {:,} reads. May take a few minutes".format(
@@ -515,10 +523,10 @@ class InputProcessing:
             elif (not self._dis_trans) and (align_score > (self._min_trans_score / 100) * max_score) or \
                     (cigar_len < CIGAR_LEN_THRESHOLD):
                 trans_idx_list.append(idx)
-                trans_d[TRANS_NAME].append(get_trans_name(l_name, l_rev) + "_" + get_trans_name(r_name, r_rev))
+                trans_d[TRANS_NAME].append(get_trans_name(l_name, l_rev, True) + "_" + get_trans_name(r_name, r_rev, False))
                 trans_d[FREQ].append(row[FREQ])
-                trans_d[R_SITE].append(l_name)
-                trans_d[L_SITE].append(r_name)
+                trans_d[R_SITE].append(r_name)
+                trans_d[L_SITE].append(l_name)
                 trans_d[REFERENCE].append(reference)
                 trans_d[READ].append(row[READ])
                 trans_d[ALIGNMENT_W_INS].append(ref_w_ins)

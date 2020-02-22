@@ -21,7 +21,7 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
     :param edit_thresh: Threshold to count NHEJ activity as active
     :return: TransResultDf - translocation result
     """
-    if tx_df.shape[0] == 0 or mock_df.shape[0] == 0:
+    if tx_df.shape[0] == 0:
         return pd.DataFrame(columns=[SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR])
 
     trans_d = defaultdict(list)
@@ -38,12 +38,17 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
             # Get all translocation between site A & B
             tx_a_b_df = tx_df.loc[((tx_df[R_SITE] == site_a) & (tx_df[L_SITE] == site_b)) |
                                   ((tx_df[R_SITE] == site_b) & (tx_df[L_SITE] == site_a))]
-
-            mock_a_b_df = mock_df.loc[((mock_df[R_SITE] == site_a) & (mock_df[L_SITE] == site_b)) |
-                                      ((mock_df[R_SITE] == site_b) & (mock_df[L_SITE] == site_a))]
-            # Get number for HG test
             tx_trans = tx_a_b_df[FREQ].sum()
-            mock_trans = mock_a_b_df[FREQ].sum()
+
+            # Make sure mock_df is empty with all the relevant fields
+            if (R_SITE in mock_df.columns) and (L_SITE in mock_df.columns):
+                mock_a_b_df = mock_df.loc[((mock_df[R_SITE] == site_a) & (mock_df[L_SITE] == site_b)) |
+                                          ((mock_df[R_SITE] == site_b) & (mock_df[L_SITE] == site_a))]
+                mock_trans = mock_a_b_df[FREQ].sum()
+            else:
+                mock_trans = 0
+
+            # Get number for HG test
             tx_a_read_num = row_a[TX_READ_NUM]
             mock_a_read_num = row_a[MOCK_READ_NUM]
             tx_b_read_num = row_b[TX_READ_NUM]

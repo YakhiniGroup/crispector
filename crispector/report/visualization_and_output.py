@@ -37,7 +37,7 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     html_d[TITLE] = "{}".format(site_name)
     html_d[REPORT_PATH] = os.path.join(OUTPUT_DIR, site_name, "report.html")
 
-    base_path = "" # TODO - remove mechanism
+    base_path = ""
 
     cut_site = algorithm.cut_site
     win_size = algorithm.win_size
@@ -63,11 +63,11 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
                              all_table_idx, output, html_d, base_path, "all", figsize=(14, 20))
     plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
-                             del_table_idx, output, html_d, base_path, "del", figsize=(12, 8))
+                             del_table_idx, output, html_d, base_path, "del")
     plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
-                             ins_table_idx, output, html_d, base_path, "ins", figsize=(12, 8))
+                             ins_table_idx, output, html_d, base_path, "ins")
     plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
-                             mix_table_idx, output, html_d, base_path, "mix_and_sub", figsize=(12, 8))
+                             mix_table_idx, output, html_d, base_path, "mix_and_sub")
 
     # Create edited read table
     html_d[READ_SECTION] = dict()
@@ -121,8 +121,8 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
     html_d[TRANSLOCATIONS] = dict()
     html_d[TRANSLOCATIONS][TITLE] = "Translocations"
     # Dump all translocations reads
-    tx_trans_df.to_csv(os.path.join(output, "tx_translocations_reads.csv"), index=False)
-    mock_trans_df.to_csv(os.path.join(output, "mock_translocations_reads.csv"), index=False)
+    tx_trans_df.to_csv(os.path.join(output, "tx_reads_with_primer_inconsistency.csv"), index=False)
+    mock_trans_df.to_csv(os.path.join(output, "mock_reads_with_primer_inconsistency.csv"), index=False)
     html_d[TRANSLOCATIONS][TX_TRANS_PATH] = os.path.join(output, "tx_translocations_reads.csv")
     html_d[TRANSLOCATIONS][MOCK_TRANS_PATH] = os.path.join(output, "mock_translocations_reads.csv")
 
@@ -171,7 +171,7 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
 #####----------------------#####
 def plot_modification_tables(mod_table: ModificationTables, modifications: ModificationTypes, edit_table: IsEdit,
                              table_offset: int, table_indexes: List[int], output: Path, html_d: Dict, base_output: Path,
-                             name_suffix = "", figsize: Tuple = (16, 11)):
+                             name_suffix = "", figsize: Tuple = (20, 12)):
     """
     Plot all modification tables around cut-site.
     Also display edit events.
@@ -187,9 +187,13 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
     """
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
-    mpl.rcParams['font.size'] = 22
-    mpl.rcParams['ytick.labelsize'] = 12
-    indel_size = 12
+    mpl.rcParams['font.size'] = 20
+    mpl.rcParams['xtick.labelsize'] = 20
+    mpl.rcParams['ytick.labelsize'] = 20
+    mpl.rcParams['axes.labelsize'] = 24
+    mpl.rcParams['legend.fontsize'] = 24
+    mpl.rcParams['axes.titlesize'] = 26
+    indel_size = 20
     bar_width = 0.4
     dpi = 200
     mock_color = '#3690c0'  # blue
@@ -252,22 +256,21 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
         axes[axes_idx].text(x=positions[0] - 1 - 0.5 * (not is_ins), y=y_max / 2,
                              s=modifications.plot_name_at_idx(table_idx), ha="right", va="center")
 
-        # Create legend in the middle of the plot
-        if axes_idx == ((len(table_indexes) // 2) - 1):
+        # Create legend at the bottom of the plot
+        if axes_idx == len(table_indexes) - 1:
             axes[axes_idx].bar([0], [0], color=edit_color, label="Edit event", edgecolor='grey')
             axes[axes_idx].plot([], [], color=cut_site_color, label="Cut-Site")
             handles, labels = axes[axes_idx].get_legend_handles_labels()
             order = [1, 2, 3, 0]
             axes[axes_idx].legend([handles[idx] for idx in order], [labels[idx] for idx in order],
-                                   bbox_to_anchor=(1.51, 0))
+                                   bbox_to_anchor=(0.65, 0))
 
         # Add the reference sequence in the position of the title
         if axes_idx == 0:
             ref = mod_table.amplicon[table_offset:table_offset + len(positions)]
             offset = 0.5 if name_suffix == "ins" else 0
             for pos_idx, ii in enumerate(bar_ind):
-                axes[axes_idx].text(ii-offset, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
-                axes[axes_idx].text(ii-offset, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
+                axes[axes_idx].text(ii+offset, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
             # red cute-site
             axes[axes_idx].text(cut_site-offset, 1.1 * y_max, "|", ha="center", va="bottom", weight='bold', size=20,
                                 color=cut_site_color)
@@ -285,9 +288,9 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'classifier_results_by_position_{}.png'.format(name_suffix)),
                     bbox_inches='tight', dpi=dpi)
-        plt.tight_layout(w_pad=0.1)
-        fig.savefig(os.path.join(output, 'classifier_results_by_position_{}.pdf'.format(name_suffix)),
-                    pad_inches = 1, box_inches='tight')
+        plt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.85)
+        fig.savefig(os.path.join(output, 'classifier_results_by_position_{}.svg'.format(name_suffix)),
+                    box_inches='tight')
 
         plt.close(fig)
 
@@ -308,7 +311,7 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
     html_d[CLS_RES_SECTION][tab_name][PLOT_PATH] = os.path.join(base_output,'classifier_results_by'
                                                                             '_position_{}.png'.format(name_suffix))
     html_d[CLS_RES_SECTION][tab_name][PDF_PATH] = os.path.join(base_output, 'classifier_results_by'
-                                                                            '_position_{}.pdf'.format(name_suffix))
+                                                                            '_position_{}.svg'.format(name_suffix))
     html_d[CLS_RES_SECTION][tab_name][TITLE] = title
     html_d[CLS_RES_SECTION][tab_name][W] = dpi * fig_w
     html_d[CLS_RES_SECTION][tab_name][H] = dpi * fig_h
@@ -379,12 +382,12 @@ def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'distribution_of_all_modifications.png'), bbox_inches='tight', dpi=dpi)
-        fig.savefig(os.path.join(output, 'distribution_of_all_modifications.pdf'), pad_inches = 1, box_inches='tight')
+        fig.savefig(os.path.join(output, 'distribution_of_all_modifications.svg'), pad_inches = 1, box_inches='tight')
         plt.close(fig)
 
     html_d[MOD_SECTION][MOD_DIST] = dict()
     html_d[MOD_SECTION][MOD_DIST][PLOT_PATH] = os.path.join(base_path, 'distribution_of_all_modifications.png')
-    html_d[MOD_SECTION][MOD_DIST][PDF_PATH] = os.path.join(base_path, 'distribution_of_all_modifications.pdf')
+    html_d[MOD_SECTION][MOD_DIST][PDF_PATH] = os.path.join(base_path, 'distribution_of_all_modifications.svg')
     html_d[MOD_SECTION][MOD_DIST][TITLE] = "All Modifications Distribution"
     html_d[MOD_SECTION][MOD_DIST][W] = dpi*fig_w
     html_d[MOD_SECTION][MOD_DIST][H] = dpi*fig_h
@@ -411,8 +414,7 @@ def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, 
     fig_w, fig_h = 16, 9
 
     # Create axes
-    fig = plt.figure(figsize=(fig_w, fig_h))
-    ax = fig.add_axes([0.01, 0.01, 0.99, 0.99])
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(fig_w, fig_h))
 
     positions = list(range(amplicon_length + 1))
     ax.axvline(x=cut_site, linestyle='-', color="red", label='Expected cut-site', linewidth=2)
@@ -434,12 +436,12 @@ def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'distribution_of_edit_events.png'), bbox_inches='tight', dpi=dpi)
-        fig.savefig(os.path.join(output, 'distribution_of_edit_events.pdf'), box_inches='tight')
+        fig.savefig(os.path.join(output, 'distribution_of_edit_events.svg'), box_inches='tight')
         plt.close(fig)
 
     html_d[MOD_SECTION][EDIT_DIST] = dict()
     html_d[MOD_SECTION][EDIT_DIST][PLOT_PATH] = os.path.join(base_path, 'distribution_of_edit_events.png')
-    html_d[MOD_SECTION][EDIT_DIST][PDF_PATH] = os.path.join(base_path, 'distribution_of_edit_events.pdf')
+    html_d[MOD_SECTION][EDIT_DIST][PDF_PATH] = os.path.join(base_path, 'distribution_of_edit_events.svg')
     html_d[MOD_SECTION][EDIT_DIST][TITLE] = "Edited Events Distribution"
     html_d[MOD_SECTION][EDIT_DIST][W] = dpi*fig_w
     html_d[MOD_SECTION][EDIT_DIST][H] = dpi*fig_h
@@ -500,12 +502,12 @@ def plot_distribution_of_edit_event_sizes(tables: ModificationTables, output: Pa
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'distribution_of_edit_events_size.png'), bbox_inches='tight', dpi=dpi)
-        fig.savefig(os.path.join(output, 'distribution_of_edit_events_size.pdf'), pad_inches = 1, box_inches='tight')
+        fig.savefig(os.path.join(output, 'distribution_of_edit_events_size.svg'), pad_inches = 1, box_inches='tight')
         plt.close(fig)
 
     html_d[MOD_SECTION][EDIT_SIZE_DIST] = dict()
     html_d[MOD_SECTION][EDIT_SIZE_DIST][PLOT_PATH] = os.path.join(base_path, 'distribution_of_edit_events_size.png')
-    html_d[MOD_SECTION][EDIT_SIZE_DIST][PDF_PATH] = os.path.join(base_path, 'distribution_of_edit_events_size.pdf')
+    html_d[MOD_SECTION][EDIT_SIZE_DIST][PDF_PATH] = os.path.join(base_path, 'distribution_of_edit_events_size.svg')
     html_d[MOD_SECTION][EDIT_SIZE_DIST][TITLE] = "Edit Event Size Distribution"
     html_d[MOD_SECTION][EDIT_SIZE_DIST][W] = dpi*fig_w
     html_d[MOD_SECTION][EDIT_SIZE_DIST][H] = dpi*fig_h
@@ -679,7 +681,7 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
 
     # Define fix and axes
     fig_w, fig_h = 4, 4
-    plt.tight_layout(pad=1.5, w_pad=4, h_pad=3)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(fig_w, fig_h))
 
     # Get bar data
     editing = result_d[EDIT_PERCENT]
@@ -702,9 +704,9 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
     ax.set_xticks([0])
     ax.set_xticklabels([site_name])
 
-    ax.text(x=-0.1, y=-0.3, s="Number of edited reads\nEditing activity",
+    ax.text(x=-0.1, y=-0.1, s="Number of edited reads\nEditing activity",
             ha='left', va='bottom', transform=fig.transFigure, family='serif')
-    ax.text(x=0.55, y=-0.3, s="- {:,} (out of {:,} reads).\n"
+    ax.text(x=0.55, y=-0.1, s="- {:,} (out of {:,} reads).\n"
                               "- {:.2f}%, CI=({:.2f}%$-${:.2f}%).".format(result_d[TX_EDIT], result_d[TX_READ_NUM],
                                                                           editing, result_d[CI_LOW],
                                                                           result_d[CI_HIGH]),
@@ -713,12 +715,12 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'site_editing_activity.png'), bbox_inches='tight', dpi=dpi)
-        fig.savefig(os.path.join(output, 'site_editing_activity.pdf'), box_inches='tight')
+        fig.savefig(os.path.join(output, 'site_editing_activity.svg'), box_inches='tight')
         plt.close(fig)
 
     html_d[EDITING_ACTIVITY] = dict()
     html_d[EDITING_ACTIVITY][PLOT_PATH] = os.path.join(base_path, 'site_editing_activity.png')
-    html_d[EDITING_ACTIVITY][PDF_PATH] = os.path.join(base_path, 'site_editing_activity.pdf')
+    html_d[EDITING_ACTIVITY][PDF_PATH] = os.path.join(base_path, 'site_editing_activity.svg')
     html_d[EDITING_ACTIVITY][TITLE] = "Editing Activity"
     html_d[EDITING_ACTIVITY][W] = dpi*fig_w
     html_d[EDITING_ACTIVITY][H] = dpi*fig_h
@@ -847,11 +849,11 @@ def plot_editing_activity(result_df: AlgResultDf, confidence_interval: float, ed
 
     if edit_df.shape[0] > 0:
         fig.savefig(os.path.join(output, 'editing_activity.png'), box_inches='tight', dpi=dpi)
-        fig.savefig(os.path.join(output, 'editing_activity.pdf'), pad_inches = 1, box_inches='tight')
+        fig.savefig(os.path.join(output, 'editing_activity.svg'), pad_inches = 1, box_inches='tight')
 
     html_d[EDIT_SECTION][EDITING_ACTIVITY] = dict()
     html_d[EDIT_SECTION][EDITING_ACTIVITY][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.png')
-    html_d[EDIT_SECTION][EDITING_ACTIVITY][PDF_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.pdf')
+    html_d[EDIT_SECTION][EDITING_ACTIVITY][PDF_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.svg')
     html_d[EDIT_SECTION][EDITING_ACTIVITY][TITLE] = title
     html_d[EDIT_SECTION][EDITING_ACTIVITY][W] = dpi*fig_w
     html_d[EDIT_SECTION][EDITING_ACTIVITY][H] = dpi*fig_h
@@ -931,7 +933,7 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
 
     html_d[READING_STATS][MAPPING_STATS] = dict()
     html_d[READING_STATS][MAPPING_STATS][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'mapping_statistics.png')
-    html_d[READING_STATS][MAPPING_STATS][PDF_PATH] = os.path.join(OUTPUT_DIR, 'mapping_statistics.pdf')
+    html_d[READING_STATS][MAPPING_STATS][PDF_PATH] = os.path.join(OUTPUT_DIR, 'mapping_statistics.svg')
     html_d[READING_STATS][MAPPING_STATS][TITLE] = title
     html_d[READING_STATS][MAPPING_STATS][W] = dpi*fig_w
     html_d[READING_STATS][MAPPING_STATS][H] = dpi*fig_h
@@ -939,7 +941,7 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'mapping_statistics.png'), bbox_inches='tight', dpi=dpi)
-        fig.savefig(os.path.join(output, 'mapping_statistics.pdf'), bbox_inches='tight', pad_inches=1)
+        fig.savefig(os.path.join(output, 'mapping_statistics.svg'), bbox_inches='tight', pad_inches=1)
         plt.close(fig)
 
     # Create reads box_plot
@@ -962,7 +964,7 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
 
     html_d[READING_STATS][MAPPING_PER_SITE] = dict()
     html_d[READING_STATS][MAPPING_PER_SITE][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'number_of_aligned_reads_per_site.png')
-    html_d[READING_STATS][MAPPING_PER_SITE][PDF_PATH] = os.path.join(OUTPUT_DIR, 'number_of_aligned_reads_per_site.pdf')
+    html_d[READING_STATS][MAPPING_PER_SITE][PDF_PATH] = os.path.join(OUTPUT_DIR, 'number_of_aligned_reads_per_site.svg')
     html_d[READING_STATS][MAPPING_PER_SITE][TITLE] = title
     html_d[READING_STATS][MAPPING_PER_SITE][W] = dpi*fig_w
     html_d[READING_STATS][MAPPING_PER_SITE][H] = dpi*fig_h
@@ -970,7 +972,7 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'number_of_aligned_reads_per_site.png'), bbox_inches='tight', dpi=dpi)
-        fig.savefig(os.path.join(output, 'number_of_aligned_reads_per_site.pdf'), bbox_inches='tight', pad_inches=1)
+        fig.savefig(os.path.join(output, 'number_of_aligned_reads_per_site.svg'), bbox_inches='tight', pad_inches=1)
         plt.close(fig)
 
 
@@ -1049,7 +1051,7 @@ def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransR
     # Add to final report
     html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB] = dict()
     html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'translocations_heatmap.png')
-    html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][PDF_PATH] = os.path.join(OUTPUT_DIR, 'translocations_heatmap.pdf')
+    html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][PDF_PATH] = os.path.join(OUTPUT_DIR, 'translocations_heatmap.svg')
     html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][TITLE] = title
     html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][W] = dpi*fig_w
     html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][H] = dpi*fig_h
@@ -1057,7 +1059,7 @@ def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransR
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, "translocations_heatmap.png"), bbox_inches='tight', dpi=dpi)
-        fig.savefig(os.path.join(output, "translocations_heatmap.pdf"), pad_inches=1, box_inches='tight')
+        fig.savefig(os.path.join(output, "translocations_heatmap.svg"), pad_inches=1, box_inches='tight')
         plt.close(fig)
 
 

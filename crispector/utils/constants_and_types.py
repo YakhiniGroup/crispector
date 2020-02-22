@@ -233,7 +233,7 @@ CIGAR_D, CIGAR_I, CIGAR_S, CIGAR_M = "D", "I", "X", "="
 AlignedIndel = Tuple[IndelType, int, int]
 
 # plots colors
-OFF_TARGET_COLOR = "#db5856"
+OFF_TARGET_COLOR = '#ffa5a5'
 ON_TARGET_COLOR = "#39ad48"
 
 # html constants
