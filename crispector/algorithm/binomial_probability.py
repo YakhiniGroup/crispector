@@ -1,6 +1,6 @@
 from utils.constants_and_types import Pr, IndelType, C_TX, C_MOCK, ON_TARGET, CUT_SITE, SITE_NAME, R_PRIMER, F_PRIMER, \
     BINOM_PERCENTILE, BINOM_AVERAGE_P, AmpliconDf
-from utils.logger import Logger
+from utils.logger import LoggerWrapper
 from utils.configurator import Configurator
 from typing import Dict, List
 from modifications.modification_tables import ModificationTables
@@ -19,7 +19,7 @@ def compute_binom_p(tables: Dict[str ,ModificationTables], modifications: Modifi
     :param donor: is donor experiment flag
     :return: Dict[SITE_NAME, LIST of probability for each modification type]
     """
-    logger = Logger.get_logger()
+    logger = LoggerWrapper.get_logger()
     cfg = Configurator.get_cfg()
     binom_p_d = dict()
     default_p = cfg["default_binom_p"]
@@ -27,19 +27,19 @@ def compute_binom_p(tables: Dict[str ,ModificationTables], modifications: Modifi
     # Use default Binomial probability when can't estimate signal from on target.
     if ref_df[ON_TARGET].sum() != 1:
         override_coin = True
-        logger.warning("Multiple or non on-targets detected. Noise estimation for Binomial probability will use \
-        probability from config file - default_binom_p")
+        logger.warning("Multiple or non on-targets detected. Noise estimation for Binomial probability will use "
+                       "probability from config file - default_binom_p")
     else:
         on_site_name = ref_df.loc[ref_df[ON_TARGET], SITE_NAME].values[0]
         if not on_site_name in tables:
             override_coin = True
-            logger.warning("On-target was Discarded from evaluation. Noise estimation for\
-                           Binomial probability will use probability from config file - default_binom_p")
+            logger.warning("On-target was Discarded from evaluation. Noise estimation for "
+                           "Binomial probability will use probability from config file - default_binom_p")
 
     if ref_df.shape[0] == 1:
         override_coin = True
-        logger.warning("No off-target. Noise estimation for Binomial probability will use \
-        probability from config file - default_binom_p")
+        logger.warning("No off-target experiments. Noise estimation for Binomial probability will use "
+                       "probability from config file - default_binom_p")
 
     # Use default_p if override_coin is True
     if override_coin:

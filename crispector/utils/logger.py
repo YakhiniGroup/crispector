@@ -1,10 +1,22 @@
 import logging
 import os
-
+from logging import Logger
 from utils.constants_and_types import Path
 
+class CrispectorLogger(Logger):
 
-class Logger:
+    def __init__(self, name, level=0):
+        """
+        Initialize the logger with a name and an optional level.
+        """
+        super().__init__(name, level)
+        self.warning_msg_l = []
+
+    def warning(self, msg, *args, **kwargs):
+        super().warning(msg, *args, **kwargs)
+        self.warning_msg_l.append(msg)
+
+class LoggerWrapper:
     """
     Singleton logger based on logging package.
     Dump all messages both to shell and crispector_main.log.
@@ -18,6 +30,7 @@ class Logger:
     @classmethod
     def get_logger(cls):
         # Create a custom logger
+        logging.setLoggerClass(CrispectorLogger)
         logger = logging.getLogger("default")
         logger.level = cls._logger_level
 

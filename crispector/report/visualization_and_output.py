@@ -7,7 +7,8 @@ from utils.constants_and_types import SITE_NAME, IndelType, Path, FREQ, IS_EDIT,
     TransResultDf, TRANS_FDR, SITE_A, SITE_B, TX_TRANS_READ, TRANSLOCATIONS, TX_TRANS_PATH, MOCK_TRANS_PATH, \
     TRANS_RES_TAB, TRANS_HEATMAP_TAB, TRANS_RESULTS_TITLES, EDIT_SECTION, MOD_SECTION, CLS_RES_SECTION, CLS_RES_INS, \
     CLS_RES_DEL, CLS_RES_MIX, MOD_DIST, EDIT_DIST, EDIT_SIZE_DIST, READ_SECTION, READ_EDIT, READ_MOCK_ALL, READ_TX_ALL, \
-    FILTERED_PATH, READ_TX_FILTER, READ_MOCK_FILTER, HTML_SITES, HTML_SITES_NAME_LIST, REPORT_PATH, LOGO_PATH
+    FILTERED_PATH, READ_TX_FILTER, READ_MOCK_FILTER, HTML_SITES, HTML_SITES_NAME_LIST, REPORT_PATH, LOGO_PATH, \
+    EDIT_TEXT, UNBALANCED_READ_WARNING
 import math
 import os
 import warnings
@@ -23,7 +24,7 @@ import seaborn as sns #
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
-from utils.logger import Logger
+from utils.logger import LoggerWrapper
 from copy import deepcopy
 from matplotlib.collections import QuadMesh
 import shutil
@@ -36,7 +37,6 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     html_d = html_param_d[HTML_SITES][site_name]
     html_d[TITLE] = "{}".format(site_name)
     html_d[REPORT_PATH] = os.path.join(OUTPUT_DIR, site_name, "report.html")
-
     base_path = ""
 
     cut_site = algorithm.cut_site
@@ -71,7 +71,7 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
 
     # Create edited read table
     html_d[READ_SECTION] = dict()
-    html_d[READ_SECTION][TITLE] = "Reads"
+    html_d[READ_SECTION][TITLE] = "Reads level information"
     plot_edited_reads_to_table(mod_table, cut_site, output, html_d, base_path)
 
     # Dump .csv file with all reads
@@ -116,15 +116,15 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
                                    mock_input_n, mock_merged_n, mock_aligned_n, html_d, output)
 
     # Create a text file with all discarded sites
-    discarded_sites_text(result_df, min_num_of_reads, html_d, output)
+    warnings_and_discarded_sites_text(result_df, min_num_of_reads, html_d, output)
 
     html_d[TRANSLOCATIONS] = dict()
     html_d[TRANSLOCATIONS][TITLE] = "Translocations"
     # Dump all translocations reads
     tx_trans_df.to_csv(os.path.join(output, "tx_reads_with_primer_inconsistency.csv"), index=False)
     mock_trans_df.to_csv(os.path.join(output, "mock_reads_with_primer_inconsistency.csv"), index=False)
-    html_d[TRANSLOCATIONS][TX_TRANS_PATH] = os.path.join(output, "tx_translocations_reads.csv")
-    html_d[TRANSLOCATIONS][MOCK_TRANS_PATH] = os.path.join(output, "mock_translocations_reads.csv")
+    html_d[TRANSLOCATIONS][TX_TRANS_PATH] = os.path.join(output, "tx_reads_with_primer_inconsistency.csv")
+    html_d[TRANSLOCATIONS][MOCK_TRANS_PATH] = os.path.join(output, "mock_reads_with_primer_inconsistency.csv")
 
     # Save translocations results
     trans_result_df.to_csv(os.path.join(output, "translocations_results.csv"), index=False)
@@ -157,7 +157,7 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.MOCK])):
         html_d[READING_STATS][FASTP_MOCK_PATH] = os.path.join(OUTPUT_DIR, "{}/fastp.html".format(FASTP_DIR[ExpType.MOCK]))
 
-    html_d[LOG_PATH] = os.path.join(OUTPUT_DIR, Logger.logger_name)
+    html_d[LOG_PATH] = os.path.join(OUTPUT_DIR, LoggerWrapper.logger_name)
     # copy logo to user directory
     user_path = os.path.join(output, "crispector_logo.jpg")
     package_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'html_templates/crispector_logo.jpg')
@@ -682,6 +682,7 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
     # Define fix and axes
     fig_w, fig_h = 4, 4
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(fig_w, fig_h))
+    plt.subplots_adjust(left=0.2)
 
     # Get bar data
     editing = result_d[EDIT_PERCENT]
@@ -704,27 +705,21 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
     ax.set_xticks([0])
     ax.set_xticklabels([site_name])
 
-    ax.text(x=-0.1, y=-0.1, s="Number of edited reads\nEditing activity",
-            ha='left', va='bottom', transform=fig.transFigure, family='serif')
-    ax.text(x=0.55, y=-0.1, s="- {:,} (out of {:,} reads).\n"
-                              "- {:.2f}%, CI=({:.2f}%$-${:.2f}%).".format(result_d[TX_EDIT], result_d[TX_READ_NUM],
-                                                                          editing, result_d[CI_LOW],
-                                                                          result_d[CI_HIGH]),
-            ha='left', va='bottom', transform=fig.transFigure, family='serif')
-
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'site_editing_activity.png'), bbox_inches='tight', dpi=dpi)
         fig.savefig(os.path.join(output, 'site_editing_activity.svg'), box_inches='tight')
         plt.close(fig)
 
+    edit_text = "Number of edited reads - {:,} (out of {:,} reads).\n".format(result_d[TX_EDIT], result_d[TX_READ_NUM])
+    edit_text += "Editing activity - {:.2f}%, CI=({:.2f}%$-${:.2f}%).\n".format(editing, result_d[CI_LOW], result_d[CI_HIGH])
     html_d[EDITING_ACTIVITY] = dict()
     html_d[EDITING_ACTIVITY][PLOT_PATH] = os.path.join(base_path, 'site_editing_activity.png')
     html_d[EDITING_ACTIVITY][PDF_PATH] = os.path.join(base_path, 'site_editing_activity.svg')
     html_d[EDITING_ACTIVITY][TITLE] = "Editing Activity"
     html_d[EDITING_ACTIVITY][W] = dpi*fig_w
     html_d[EDITING_ACTIVITY][H] = dpi*fig_h
-
+    html_d[EDITING_ACTIVITY][EDIT_TEXT] = edit_text
 
 #####----------------------#####
 #####------Experiment------#####
@@ -873,6 +868,7 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
     mpl.rcParams['xtick.labelsize'] = 18
     mpl.rcParams['axes.labelsize'] = 20
     mpl.rcParams['axes.titlesize'] = 22
+    mpl.rcParams['legend.fontsize'] = 22
     dpi = 200
     fig_w, fig_h = 14, 8
     bar_width = 0.4
@@ -948,19 +944,27 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
     fig = plt.figure(figsize=(fig_w, fig_h))
     ax = fig.add_axes([0, 0, 1, 1])
 
-    bplot = sns.boxplot(x=["Treatment", "Mock"],
-                        y=[result_df[TX_READ_NUM], result_df[MOCK_READ_NUM]],
-                        linewidth=2.5, ax=ax)
-    txbox = bplot.artists[0]
-    txbox.set_facecolor(tx_color)
-    mockbox = bplot.artists[1]
-    mockbox.set_facecolor(mock_color)
+    max_number_of_reads = max(result_df[TX_READ_NUM].max(), result_df[MOCK_READ_NUM].max())
+    sns.scatterplot(x=TX_READ_NUM, y=MOCK_READ_NUM, data=result_df, ax=ax, s=200)
+    plt.plot([0, max_number_of_reads], [0, max_number_of_reads], c='k') # balance line
 
-    # Set x, y lim & ticks and title
-    ax.set_xlim(-1, 2)
-    ax.set_ylabel("Number Of Reads")
+    unbalanced_df = result_df.loc[(result_df[TX_READ_NUM] > UNBALANCED_READ_WARNING * result_df[MOCK_READ_NUM]) |
+                                  (result_df[MOCK_READ_NUM] > UNBALANCED_READ_WARNING * result_df[TX_READ_NUM])]
+    sns.scatterplot(x=TX_READ_NUM, y=MOCK_READ_NUM, data=unbalanced_df, ax=ax, s=200, color='r',
+                    label="Unbalanced read numbers")
+
+    ax.set_ylabel("Number of reads in Mock")
+    ax.set_xlabel("Number of reads in Treatment")
     title = "Number Of Aligned Reads Per Site"
-    # ax.set_title(,title weight='bold', family='serif')
+
+    logger = LoggerWrapper.get_logger()
+    if unbalanced_df.shape[0] > 0:
+        logger.warning("Experiment has sites with unbalanced number reads between Treatment and Mock."
+                       "These sites editing activity estimation can be inaccurate.")
+    for _, row in unbalanced_df.iterrows():
+        logger.warning("Site {} has highly unbalanced number of reads: Treatment - {:,}. Mock - {:,}.".format(row[SITE_NAME],
+                                                                                                              row[TX_READ_NUM],
+                                                                                                              row[MOCK_READ_NUM]))
 
     html_d[READING_STATS][MAPPING_PER_SITE] = dict()
     html_d[READING_STATS][MAPPING_PER_SITE][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'number_of_aligned_reads_per_site.png')
@@ -1080,11 +1084,16 @@ def summary_result_to_excel(summary_result_df: pd.DataFrame, confidence_interval
     df.to_excel(os.path.join(output, "results_summary.xlsx"), index=False, float_format='%.4f')
 
 
-def discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int, html_d: Dict, output: str):
+def warnings_and_discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int, html_d: Dict, output: str):
     # Print information on discarded reads
     discarded_df = summary_result_df.loc[summary_result_df[EDIT_PERCENT].isna()]
 
-    with open(os.path.join(output, "discarded_sites.txt"), 'w') as file:
+    with open(os.path.join(output, "warnings_and_discarded_sites.txt"), 'w') as file:
+        html_d[READING_STATS][DISCARDED_SITES] = ""
+        logger = LoggerWrapper.get_logger()
+        for warn_msg in logger.warning_msg_l:
+            file.write(warn_msg)
+            html_d[READING_STATS][DISCARDED_SITES] += warn_msg + "\n"
 
         if discarded_df.shape[0] > 0:
             opening_line = "{} sites were discarded due to low number of reads (below {:,}):\n".format(
@@ -1097,7 +1106,8 @@ def discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int,
                                                                                              row[MOCK_READ_NUM]))
                 file.write(site_lines[-1])
 
-            html_d[READING_STATS][DISCARDED_SITES] = opening_line + "".join(site_lines)
+            discarded_text = opening_line + "".join(site_lines)
+            html_d[READING_STATS][DISCARDED_SITES] += discarded_text
 
 # Edit read table utils
 def get_read_around_cut_site(read, cut_site, length):

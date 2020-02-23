@@ -204,6 +204,7 @@ CIGAR_LEN_THRESHOLD = 8 # This threshold is applied only if alignment score is l
 MIN_PRIMER_DIMER_THRESH = 10
 READ_LEN_SIDE = 20
 OUTPUT_DIR = "crispector_output"
+UNBALANCED_READ_WARNING = 3 #if Tx vs M read numbers are high unbalanced, (*3 or /3), report to the user
 
 # DEBUG purpose constant
 ALIGNMENT_HUMAN = 'alignment_human_readable'
@@ -279,3 +280,4 @@ READ_TX_ALL = "treatment_aligned_reads"
 READ_MOCK_ALL = "mock_aligned_reads"
 READ_TX_FILTER = "treatment_filtered_reads"
 READ_MOCK_FILTER = "mock_filtered_reads"
+EDIT_TEXT = "edit_text"

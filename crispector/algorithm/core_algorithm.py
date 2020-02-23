@@ -1,7 +1,7 @@
 from utils.constants_and_types import IsEdit, IndelType, AlgResult, Pr, FREQ, IS_EDIT, C_TX, C_MOCK, TX_READ_NUM, \
     MOCK_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH, ReadsDf
 from utils.exceptions import ClassificationFailed
-from utils.logger import Logger
+from utils.logger import LoggerWrapper
 from utils.configurator import Configurator
 from modifications.modification_tables import ModificationTables
 from modifications.modification_types import ModificationTypes
@@ -35,7 +35,7 @@ class CoreAlgorithm:
         self._edit: IsEdit = dict()
         self._tx_df: ReadsDf = None
         self._mock_df: ReadsDf = None
-        self._logger = Logger.get_logger()
+        self._logger = LoggerWrapper.get_logger()
         self._on_target = on_target
 
     def evaluate(self, tables: ModificationTables) -> Dict:

@@ -6,7 +6,7 @@ from utils.constants_and_types import ReadsDf, IndelType, Path, DNASeq, CigarPat
     CIGAR_S, CIGAR_M, AlignedIndel, DEL_BASE, INS_BASE, SUB_BASE, REVERSED, CIGAR_LEN, CIGAR_LEN_THRESHOLD, \
     ALIGN_CUT_SITE, ALIGNMENT_HUMAN, FILTERED_PATH, ExpType
 from input_processing.utils import reverse_complement, parse_cigar
-from utils.logger import Logger
+from utils.logger import LoggerWrapper
 from utils.configurator import Configurator
 from typing import List, Tuple, Dict
 import pandas as pd
@@ -23,7 +23,7 @@ class Alignment:
         self._window_size = window_size
 
         # Set logger
-        logger = Logger.get_logger()
+        logger = LoggerWrapper.get_logger()
         self._logger = logger
 
         self._min_primer_dimer_thresh = align_cfg["min_primer_dimer_thresh"]

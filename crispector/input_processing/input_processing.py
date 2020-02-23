@@ -8,7 +8,7 @@ from utils.constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, I
     NORM_SCORE, TX_IN2, TX_IN1, MOCK_IN1, TX_MERGED, MOCK_MERGED, MOCK_IN2, DONOR, ON_TARGET, ALIGNMENT_HUMAN
 from input_processing.alignment import Alignment
 from input_processing.utils import reverse_complement, parse_fastq_file, parse_cigar
-from utils.logger import Logger
+from utils.logger import LoggerWrapper
 from utils.configurator import Configurator
 from typing import List, Tuple, Dict
 import pandas as pd
@@ -44,7 +44,7 @@ class InputProcessing:
         self._keep_fastp = keep_intermediate_files
 
         # Set logger
-        logger = Logger.get_logger()
+        logger = LoggerWrapper.get_logger()
         self._logger = logger
 
         # Get config
@@ -191,7 +191,7 @@ class InputProcessing:
 
             # Remove fastp files
             if not override_fastp and not self._keep_fastp:
-                for row in self._ref_df.iterrows():
+                for _, row in self._ref_df.iterrows():
                     if os.path.exists(row[TX_MERGED]):
                         os.remove(row[TX_MERGED])
                     if os.path.exists(row[MOCK_MERGED]):
@@ -267,7 +267,7 @@ class InputProcessing:
                    "-O", os.path.join(fastp_output, "r2_filtered_reads.fastq"), "-m", "--merged_out", merged_path,
                    "-j", os.path.join(fastp_output, "fastp.json"), "-h", os.path.join(fastp_output, "fastp.html"),
                    "--length_required {}".format(self._min_read_length),
-                   self._fastp_options, ">> {} 2>&1".format(Logger.get_log_path())]
+                   self._fastp_options, ">> {} 2>&1".format(LoggerWrapper.get_log_path())]
 
         command = " ".join(command)
 

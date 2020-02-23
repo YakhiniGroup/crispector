@@ -14,7 +14,7 @@ from report.html_report import create_final_html_report
 from input_processing.input_processing import InputProcessing
 import traceback
 from algorithm.translocations import translocations_test
-from utils.logger import Logger
+from utils.logger import LoggerWrapper
 from utils.configurator import Configurator
 from report.visualization_and_output import create_site_output, create_experiment_output
 import os
@@ -43,12 +43,12 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
             os.makedirs(output)
 
         # Init the logger
-        Logger.set_output_dir(output)
+        LoggerWrapper.set_output_dir(output)
         if verbose:
-            Logger.set_logger_level(logging.DEBUG)
+            LoggerWrapper.set_logger_level(logging.DEBUG)
         else:
-            Logger.set_logger_level(logging.INFO)
-        logger = Logger.get_logger()
+            LoggerWrapper.set_logger_level(logging.INFO)
+        logger = LoggerWrapper.get_logger()
 
         # Display welcome msg
         click.echo(welcome_msg)
@@ -161,8 +161,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
                 pickle.dump(algorithm_d, file)
             with open(os.path.join(output, "ref_df.pkl"), "wb") as file:
                 pickle.dump(ref_df, file)
-            with open(os.path.join(output, "html_param_d.pkl"), "wb") as file:
-                pickle.dump(html_param_d, file)
+        with open(os.path.join(output, "html_param_d.pkl"), "wb") as file: # TODO - move inside
+            pickle.dump(html_param_d, file)
 
         # Create final HTML report
         create_final_html_report(html_param_d, report_output)
