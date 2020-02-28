@@ -1,5 +1,9 @@
 {% extends 'final_layout.html' %}
 
+{% block crispector_logo %}
+		{{exp_param_d.logo_path}}
+{% endblock %}
+
 {% block experiment_title %}
 		{{exp_param_d.page_title}}{{exp_param_d.page_title}}
 {% endblock %}
@@ -20,6 +24,10 @@
 		{{exp_param_d.edit_section.editing_activity.pdf_path}}
 {% endblock %}
 
+{% block edit_section_editing_activity_edit_text %}
+		{{exp_param_d.edit_section.editing_activity.edit_text}}
+{% endblock %}
+
 {% block edit_section_result_table_title %}
 		{{exp_param_d.edit_section.result_table.title}}
 {% endblock %}
@@ -30,7 +38,9 @@
 
 {% block translocations_menu %}
 	{% if exp_param_d.translocations.title != '' %}
-	<li class="active"><a href="#translocations">Translocations</a></li>
+	<li class="nav-item">
+		<a class="nav-link" href="#translocations">Translocations</a>
+	 </li>
 	{% endif %}	
 {% endblock translocations_menu %}
 
@@ -41,44 +51,107 @@
 			<h5 style="text-align:center">{{exp_param_d.translocations.title}}</h5>
 			<ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
 	{% endif %}	
-			{% if exp_param_d.translocations.translocations_heatmap_tab.title != '' %}
+
+			{% if exp_param_d.translocations.translocations_heatmap_tab != '' %}
 					<li class="nav-item">
 				  	<a class="nav-link active" id="heatmap_tab" data-toggle="tab" href="#heatmap" role="tab" aria-controls="" aria-selected="true">{{exp_param_d.translocations.translocations_heatmap_tab.title}}</a>
 					</li>
 			{% endif %}
 
-			{% if exp_param_d.translocations.translocations_results_tab.title != '' %}
+			{% if exp_param_d.translocations.translocations_results_tab != '' and exp_param_d.translocations.translocations_heatmap_tab == '' %}
 					<li class="nav-item">
 					<a class="nav-link active" id="mapping_stats-tab" data-toggle="tab" href="#result_table" role="tab" aria-controls="" aria-selected="true">{{exp_param_d.translocations.translocations_results_tab.title}}</a>
 					</li>
 				</ul>
 			{% endif %}
+
+			{% if exp_param_d.translocations.translocations_results_tab != '' %}
+					<li class="nav-item">
+					<a class="nav-link" id="mapping_stats-tab" data-toggle="tab" href="#result_table" role="tab" aria-controls="" aria-selected="true">{{exp_param_d.translocations.translocations_results_tab.title}}</a>
+					</li>
+				</ul>
+			{% endif %}
+			
+
 				<div class="tab-content" id="myTabContent">
-			{% if exp_param_d.translocations.translocations_heatmap_tab.title != '' %}	
-					<div class="tab-pane fade show active" id="heatmap" role="tabpanel" aria-labelledby="mapping_stats-tab">
-				  		<a href="{{exp_param_d.translocations.translocations_heatmap_tab.pdf_path}}"><img src="{exp_param_d.translocations.translocations_heatmap_tab.plot_path}" width='95%' ></a>
-					</div>	
+			{% if exp_param_d.translocations.translocations_heatmap_tab == '' and exp_param_d.translocations.translocations_results_tab == ''%}
+				<table style="width:100%">
+					<tr>
+					<th><form method="get" action="{{exp_param_d.translocations.tx_translocations_path}}">
+							<button type="submit" style="width:80%; height:20%" class="btn btn-primary">Translocations treatment report</button>
+						</form>
+					</th>
+					<th><form method="get" action="{{exp_param_d.translocations.mock_translocations_path}}">
+							<button type="submit" style="width:80%; height:20%" class="btn btn-primary">Translocations mock report</button>
+						</form>
+						</th>
+					</tr>
+				</table>
 			{% endif %}
 
-			{% if exp_param_d.translocations.translocations_results_tab.title != '' and exp_param_d.translocations.translocations_heatmap_tab.title != '' %}
-				<div class="tab-pane fade" id="result_table" role="tabpanel" aria-labelledby="">
-					<table class="table table-hover">
-				  		{{translocations_trans_res_tab_tab_data_html}}
-					</table>
-			  	</div>
-			{% endif %}	
+			{% if exp_param_d.translocations.translocations_heatmap_tab != '' %}	
+					<div class="tab-pane fade show active" id="heatmap" role="tabpanel" aria-labelledby="mapping_stats-tab">
+				  		<a href="{{exp_param_d.translocations.translocations_heatmap_tab.pdf_path}}"><img src="{{exp_param_d.translocations.translocations_heatmap_tab.plot_path}}" width='95%' ></a>
+						  <table style="width:100%">
+							<tr>
+							  <th><form method="get" action="{{exp_param_d.translocations.tx_translocations_path}}">
+									<button type="submit" style="width:80%; height:20%" class="btn btn-primary">Translocations treatment report</button>
+								  </form>
+							  </th>
+							  <th><form method="get" action="{{exp_param_d.translocations.mock_translocations_path}}">
+									<button type="submit" style="width:80%; height:20%" class="btn btn-primary">Translocations mock report</button>
+								  </form>
+								</th>
+							</tr>
+						</table>
+					</div>
+						
+			{% endif %}
 
-			{% if exp_param_d.translocations.translocations_results_tab.title != '' and exp_param_d.translocations.translocations_heatmap_tab.title == '' %}
+			{% if exp_param_d.translocations.translocations_results_tab != '' and exp_param_d.translocations.translocations_heatmap_tab == "" %}
 				<div class="tab-pane fade show active" id="result_table" role="tabpanel" aria-labelledby="">
 					<table class="table table-hover">
 				  		{{translocations_trans_res_tab_tab_data_html}}
 					</table>
+					<table style="width:100%">
+						<tr>
+						  <th><form method="get" action="{{exp_param_d.translocations.tx_translocations_path}}">
+								<button type="submit" style="width:100%; height:20%" class="btn btn-primary">Translocations treatment report</button>
+							  </form>
+						  </th>
+						  <th><form method="get" action="{{exp_param_d.translocations.mock_translocations_path}}">
+							    <button type="submit" style="width:100%; height:20%" class="btn btn-primary">Translocations mock report</button>
+						      </form>
+					  	  </th>
+						</tr>
+					</table>
 			  	</div>
 			{% endif %}		
+
+			{% if exp_param_d.translocations.translocations_results_tab != '' %}
+				<div class="tab-pane fade" id="result_table" role="tabpanel" aria-labelledby="">
+					<table class="table table-hover">
+				  		{{translocations_trans_res_tab_tab_data_html}}
+					</table>
+					<table style="width:100%">
+						<tr>
+						  <th><form method="get" action="{{exp_param_d.translocations.tx_translocations_path}}">
+								<button type="submit" style="width:80%; height:20%" class="btn btn-primary">Translocations treatment report</button>
+							  </form>
+						  </th>
+						  <th><form method="get" action="{{exp_param_d.translocations.mock_translocations_path}}">
+							    <button type="submit" style="width:80%; height:20%" class="btn btn-primary">Translocations mock report</button>
+						      </form>
+					  	  </th>
+						</tr>
+					</table>
+			  	</div>
+			{% endif %}	
 			</div>	  
 		</div>
   	</li> 
 {% endblock translocations %}
+
 
 {% block reading_stats_title %}
 		{{exp_param_d.reading_statistics.title}}
@@ -148,8 +221,7 @@
 	{% for site in exp_param_d.html_sites.sites_name_list -%}
             <li class="list-group-item">
             <div id="{{ site }}">         
-                    <a href="{{exp_param_d['html_sites'][site]['report_path']}}">{{ site }}</a>  #
-				exp_param_d.html_sites
+                    <a href="{{exp_param_d['html_sites'][site]['report_path']}}">{{ site }}</a>
             </div>
             </li>
 	{% endfor %}

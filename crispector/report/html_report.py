@@ -1,6 +1,6 @@
 from typing import Dict
-from utils.constants_and_types import Path, EDIT_SECTION, RESULT_TABLE, TAB_DATA, TRANSLOCATIONS, TRANS_RES_TAB, \
-    HTML_SITES, REPORT_PATH, HTML_SITES_NAME_LIST
+from constants_and_types import Path, EDIT_SECTION, RESULT_TABLE, TAB_DATA, TRANSLOCATIONS, TRANS_RES_TAB, \
+    HTML_SITES, REPORT_PATH, HTML_SITES_NAME_LIST, LOGO_PATH
 import click
 import os
 import sys
@@ -24,18 +24,34 @@ def create_final_html_report(html_param_d: Dict, report_output: Path):
 
     edit_section_result_table_html = create_edit_section_result_table(html_param_d)
     # TODO - not created by default!
-    translocations_trans_res_tab_tab_data_html = create_translocations_trans_res_tab_tab_data(html_param_d)
+    
+    #html_param_d["translocations"]['tx_translocations_path'] = "crispector_output/tx_reads_with_primer_inconsistency.csv"
+    #html_param_d["translocations"]['mock_translocations_path'] = "crispector_output/mock_reads_with_primer_inconsistency.csv"
+    #html_param_d["translocations"]["translocations_heatmap_tab"] = ''
+    #html_param_d["translocations"]["translocations_results_tab"] = ''
+    
+    if html_param_d["translocations"]["translocations_results_tab"] != '':
+        translocations_trans_res_tab_tab_data_html = create_translocations_trans_res_tab_tab_data(html_param_d)
 
     for site in html_param_d[HTML_SITES][HTML_SITES_NAME_LIST]:
         create_site_page(site, html_param_d, html_param_d[HTML_SITES][site], report_output)
 
-    with open(os.path.join(report_output, "report.html"), "w+") as file:
-        output = crispector_output.render(exp_param_d=html_param_d,
-                                          edit_section_result_table_html=edit_section_result_table_html,
-                                          translocations_trans_res_tab_tab_data_html=translocations_trans_res_tab_tab_data_html)
+    if html_param_d["translocations"]["translocations_results_tab"] != '':
+        with open(os.path.join(report_output, "report.html"), "w+") as file:
+            output = crispector_output.render(exp_param_d=html_param_d,
+                                            edit_section_result_table_html=edit_section_result_table_html,
+                                            translocations_trans_res_tab_tab_data_html=translocations_trans_res_tab_tab_data_html)
+            file.write(output)
+            file.close()
 
-        file.write(output)
-        file.close()
+    else:
+        with open(os.path.join(report_output, "report.html"), "w+") as file:
+            output = crispector_output.render(exp_param_d=html_param_d,
+                                            edit_section_result_table_html=edit_section_result_table_html)
+
+    
+            file.write(output)
+            file.close()
 
 
 def create_edit_section_result_table(exp_param_d):
@@ -63,23 +79,29 @@ def create_site_page(site: str, exp_param_d: Dict, site_param_d: Dict, report_ou
     html_templates_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'html_templates')
     file_loader = FileSystemLoader(html_templates_path)
     env = Environment(loader=file_loader)
+    site_param_d["read_section"]["mock_filtered_reads"] = ""
+    site_param_d["read_section"]["fastp_tx_path"] = ""
+    site_param_d["read_section"]["fastp_mock_path"] = ""
 
     with open(os.path.join(report_output, site_param_d[REPORT_PATH]), "w+") as file:
         crispector_output = env.get_template("site_file_to_render.html")
+
+    
 
         output = crispector_output.render(exp_param_d=exp_param_d, site_param_d=site_param_d, site=site)
 
         file.write(output)
         file.close()
 
-@click.command()
-@click.option('--output_path', type=click.Path(), required=True, help="")
-def main(output_path):
-    with open(os.path.join(output_path,"crispector_output/html_param_d.pkl"), "rb") as file:
+#@click.command()
+#@click.option('--output_path', type=click.Path(), required=True, help="")
+def main(output_path):#output_path
+    #output_path = "C:/Users/Chi Hong Choi/Desktop/RAG2_OECas9_HEK293/"
+    with open(os.path.join(output_path, "crispector_output/html_param_d.pkl"), "rb") as file:
         html_param_d = pickle.load(file)
 
-    html_param_d['logo_path'] = "crispector_output/crispector_logo.jpg"  # TODO - remove
-    create_final_html_report(html_param_d, output_path)
+    #html_param_d['logo_path'] = "crispector_output/crispector_logo.jpg"  # TODO - remove
+    create_final_html_report(html_param_d, output_path)#output_path
 
 if __name__ == '__main__':
     sys.exit(main())  # pragma: no cover
