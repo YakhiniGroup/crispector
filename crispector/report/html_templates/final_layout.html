@@ -122,7 +122,7 @@
                     <div class="tab-content" id="myTabContent">
                       <div class="tab-pane fade show active" id="mapping_stats" role="tabpanel" aria-labelledby="mapping_stats-tab">
                         <a href="{% block reading_stats_mapping_stats_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_stats_plot_path %}{% endblock %}" width='95%' ></a>
-                        <p>{% block reading_stats_discarded_sites %}{% endblock reading_stats_discarded_sites %}</p>
+                        {% block reading_stats_discarded_sites %}{% endblock reading_stats_discarded_sites %}
                         <a href="{% block reading_stats_fastp_tx_path %}{% endblock reading_stats_fastp_tx_path %}">{% block reading_stats_fastp_tx_text %}{% endblock reading_stats_fastp_tx_text %}</a>
                         <a href="{% block reading_stats_fastp_mock_path %}{% endblock reading_stats_fastp_mock_path %}">{% block reading_stats_fastp_mock_text %}{% endblock reading_stats_fastp_mock_text %}</a>
                       </div>
