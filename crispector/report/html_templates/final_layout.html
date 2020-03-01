@@ -11,49 +11,53 @@
   <title>Crispector Report</title>
 
   <!--Bootstrap CSS library-->
-  <link rel="stylesheet" href=
-"https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" 
-integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
-   crossorigin="anonymous">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" 
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+    crossorigin="anonymous">
 
   <!--jQuery library-->
-  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity=
-  "sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" 
-  crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" 
+    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" 
+    crossorigin="anonymous"></script>
 
   <!--JS library-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" 
-  integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" 
-  crossorigin="anonymous"></script>
+    integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" 
+    crossorigin="anonymous"></script>
 
   <!--Latest compiled JavaScript library-->
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" 
-  integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" 
-  crossorigin="anonymous"></script>
+    integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" 
+    crossorigin="anonymous"></script>
 
-    
 </head>
 
 <body>
    
   <!-- Navigation -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
-    <div class="container">
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarResponsive">
-        <ul class="navbar-nav ml-auto">
-          <li class="nav-item active">
-            <a class="nav-link" href="#">Home
-              <span class="sr-only">(current)</span>
-            </a>
+        <ul class="navbar-nav mx-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="#edit_section">{% block edit_section_title %}{% endblock %}</a>
+          </li>
+          {% block translocations_menu %}{% endblock translocations_menu %}
+          <li class="nav-item">
+            <a class="nav-link" href="#Reading_Statistics">{% block reading_stats_title %}{% endblock %}</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">About</a>
+            <li class="dropdown">
+              <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#Off-Target Sites">Off-Target Sites<span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                {% block site_name_menu %}{% endblock %}           
+              </ul>
+            </li>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Contact</a>
+            <a class="nav-link" href="#Crispector_Main_Log">Crispector Main Log</a>
           </li>
         </ul>
       </div>
@@ -62,33 +66,19 @@ integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw
 
   <!-- Page Content -->
   <div class="container-fluid">
-    <div class="row">
+    <div class="row justify-content-center">
       <div class="col-lg-12 text-center">
-        <img src="{{exp_param_d.logo_path}}" width="30%">
+        <img src="{% block crispector_logo %}{% endblock %}" width="30%">
         <div class="hr-divider">
           <h5 class="hr-divider-content hr-divider-heading">
             Accurate analysis of CRISPR-CAS9 Off-Target editing activity from NGS data
           </h5>
         </div>
       </div>
-      <div data-spy="scroll" data-target="#myScrollspy" data-offset="20">
-        <div class="container">
-          <div class="row">
-            <nav class="col-sm-3" id="myScrollspy">
-              <ul class="nav nav-pills nav-stacked">
-                <li class="active"><a href="#edit_section">{% block edit_section_title %}{% endblock %}</a></li>
-                {% block translocations_menu %}{% endblock translocations_menu %}
-                <li><a href="#Reading_Statistics">{% block reading_stats_title %}{% endblock %}</a></li>
-                  <li class="dropdown">
-                  <a class="dropdown-toggle" data-toggle="dropdown" href="#Off-Target Sites">Off-Target Sites<span class="caret"></span></a>
-                  <ul class="dropdown-menu">
-                    {% block site_name_menu %}{% endblock %}           
-                  </ul>
-                  <li><a href="#Crispector_Main_Log">Crispector Main Log</a></li>
-                </li>
-              </ul>
-            </nav>
-            <div class="col-sm-9">
+      
+        <div class="container-fluid">
+          <div class="row justify-content-center">         
+            <div class="col-sm-9 text-center">
               <div class="card text-center">
                 <div class="card-header" style="height:100%">
                   <h5 class="text-center">{% block experiment_title %}{% endblock %}</h5>
@@ -108,6 +98,7 @@ integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw
                     <div class="tab-content" id="edit_section">
                       <div class="tab-pane fade show active" id="edit_section_editing_activity" role="tabpanel" aria-labelledby="mapping_stats-tab">
                         <a href="{% block edit_section_editing_activity_pdf_path %}{% endblock %}"><img src="{% block edit_section_editing_activity_plot_path %}{% endblock %}" width='95%' ></a>
+                        <p>{% block edit_section_editing_activity_edit_text %}{% endblock %}</p>
                       </div>
                       <div class="tab-pane fade" id="edit_section_result_table" role="tabpanel" aria-labelledby="edit_section_result_table">
                         <table class="table table-hover">
@@ -131,7 +122,7 @@ integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw
                     <div class="tab-content" id="myTabContent">
                       <div class="tab-pane fade show active" id="mapping_stats" role="tabpanel" aria-labelledby="mapping_stats-tab">
                         <a href="{% block reading_stats_mapping_stats_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_stats_plot_path %}{% endblock %}" width='95%' ></a>
-                        <p>{% block reading_stats_discarded_sites %}{% endblock reading_stats_discarded_sites %}</p>
+                        {% block reading_stats_discarded_sites %}{% endblock reading_stats_discarded_sites %}
                         <a href="{% block reading_stats_fastp_tx_path %}{% endblock reading_stats_fastp_tx_path %}">{% block reading_stats_fastp_tx_text %}{% endblock reading_stats_fastp_tx_text %}</a>
                         <a href="{% block reading_stats_fastp_mock_path %}{% endblock reading_stats_fastp_mock_path %}">{% block reading_stats_fastp_mock_text %}{% endblock reading_stats_fastp_mock_text %}</a>
                       </div>

@@ -43,17 +43,18 @@ integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarResponsive">
-        <ul class="navbar-nav ml-auto">
-          <li class="nav-item active">
-            <a class="nav-link" href="#">Home
-              <span class="sr-only">(current)</span>
-            </a>
+        <ul class="navbar-nav mx-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="#edit_activity">{% block editing_activity_title %}{% endblock %}</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">About</a>
+            <a class="nav-link" href="#mod_section">{% block modification_section_title %}{% endblock %}</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Contact</a>
+            <a class="nav-link" href="#cls_res_section">{% block classifier_results_section_title %}{% endblock %}</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#read_section">{% block read_section_title %}{% endblock %}</a>
           </li>
         </ul>
       </div>
@@ -62,9 +63,9 @@ integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw
 
   <!-- Page Content -->
   <div class="container-fluid">
-    <div class="row">
+    <div class="row justify-content-center">
       <div class="col-lg-12 text-center">
-        <img src="{{exp_param_d.logo_path}}" width="30%">
+        <img src="{% block crispector_logo %}{% endblock %}" width="30%">
         <div class="hr-divider">
           <h5 class="hr-divider-content hr-divider-heading">
             Accurate analysis of CRISPR-CAS9 Off-Target editing activity from NGS data
@@ -73,15 +74,7 @@ integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw
       </div>
       <div data-spy="scroll" data-target="#myScrollspy" data-offset="20">
         <div class="container">
-          <div class="row">
-            <nav class="col-sm-3" id="myScrollspy">
-              <ul class="nav nav-pills nav-stacked">
-                <li class="active"><a href="#edit_activity">{% block editing_activity_title %}{% endblock %}</a></li>
-                <li><a href="#mod_section">{% block modification_section_title %}{% endblock %}</a></li>
-                <li><a href="#cls_res_section">{% block classifier_results_section_title %}{% endblock %}</a></li>
-                <li><a href="#read_section">{% block read_section_title %}{% endblock %}</a></li>
-              </ul>
-            </nav>
+          <div class="row justify-content-center">
             <div class="col-sm-9">
               <div class="card text-center">
                 <div class="card-header" style="height:100%">
@@ -150,13 +143,23 @@ integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw
                   <li class="list-group-item">   
                   <div id="read_section">         
                     <h5>{{ self.read_section_title() }}</h5>
-                    {% block read_section_edited_reads %}{% endblock read_section_edited_reads %}
-                    {% block read_section_treatment_aligned_reads %}{% endblock read_section_treatment_aligned_reads %}
-                    {% block read_section_mock_aligned_reads %}{% endblock read_section_mock_aligned_reads %}
-                    {% block read_section_treatment_filtered_reads %}{% endblock read_section_treatment_filtered_reads %}
-                    {% block read_section_mock_filtered_reads %}{% endblock read_section_mock_filtered_reads %}
-                    {% block read_section_fastp_tx_path %}{% endblock read_section_fastp_tx_path %}
-                    {% block read_section_fastp_mock_path %}{% endblock read_section_fastp_mock_path %}
+                    <table style="width:100%">
+                      <tr>
+                        <th>{% block read_section_edited_reads %}{% endblock read_section_edited_reads %}</th>
+                      </tr>
+                      <tr>
+                        <th>{% block read_section_treatment_aligned_reads %}{% endblock read_section_treatment_aligned_reads %}</th>
+                        <th>{% block read_section_mock_aligned_reads %}{% endblock read_section_mock_aligned_reads %}</th>
+                      </tr>
+                      <tr>
+                        <td>{% block read_section_treatment_filtered_reads %}{% endblock read_section_treatment_filtered_reads %}</td>
+                        <td>{% block read_section_mock_filtered_reads %}{% endblock read_section_mock_filtered_reads %}</td>
+                      </tr>
+                      <tr>
+                        <td>{% block read_section_fastp_tx_path %}{% endblock read_section_fastp_tx_path %}</td>
+                        <td>{% block read_section_fastp_mock_path %}{% endblock read_section_fastp_mock_path %}</td>
+                      </tr>
+                    </table>
                 </div>
                   </li>   
                 </div>
