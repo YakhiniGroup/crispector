@@ -122,15 +122,17 @@
                     <div class="tab-content" id="myTabContent">
                       <div class="tab-pane fade show active" id="mapping_stats" role="tabpanel" aria-labelledby="mapping_stats-tab">
                         <a href="{% block reading_stats_mapping_stats_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_stats_plot_path %}{% endblock %}" width='95%' ></a>
+                        {% block reading_stats_fastp %}{% endblock reading_stats_fastp %}
+                        <p style="text-align: center;"><b>Warnings</b></p>
                         {% block reading_stats_discarded_sites %}{% endblock reading_stats_discarded_sites %}
-                        <a href="{% block reading_stats_fastp_tx_path %}{% endblock reading_stats_fastp_tx_path %}">{% block reading_stats_fastp_tx_text %}{% endblock reading_stats_fastp_tx_text %}</a>
-                        <a href="{% block reading_stats_fastp_mock_path %}{% endblock reading_stats_fastp_mock_path %}">{% block reading_stats_fastp_mock_text %}{% endblock reading_stats_fastp_mock_text %}</a>
+                        
                       </div>
                       <div class="tab-pane fade" id="mapping_per_site" role="tabpanel" aria-labelledby="mapping_per_site-tab">
                         <a href="{% block reading_stats_mapping_per_site_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_per_site_plot_path %}{% endblock %}" width='95%'></a>
-                        <p>{{ self.reading_stats_discarded_sites() }}</p>
-                        <a href="{{ self.reading_stats_fastp_tx_path() }}">{{ self.reading_stats_fastp_tx_text() }}</a>
-                        <a href="{{ self.reading_stats_fastp_mock_path() }}">{{ self.reading_stats_fastp_mock_text() }}</a>
+                        {{ self.reading_stats_fastp() }}
+                        <p style="text-align: center;"><b>Warnings</b></p>
+                        {{ self.reading_stats_discarded_sites() }}
+         
                       </div>
                     </div>
                     </div>

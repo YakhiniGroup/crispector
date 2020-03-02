@@ -187,23 +187,36 @@
 	{% endif %}
 {% endblock reading_stats_discarded_sites %}
 
-{% block reading_stats_fastp_tx_path %}
-	{% if exp_param_d.reading_statistics.fastp_tx_path != '' %}
-		{{exp_param_d.reading_statistics.fastp_tx_path}}
-	{% endif %}
-{% endblock reading_stats_fastp_tx_path %}
+{% block reading_stats_fastp %}
+		<table style="width:100%">
+			<tr>
+			  <th>
+				{% if exp_param_d.reading_statistics.fastp_tx_path != '' %}
+				  <form method="get" action="{{exp_param_d.reading_statistics.fastp_tx_path}}">
+					<button type="submit" style="width:80%; height:20%" class="btn btn-primary">fastp report for treatment</button>
+				  </form>
+				{% else %}
+				  <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">FASTP treatment report</button>
+				{% endif %}
+			  </th>
+			  <th>
+				{% if exp_param_d.reading_statistics.fastp_mock_path != '' %}
+				  <form method="get" action="{{exp_param_d.reading_statistics.fastp_mock_path}}">
+					<button type="submit" style="width:80%; height:20%" class="btn btn-primary">fastp report for mock</button>
+				  </form>
+				{% else %}
+				  <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">FASTP treatment report</button>
+				{% endif %}
+				</th>
+			</tr>
+		</table>
+{% endblock reading_stats_fastp %}
 
 {% block reading_stats_fastp_tx_text %}
 	{% if exp_param_d.reading_statistics.fastp_tx_text != '' %}
 		{{exp_param_d.reading_statistics.fastp_tx_text}}
 	{% endif %}
 {% endblock reading_stats_fastp_tx_text %}
-
-{% block reading_stats_fastp_mock_path %}
-	{% if exp_param_d.reading_statistics.fastp_mock_path != '' %}
-		{{exp_param_d.reading_statistics.fastp_mock_path}}
-	{% endif %}
-{% endblock reading_stats_fastp_mock_path %}
 
 {% block reading_stats_fastp_mock_text %}
 	{% if exp_param_d.reading_statistics.fastp_mock_text != '' %}
