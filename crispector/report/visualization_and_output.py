@@ -83,28 +83,37 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     # Add fastp links
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.TX])):
         html_d[READ_SECTION][FASTP_TX_PATH] = os.path.join(base_path, "{}/fastp.html".format(FASTP_DIR[ExpType.TX]))
+    else:
+        html_d[READING_STATS][FASTP_TX_PATH] = ""
+
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.MOCK])):
         html_d[READ_SECTION][FASTP_MOCK_PATH] = os.path.join(base_path, "{}/fastp.html".format(FASTP_DIR[ExpType.MOCK]))
+    else:
+        html_d[READ_SECTION][FASTP_MOCK_PATH] = ""
 
     # Add filtered reads link
     if os.path.exists(os.path.join(output, FILTERED_PATH[ExpType.TX])):
         html_d[READ_SECTION][READ_TX_FILTER] = os.path.join(base_path, FILTERED_PATH[ExpType.TX])
+    else:
+        html_d[READ_SECTION][READ_TX_FILTER] = ""
+
     if os.path.exists(os.path.join(output, FILTERED_PATH[ExpType.MOCK])):
         html_d[READ_SECTION][READ_MOCK_FILTER] = os.path.join(base_path, FILTERED_PATH[ExpType.MOCK])
-
+    else:
+        html_d[READ_SECTION][READ_MOCK_FILTER] = ""
 
 def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_trans_df: TransDf,
                              trans_result_df: TransResultDf, input_processing: InputProcessing, min_num_of_reads: int,
                              confidence_interval: float, editing_threshold: float, translocation_p_value: float,
                              output: Path):
 
-    html_d = dict() # html parameters dict
+    html_d = dict()  # html parameters dict
 
     # Dump summary results
     summary_result_to_excel(result_df, confidence_interval, output)
 
     # Create bar plot for editing activity
-    html_d[EDIT_SECTION]  = dict()
+    html_d[EDIT_SECTION] = dict()
     html_d[EDIT_SECTION][TITLE] = "Editing Activity"
     plot_editing_activity(result_df, confidence_interval, editing_threshold, html_d, output)
 
@@ -116,15 +125,15 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
                                    mock_input_n, mock_merged_n, mock_aligned_n, html_d, output)
 
     # Create a text file with all discarded sites
-    warnings_and_discarded_sites_text(result_df, min_num_of_reads, html_d, output)
+    warnings_and_discarded_sites_text(result_df, min_num_of_reads, html_d)
 
     html_d[TRANSLOCATIONS] = dict()
     html_d[TRANSLOCATIONS][TITLE] = "Translocations"
     # Dump all translocations reads
     tx_trans_df.to_csv(os.path.join(output, "tx_reads_with_primer_inconsistency.csv"), index=False)
     mock_trans_df.to_csv(os.path.join(output, "mock_reads_with_primer_inconsistency.csv"), index=False)
-    html_d[TRANSLOCATIONS][TX_TRANS_PATH] = os.path.join(output, "tx_reads_with_primer_inconsistency.csv")
-    html_d[TRANSLOCATIONS][MOCK_TRANS_PATH] = os.path.join(output, "mock_reads_with_primer_inconsistency.csv")
+    html_d[TRANSLOCATIONS][TX_TRANS_PATH] = os.path.join(OUTPUT_DIR, "tx_reads_with_primer_inconsistency.csv")
+    html_d[TRANSLOCATIONS][MOCK_TRANS_PATH] = os.path.join(OUTPUT_DIR, "mock_reads_with_primer_inconsistency.csv")
 
     # Save translocations results
     trans_result_df.to_csv(os.path.join(output, "translocations_results.csv"), index=False)
@@ -135,6 +144,8 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
         html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA][0] = list(trans_result_df.columns.values)
         for row_idx, row in trans_result_df.iterrows():
             html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA][row_idx+1] = list(row.values)
+    else:
+        html_d[TRANSLOCATIONS][TRANS_RES_TAB] = ""
 
     # Translocations Heatmap
     plot_translocations_heatmap(result_df, trans_result_df, translocation_p_value, html_d, output)
@@ -154,8 +165,13 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
     # Add fastp links
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.TX])):
         html_d[READING_STATS][FASTP_TX_PATH] = os.path.join(OUTPUT_DIR, "{}/fastp.html".format(FASTP_DIR[ExpType.TX]))
+    else:
+        html_d[READING_STATS][FASTP_TX_PATH] = ""
+
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.MOCK])):
         html_d[READING_STATS][FASTP_MOCK_PATH] = os.path.join(OUTPUT_DIR, "{}/fastp.html".format(FASTP_DIR[ExpType.MOCK]))
+    else:
+        html_d[READING_STATS][FASTP_MOCK_PATH] = ""
 
     html_d[LOG_PATH] = os.path.join(OUTPUT_DIR, LoggerWrapper.logger_name)
     # copy logo to user directory
@@ -986,6 +1002,7 @@ def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransR
     # Prepare Heat Map
     trans_df = trans_result_df.loc[trans_result_df[TRANS_FDR] < translocation_p_value]
     if trans_df.shape[0] == 0: # create only if there are translocations
+        html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB] = ""
         return
 
     trans_copy_df = deepcopy(trans_df)
@@ -1081,33 +1098,28 @@ def summary_result_to_excel(summary_result_df: pd.DataFrame, confidence_interval
     df.rename(columns={CI_LOW: 'CI low ({}%)'.format(100*confidence_interval),
                        CI_HIGH: 'CI high ({}%)'.format(100*confidence_interval)}, inplace=True)
 
-    df.to_excel(os.path.join(output, "results_summary.xlsx"), index=False, float_format='%.4f')
+    df.to_csv(os.path.join(output, "results_summary.csv"), index=False)
 
 
-def warnings_and_discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int, html_d: Dict, output: str):
+def warnings_and_discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int, html_d: Dict):
     # Print information on discarded reads
     discarded_df = summary_result_df.loc[summary_result_df[EDIT_PERCENT].isna()]
 
-    with open(os.path.join(output, "warnings_and_discarded_sites.txt"), 'w') as file:
-        html_d[READING_STATS][DISCARDED_SITES] = ""
-        logger = LoggerWrapper.get_logger()
-        for warn_msg in logger.warning_msg_l:
-            file.write(warn_msg)
-            html_d[READING_STATS][DISCARDED_SITES] += warn_msg + "\n"
+    html_d[READING_STATS][DISCARDED_SITES] = ""
+    logger = LoggerWrapper.get_logger()
+    for warn_msg in logger.warning_msg_l:
+        html_d[READING_STATS][DISCARDED_SITES] += "<p style=\"text-align: left\">" + warn_msg + "<p>"
 
-        if discarded_df.shape[0] > 0:
-            opening_line = "{} sites were discarded due to low number of reads (below {:,}):\n".format(
-                discarded_df.shape[0], min_num_of_reads)
-            file.write(opening_line)
-            site_lines = []
-            for row_idx, row in discarded_df.iterrows():
-                site_lines.append("{} - Treatment reads - {:,}. Mock reads - {:,}.\n".format(row[SITE_NAME],
-                                                                                             row[TX_READ_NUM],
-                                                                                             row[MOCK_READ_NUM]))
-                file.write(site_lines[-1])
+    if discarded_df.shape[0] > 0:
+        html_d[READING_STATS][DISCARDED_SITES] += "<p style=\"text-align: left\"> {} sites were discarded due to" \
+                                                  " low number of reads (below {:,}):<p>".format(discarded_df.shape[0],
+                                                                                                 min_num_of_reads)
 
-            discarded_text = opening_line + "".join(site_lines)
-            html_d[READING_STATS][DISCARDED_SITES] += discarded_text
+        for row_idx, row in discarded_df.iterrows():
+            html_d[READING_STATS][DISCARDED_SITES] += "<p style=\"text-align: left\"> {} - Treatment reads - {:,}. " \
+                                                      "Mock reads - {:,}.<p>".format(row[SITE_NAME], row[TX_READ_NUM],
+                                                                                     row[MOCK_READ_NUM])
+
 
 # Edit read table utils
 def get_read_around_cut_site(read, cut_site, length):
