@@ -1,8 +1,12 @@
-# Welcome to StackEdit!
 <img src="https://github.com/iamit87/crispector/blob/master/crispector/report/html_templates/crispector_logo.jpg" height="100" />
-#
 
-Hi! I'm your first Markdown file in **StackEdit**. If you want to learn about StackEdit, you can read me. If you want to play with Markdown, you can edit me. Once you have finished with me, you can create new files by opening the **file explorer** on the left corner of the navigation bar.
+#
+CRISPECTOR is a software package that desinged to support the detection, evaluation and quantification of on and off-target genome editing activity. CRISPECTOR accepts FASTQ files resulting from running treatment vs mock experiments followed by multiplex-PCR and NGS. The tool analyzes the NGS input and applies statistical modelling to determine and quantify NHEJ edit activity at every interrogated locus as well as adverse translocation activity in all relevant pairs of loci.
+
+Breifly,  CRISPECTOR assigns each read in the treatment and mock FASTQ files to a specific locus of interest or to a putative translocation. Then, a Bayesian inference classifier accurately estimates the NHEJ editing activity and a hypergeometric test is performed to detect translocation reads.
+
+ **CRISPECTOR Workflow:**
+<img src="https://github.com/iamit87/crispector/blob/master/crispector/CRISPECTOR_workflow.png/>
 
 # Files
 

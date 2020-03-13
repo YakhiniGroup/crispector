@@ -975,9 +975,9 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
     logger = LoggerWrapper.get_logger()
     if unbalanced_df.shape[0] > 0:
         logger.warning("Experiment has sites with unbalanced number reads between Treatment and Mock."
-                       "These sites editing activity estimation can be inaccurate.")
+                       " These sites editing activity estimation can be inaccurate.")
     for _, row in unbalanced_df.iterrows():
-        logger.warning("Site {} has highly unbalanced number of reads: Treatment - {:,}. Mock - {:,}.".format(row[SITE_NAME],
+        logger.warning("Site {} has highly unbalanced number of reads: Treatment - {:,}, Mock - {:,}.".format(row[SITE_NAME],
                                                                                                               row[TX_READ_NUM],
                                                                                                               row[MOCK_READ_NUM]))
 
