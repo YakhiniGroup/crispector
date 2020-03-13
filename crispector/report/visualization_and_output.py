@@ -84,7 +84,7 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.TX])):
         html_d[READ_SECTION][FASTP_TX_PATH] = os.path.join(base_path, "{}/fastp.html".format(FASTP_DIR[ExpType.TX]))
     else:
-        html_d[READING_STATS][FASTP_TX_PATH] = ""
+        html_d[READ_SECTION][FASTP_TX_PATH] = ""
 
     if os.path.exists(os.path.join(output, FASTP_DIR[ExpType.MOCK])):
         html_d[READ_SECTION][FASTP_MOCK_PATH] = os.path.join(base_path, "{}/fastp.html".format(FASTP_DIR[ExpType.MOCK]))
@@ -1001,7 +1001,7 @@ def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransR
 
     # Prepare Heat Map
     trans_df = trans_result_df.loc[trans_result_df[TRANS_FDR] < translocation_p_value]
-    if trans_df.shape[0] == 0: # create only if there are translocations
+    if trans_df.shape[0] == 0:  # create only if there are translocations
         html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB] = ""
         return
 
