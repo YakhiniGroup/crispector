@@ -44,13 +44,13 @@ crispector -t_r1 tx_R1.fq.gz -t_r2 tx_R2.fq.gz -m_r1 mock_R1.fq.gz -mock_r2 m_R2
 ```
 **Exmaple:**
 You can download data and configuration for EMX1 experiemt (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB)) . Experiment was designed with one on-target site and 10 off-target sites. The followoing files contain the first 50,000 reads of the expriment: 
-- asdf 
-- asdf
-- asdf 
-- asdf
-- asdf
+- [EMX1_tx_R1.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_tx_R1.fq.gz) 
+- [EMX1_tx_R2.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_tx_R2.fq.gz)
+- [EMX1_mock_R1.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_mock_R1.fq.gz) 
+- [EMX1_mock_R2.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_mock_R2.fq.gz)
+- [EMX1_config.csv](https://github.com/iamit87/crispector/blob/master/example/EMX1_config.csv)
 ```
-crispector -t_r1 EMX1_tx_R1.fq.gz -t_r2 EMX1_tx_R2.fq.gz -m_r1 EMX1_mock_R1.fq.gz -m_r2 EMX1_mock_R2.fq.gz -c EMX1_110120.csv
+crispector -t_r1 EMX1_tx_R1.fq.gz -t_r2 EMX1_tx_R2.fq.gz -m_r1 EMX1_mock_R1.fq.gz -m_r2 EMX1_mock_R2.fq.gz -c EMX1_config.csv
 ```
  
 ## Usage - Reads are pre-demultiplexed 
@@ -63,3 +63,7 @@ crispector -t_r1 EMX1_tx_R1.fq.gz -t_r2 EMX1_tx_R2.fq.gz -m_r1 EMX1_mock_R1.fq.g
 CRISPECTOR generates an HTML-based report to support user interpretation and further analysis of the outcomes. The report contains plots and tables. 
 For example: multiple off-target editing activity including statistical confidence indicators and translocation results. The report also contains read statistics, such as the number of assigned and aligned reads in each processing step in the different loci. In addition, plots are generated for each individual locus: distribution of edit events, classifier results for each modification type and reference position, and alignments of all edited reads, in a graphical format. Furthermore, all aligned reads in treatment and mock, whether assigned to a specific locus or determined as primer inconsistent (and therefore maybe representing a translocation event), are saved in a set of CSV files.
 An example report can be found in ##########.
+
+
+
+
