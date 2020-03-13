@@ -1,11 +1,12 @@
 """Console script for crispector."""
 import sys
 import click
-from crispector_main import run
+from crispector.crispector_main import run
+import os
 
 @click.command()
-@click.option('--tx_in1', '-t_r1', type=click.Path(exists=True), help="Treatment read 1 input path or treatment merged FASTQ file")
-@click.option('--tx_in2', '-t_r2', type=click.Path(exists=True), help="Treatment read 2 input path, if FASTQ's files aren't merged [OPTIONAL] ")
+@click.option('--tx_in1', '-t_r1', type=click.Path(exists=True), help="Tx read 1 input path or Tx merged FASTQ file")
+@click.option('--tx_in2', '-t_r2', type=click.Path(exists=True), help="Tx read 2 input path, if FASTQ's files aren't merged [OPTIONAL] ")
 @click.option('--mock_in1', '-m_r1', type=click.Path(exists=True), help="Mock read 1 input path or mock merged FASTQ file")
 @click.option('--mock_in2', '-m_r2', type=click.Path(exists=True), help="Mock read read 2 input path, if FASTQ's files aren't merged [OPTIONAL] ")
 @click.option("--experiment_config", '-c', type=click.Path(exists=True), required=True,
@@ -13,9 +14,8 @@ from crispector_main import run
                    "SiteName, AmpliconReference, sgRNA, OnTarget, ForwardPrimer, ReversePrimer, TxInput1Path"
                    "TxInput2Path, MockInput1Path, MockInput2Path, DonorReference.\n"
               "The first 4 columns are required, the rest are optional. Header should be specified by the above order."
-              "Please check the README file for further details and examples.") #TODO - sgRNA only 5'->3'
-@click.option('--report_output', '-o', type=click.Path(), default="CRISPECTOR", show_default=True, required=True,
-              help="Path to output folder (string)")
+              "Please check the README file for further details and examples.")
+@click.option('--report_output', '-o', type=click.Path(), default="CRISPECTOR", help="Path to output folder (string)")
 @click.option("--cut_site_position", type=click.INT, default=-3, show_default=True,
               help="Cut-site position with respect to the 3' end of the provided sgRNA sequence. Note, the sgRNA sequence must be entered without the PAM.")
 @click.option("--crispector_config", type=click.Path(),
@@ -56,9 +56,13 @@ from crispector_main import run
 @click.option('--keep_intermediate_files', is_flag=True, default=False, show_default=True, required=True,
               help="Keep intermediate files for debug purposes")
 @click.option('--verbose', is_flag=True, default=False, show_default=True, help="Higher verbosity")
+# TODO - change name and check description
 def main(**kwargs):
-    """CRISPECTOR - Console script"""
+    """Accurate estimation of CRISPR-Cas9 Off-Target editing activity from comparative NGS data"""
     kwargs["command_used"] = ' '.join(sys.argv)
+    if kwargs["report_output"] is None:
+        kwargs["report_output"] = os.path.abspath(os.getcwd())
+
     # Run crispector
     run(**kwargs)
 
