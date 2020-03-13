@@ -29,7 +29,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
         cut_site_position: int, amplicon_min_score: float, translocation_amplicon_min_score: float,
         min_read_length: int, crispector_config: Path, override_binomial_p: bool, confidence_interval: float,
         editing_threshold: float, translocation_p_value: float, suppress_site_output: bool,
-        disable_translocations: bool, enable_substitutions: bool, keep_intermediate_files: bool):
+        disable_translocations: bool, enable_substitutions: bool, keep_intermediate_files: bool, command_used: str):
 
     try:
         # Create report output folder
@@ -52,6 +52,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
 
         # Display welcome msg
         click.echo(welcome_msg)
+        logger.debug("Command used:\n {}".format(command_used))
 
         # Set config path and get configuration
         Configurator.set_cfg_path(crispector_config)

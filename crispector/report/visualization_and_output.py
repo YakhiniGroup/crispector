@@ -29,6 +29,7 @@ from copy import deepcopy
 from matplotlib.collections import QuadMesh
 import shutil
 
+
 def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationTypes, mod_table: ModificationTables,
                        html_param_d: Dict, site_result: Dict, site_name: str, output: Path):
 
@@ -53,15 +54,12 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     plot_distribution_of_edit_event_sizes(mod_table, output, html_d, base_path)
 
     # plot modification table
-    # TODO - remove all table
     html_d[CLS_RES_SECTION] = dict()
     html_d[CLS_RES_SECTION][TITLE] = "Classifier Results"
     all_table_idx = list(range(modifications.size))
     del_table_idx = [i for i, x in enumerate(modifications.types) if x == IndelType.DEL]
     ins_table_idx = [i for i, x in enumerate(modifications.types) if x == IndelType.INS]
     mix_table_idx = [i for i, x in enumerate(modifications.types) if x in [IndelType.MIXED, IndelType.SUB]]
-    plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
-                             all_table_idx, output, html_d, base_path, "all", figsize=(14, 20))
     plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
                              del_table_idx, output, html_d, base_path, "del")
     plot_modification_tables(mod_table, modifications, algorithm.edited, algorithm.tables_offset,
@@ -101,6 +99,7 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
         html_d[READ_SECTION][READ_MOCK_FILTER] = os.path.join(base_path, FILTERED_PATH[ExpType.MOCK])
     else:
         html_d[READ_SECTION][READ_MOCK_FILTER] = ""
+
 
 def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_trans_df: TransDf,
                              trans_result_df: TransResultDf, input_processing: InputProcessing, min_num_of_reads: int,
@@ -318,7 +317,7 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
         title = "Insertions"
     elif name_suffix == "del":
         tab_name = CLS_RES_DEL
-        title = "deletions"
+        title = "Deletions"
     else:
         tab_name = CLS_RES_MIX
         title = "Mixed & Substitutions"
@@ -696,7 +695,7 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
         bar_color = OFF_TARGET_COLOR
 
     # Define fix and axes
-    fig_w, fig_h = 4, 4
+    fig_w, fig_h = 8, 6
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(fig_w, fig_h))
     plt.subplots_adjust(left=0.2)
 
@@ -713,9 +712,9 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
     ax.set_ylabel("Editing Activity (%)")
 
     # Set scale and lim
-    y_lim = max(min(1.2 * (editing + CI_high), 100), 0.1)
+    y_lim = max(min(1.5 * (editing + CI_high), 100), 0.1)
     ax.set_ylim(0, y_lim)
-    ax.set_xlim(-0.8, 0.8)
+    ax.set_xlim(-1.2, 1.2)
 
     # Text below each bar plot + y ticks
     ax.set_xticks([0])
@@ -1106,10 +1105,7 @@ def warnings_and_discarded_sites_text(summary_result_df: pd.DataFrame, min_num_o
     discarded_df = summary_result_df.loc[summary_result_df[EDIT_PERCENT].isna()]
 
     html_d[READING_STATS][DISCARDED_SITES] = ""
-    logger = LoggerWrapper.get_logger()
-    for warn_msg in logger.warning_msg_l:
-        html_d[READING_STATS][DISCARDED_SITES] += "<p style=\"text-align: left\">" + warn_msg + "<p>"
-
+    # Display discarded sites
     if discarded_df.shape[0] > 0:
         html_d[READING_STATS][DISCARDED_SITES] += "<p style=\"text-align: left\"> {} sites were discarded due to" \
                                                   " low number of reads (below {:,}):<p>".format(discarded_df.shape[0],
@@ -1119,6 +1115,16 @@ def warnings_and_discarded_sites_text(summary_result_df: pd.DataFrame, min_num_o
             html_d[READING_STATS][DISCARDED_SITES] += "<p style=\"text-align: left\"> {} - Treatment reads - {:,}. " \
                                                       "Mock reads - {:,}.<p>".format(row[SITE_NAME], row[TX_READ_NUM],
                                                                                      row[MOCK_READ_NUM])
+    # Display all warnings
+    logger = LoggerWrapper.get_logger()
+    for warn_msg in logger.warning_msg_l:
+        for idx in range(0, len(warn_msg), 100):
+            current_msg = warn_msg[idx:min(idx + 100, len(warn_msg))]
+            html_d[READING_STATS][DISCARDED_SITES] += "<p style=\"text-align: left\">" + current_msg + "<p>"
+
+    # No warnings msg:
+    if html_d[READING_STATS][DISCARDED_SITES] == "":
+        html_d[READING_STATS][DISCARDED_SITES] = "No warnings"
 
 
 # Edit read table utils

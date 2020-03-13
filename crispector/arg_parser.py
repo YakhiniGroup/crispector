@@ -58,7 +58,7 @@ from crispector_main import run
 @click.option('--verbose', is_flag=True, default=False, show_default=True, help="Higher verbosity")
 def main(**kwargs):
     """CRISPECTOR - Console script"""
-
+    kwargs["command_used"] = ' '.join(sys.argv)
     # Run crispector
     run(**kwargs)
 

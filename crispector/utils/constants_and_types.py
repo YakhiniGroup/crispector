@@ -137,7 +137,7 @@ FILTERED_PATH[ExpType.TX] = "treatment_filtered_reads.fasta"
 FILTERED_PATH[ExpType.MOCK] = "mock_filtered_reads.fasta"
 
 # AmpliconDf constants
-SITE_NAME, REFERENCE, SGRNA, ON_TARGET = 'SiteName', 'AmpliconReference', 'sgRNA', 'OnTarget'
+SITE_NAME, REFERENCE, SGRNA, ON_TARGET = 'Site Name', 'AmpliconReference', 'sgRNA', 'On Target'
 F_PRIMER = 'ForwardPrimer'
 R_PRIMER = 'ReversePrimer'
 TX_IN1, TX_IN2, MOCK_IN1, MOCK_IN2 = "TxInput1Path", "TxInput2Path", "MockInput1Path", "MockInput2Path"
@@ -219,10 +219,12 @@ CI_HIGH = "CI_high"
 SUMMARY_RESULTS_TITLES = [SITE_NAME, ON_TARGET, MOCK_READ_NUM, TX_READ_NUM, TX_EDIT, EDIT_PERCENT, CI_LOW, CI_HIGH]
 
 #TransResultDf columns
-SITE_A = "site_A"
-SITE_B = "site_B"
-TX_TRANS_READ = "treatment_reads"
-MOCK_TRANS_READ = "mock_reads"
+SITE_A = "site A"
+SITE_B = "site B"
+TX_TRANS_READ = "treatment reads"
+MOCK_TRANS_READ = "mock reads"
+TX_TRANS_BACKGROUND_READ = "treatment background"
+MOCK_TRANS_BACKGROUND_READ = "mock background"
 TRANS_PVAL = "p_value"
 TRANS_FDR = "FDR"
 TRANS_RESULTS_TITLES = [SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR]
@@ -244,7 +246,7 @@ EDITING_ACTIVITY = "editing_activity"
 W = "width"
 H = "height"
 PLOT_PATH = "plot_path"
-PDF_PATH =  "pdf_path"
+PDF_PATH = "pdf_path"
 REPORT_PATH = "report_path"
 TITLE = "title"
 PAGE_TITLE = "page_title"

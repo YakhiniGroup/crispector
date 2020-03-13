@@ -6,8 +6,10 @@ from scipy.special import logsumexp
 from scipy import stats
 from statsmodels.stats.multitest import fdrcorrection
 import pandas as pd
-from utils.constants_and_types import TransDf, AlgResultDf, EDIT_PERCENT, TransResultDf, SITE_NAME, R_SITE, L_SITE, FREQ, \
-    TX_READ_NUM, MOCK_READ_NUM, SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR, IS_TRANS
+from utils.constants_and_types import TransDf, AlgResultDf, EDIT_PERCENT, TransResultDf, SITE_NAME, R_SITE, L_SITE, \
+    FREQ, \
+    TX_READ_NUM, MOCK_READ_NUM, SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR, IS_TRANS, \
+    TX_TRANS_BACKGROUND_READ, MOCK_TRANS_BACKGROUND_READ
 
 
 def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf, FDR_thresh: float,
@@ -75,6 +77,8 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
             trans_d[SITE_B].append(site_b)
             trans_d[TX_TRANS_READ].append(tx_trans)
             trans_d[MOCK_TRANS_READ].append(mock_trans)
+            trans_d[TX_TRANS_BACKGROUND_READ].append(tx_read_num)
+            trans_d[MOCK_TRANS_BACKGROUND_READ].append(mock_read_num)
             trans_d[TRANS_PVAL].append(p_val)
 
     # Compute FDR correction

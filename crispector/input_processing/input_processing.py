@@ -423,9 +423,9 @@ class InputProcessing:
 
         for _, row in high_freq_df.iterrows():
             site_name,_,_ = self._aligner.match_by_full_alignment(row[READ], references, names, ref_rev, ref_scores)
-            self._logger.warning("The following read appears {}, but it doesn't match any site!"
-                                 "This read is most similar to {}. Please check amplicons correctness"
-                                 "read={}".format(row[FREQ], site_name, row[READ]))
+            self._logger.warning("The following read has {} repetitions, but it doesn't match any site!"
+                                 "This read is most similar to reference site {}. Please check amplicon sequences "
+                                 "correctness. read={}".format(row[FREQ], site_name, row[READ]))
 
     ######### Translocations ########
     def _get_translocation_reference(self, l_name: str, l_rev: bool, r_name: str, r_rev: bool) -> Tuple[DNASeq, int, float]:
