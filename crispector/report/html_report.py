@@ -23,7 +23,7 @@ def create_final_html_report(html_param_d: Dict, report_output: Path):
     crispector_output = env.get_template('file_to_render.html')
 
     edit_section_result_table_html = create_edit_section_result_table(html_param_d)
-    # TODO - not created by default!
+   
     if  html_param_d['translocations']['translocations_results_tab'] != '':
         translocations_trans_res_tab_tab_data_html = create_translocations_trans_res_tab_tab_data(html_param_d)
 
@@ -87,7 +87,7 @@ def create_site_page(site: str, exp_param_d: Dict, site_param_d: Dict, report_ou
 
 #@click.command()
 #@click.option('--output_path', type=click.Path(), required=True, help="")
-def main(output_path):#output_path
+def main(output_path):
     with open(os.path.join(output_path, "crispector_output/html_param_d.pkl"), "rb") as file:
         html_param_d = pickle.load(file)
 
