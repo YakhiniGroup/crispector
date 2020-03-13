@@ -6,9 +6,9 @@ CRISPECTOR is a software package that desinged to support the detection, evaluat
 Breifly,  CRISPECTOR assigns each read in the treatment and mock FASTQ files to a specific locus of interest or to a putative translocation. Then, a Bayesian inference classifier accurately estimates the NHEJ editing activity and a hypergeometric test is performed to detect translocation reads.
 
  **CRISPECTOR Workflow:**
-<img src="https://github.com/iamit87/crispector/blob/master/crispector/CRISPECTOR_workflow.png" />
-
+<img src="https://github.com/iamit87/crispector/blob/master/CRISPECTOR_workflow.png" width="600" />
 # Files
+
 
 StackEdit stores your files in your browser, which means all your files are automatically saved locally and are accessible **offline!**
 
