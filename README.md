@@ -1,5 +1,6 @@
 # Welcome to StackEdit!
-# ![CRISPECTOR Logo](https://github.com/iamit87/crispector/blob/master/crispector/report/html_templates/crispector_logo.jpg "CRISPECTOR Logo")
+<img src="https://github.com/iamit87/crispector/blob/master/crispector/report/html_templates/crispector_logo.jpg" height="100" />
+#
 
 Hi! I'm your first Markdown file in **StackEdit**. If you want to learn about StackEdit, you can read me. If you want to play with Markdown, you can edit me. Once you have finished with me, you can create new files by opening the **file explorer** on the left corner of the navigation bar.
 
