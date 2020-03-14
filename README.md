@@ -46,7 +46,7 @@ crispector -t_r1 tx_R1.fq.gz -t_r2 tx_R2.fq.gz -m_r1 mock_R1.fq.gz -mock_r2 m_R2
 You can download data and configuration for EMX1 experiemt (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB)) . Experiment was designed with one on-target site and 10 off-target sites. The followoing files contain the first 50,000 reads of the expriment: 
 - [EMX1_tx_R1.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_tx_R1.fq.gz) 
 - [EMX1_tx_R2.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_tx_R2.fq.gz)
-- [EMX1_mock_R1.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_mock_R1.fq.gz) 
+- [EMX1_mock_R1.fq.gz](https://github.com/iamit87/crispector/raw/master/example/EMX1_mock_R1.fq.gz) 
 - [EMX1_mock_R2.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_mock_R2.fq.gz)
 - [EMX1_config.csv](https://github.com/iamit87/crispector/blob/master/example/EMX1_config.csv)
 ```
