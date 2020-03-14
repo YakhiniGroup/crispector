@@ -3,14 +3,16 @@
 #
 CRISPECTOR is a software package designed to support the detection, evaluation, and quantification of on and off-target genome editing activity. CRISPECTOR accepts FASTQ files resulting from running treatment vs. mock experiments followed by multiplex-PCR and NGS. The tool analyzes the NGS input and applies statistical modeling to determine and quantify NHEJ edit activity at every interrogated locus as well as adverse translocation activity in all relevant pairs of loci.
 
-Briefly,  CRISPECTOR assigns each read in the treatment and mock FASTQ files to a specific locus of interest or a putative translocation. Then, a Bayesian inference classifier accurately estimates the NHEJ editing activity, and a hypergeometric test is performed to detect translocation reads.
-
- **CRISPECTOR Workflow:**  
-  <img src="https://github.com/iamit87/crispector/blob/master/CRISPECTOR_workflow.png" />
-  
+**Contents:**
+* [CRISPECTOR Workflow](#CRISPECTOR)
 * [Installation](#Installation)
 * [Usage](#Usage)
-* [citation](#examples-of-report)
+* [Citation](#Citation)
+
+# CRISPECTOR Workflow  
+Briefly,  CRISPECTOR assigns each read in the treatment and mock FASTQ files to a specific locus of interest or a putative translocation. Then, a Bayesian inference classifier accurately estimates the NHEJ editing activity, and a hypergeometric test is performed to detect translocation reads.
+
+  <img src="https://github.com/iamit87/crispector/blob/master/CRISPECTOR_workflow.png" />
 
 # Installation
 
@@ -64,10 +66,11 @@ crispector -t_r1 EMX1_tx_R1.fq.gz -t_r2 EMX1_tx_R2.fq.gz -m_r1 EMX1_mock_R1.fq.g
 ## Advanced usage
 
 ## CRISPECTOR output
-CRISPECTOR generates an HTML-based report to support user interpretation and further analysis of the outcomes. The report contains plots and tables. 
-For example: multiple off-target editing activity including statistical confidence indicators and translocation results. The report also contains read statistics, such as the number of assigned and aligned reads in each processing step in the different loci. In addition, plots are generated for each individual locus: distribution of edit events, classifier results for each modification type and reference position, and alignments of all edited reads, in a graphical format. Furthermore, all aligned reads in treatment and mock, whether assigned to a specific locus or determined as primer inconsistent (and therefore maybe representing a translocation event), are saved in a set of CSV files.
-An example report can be found in ##########.
+CRISPECTOR generates an HTML-based report to support user interpretation and further analysis of the outcomes. An exmaple can be found in ##########.
 
+The report contains plots and tables. For example: multiple off-target editing activity including statistical confidence indicators and translocation results. The report also contains read statistics, such as the number of assigned and aligned reads in each processing step in the different loci. In addition, plots are generated for each individual locus: distribution of edit events, classifier results for each modification type and reference position, and alignments of all edited reads, in a graphical format. Furthermore, all aligned reads in treatment and mock, whether assigned to a specific locus or determined as primer inconsistent (and therefore maybe representing a translocation event), are saved in a set of CSV files.
 
+# Citation
+########################################.
 
 
