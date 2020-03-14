@@ -1,9 +1,9 @@
 <img src="https://github.com/iamit87/crispector/blob/master/crispector/report/html_templates/crispector_logo.jpg" height="100" />
 
 #
-CRISPECTOR is a software package that desinged to support the detection, evaluation and quantification of on and off-target genome editing activity. CRISPECTOR accepts FASTQ files resulting from running treatment vs mock experiments followed by multiplex-PCR and NGS. The tool analyzes the NGS input and applies statistical modelling to determine and quantify NHEJ edit activity at every interrogated locus as well as adverse translocation activity in all relevant pairs of loci.
+CRISPECTOR is a software package designed to support the detection, evaluation, and quantification of on and off-target genome editing activity. CRISPECTOR accepts FASTQ files resulting from running treatment vs. mock experiments followed by multiplex-PCR and NGS. The tool analyzes the NGS input and applies statistical modeling to determine and quantify NHEJ edit activity at every interrogated locus as well as adverse translocation activity in all relevant pairs of loci.
 
-Breifly,  CRISPECTOR assigns each read in the treatment and mock FASTQ files to a specific locus of interest or to a putative translocation. Then, a Bayesian inference classifier accurately estimates the NHEJ editing activity and a hypergeometric test is performed to detect translocation reads.
+Briefly,  CRISPECTOR assigns each read in the treatment and mock FASTQ files to a specific locus of interest or a putative translocation. Then, a Bayesian inference classifier accurately estimates the NHEJ editing activity, and a hypergeometric test is performed to detect translocation reads.
 
  **CRISPECTOR Workflow:**  
   <img src="https://github.com/iamit87/crispector/blob/master/CRISPECTOR_workflow.png" />
@@ -17,14 +17,15 @@ Breifly,  CRISPECTOR assigns each read in the treatment and mock FASTQ files to 
 
 # Usage
 
-CRISPECTOR is designed to run on two multiplex-PCR experiments, treatment and mock. In deafult, CRISPECTOR demultiplexes the treatment and mock reads. Namely, CRISPECTOR assigns each read to its locus. 
-There is also an option to run CRISPECTOR on an already demultiplexed data (where reads for each locus are seperated into different files).  Please note, adapters need te trimmed in pre-proccessing. 
+CRISPECTOR is designed to run on two multiplex-PCR experiments, treatment and mock. In default, CRISPECTOR demultiplexes the treatment and mock reads. Namely, CRISPECTOR assigns each read to its locus. 
+There is also an option to run CRISPECTOR on an already demultiplexed data (where each locus has a FASTQ file contains all its reads).  
+Please note that in both modes, adapters need to be trimmed in a pre-processing step. 
 
 ## Usage - Default mode
 CRISPECTOR requires three parameters: 
-1. Treatment input sequences in the form of FASTQ files. Given by the  `-t_r1`  and  `-t_r2`.  If input is already pair-end merged or is a single-end, then omit `-t_r2`. FASTQ files can be gzip compressed.
-2. Mock input sequences in the form of FASTQ files. Given by the  `-m_r1`  and  `-m_r2`.  If input is already pair-end merged, then omit `-m_r2`.  FASTQ files can be gzip compressed.
-3.  An experiment config file ( `-c`). A CSV (comma separated values‏) file with the experiment description. The table has 11 columns. Where data is not available, leave cell empty. If an entire collum is empty, leave the entire colum empty. 
+1. Treatment input sequences in the form of FASTQ files. Given by the  `-t_r1`  and  `-t_r2`.  If the input is already pair-end merged or is a single-end, then omit `-t_r2`. FASTQ files can be gzip-compressed.
+2. Mock input sequences in the form of FASTQ files. Given by the  `-m_r1`  and  `-m_r2`.  If the input is already pair-end merged, then omit `-m_r2`.  FASTQ files can be gzip-compressed.
+3.  An experiment config file ( `-c`). The experiment description in a CSV (Comma Separated Values‏) format. The table has 11 columns:
 	-  **SiteName** [REQUIRED] - an identifier for the reference locus. 
 	- **AmpliconReference**  [REQUIRED] - amplicon sequence used for the experiment (5'->3').
 	- **sgRNA** [REQUIRED] - sgRNA sequence for each locus site. sequence should be supplied without the PAM sequence and without insertions or deletions.
@@ -37,22 +38,25 @@ CRISPECTOR requires three parameters:
 	- **MockInput2Path** - Leave empty for experiment with multiplexed input. 
 	- **DonorReference** - If experiment is designed with HDR, then insert amplicon sequence in the on-target row. Note that editing HDR activity isn't evaluatied by CRISPECTOR. 
 
+	Where data is not available, leave the cell empty. If an entire collum is empty, leave the entire collum empty. 
+
 
 **Command:**
 ```
 crispector -t_r1 tx_R1.fq.gz -t_r2 tx_R2.fq.gz -m_r1 mock_R1.fq.gz -mock_r2 m_R2.fq.gz -c exp_config.csv
 ```
 **Exmaple:**
-You can download data and configuration for EMX1 experiemt (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB)) . Experiment was designed with one on-target site and 10 off-target sites. The followoing files contain the first 50,000 reads of the expriment: 
-- [EMX1_tx_R1.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_tx_R1.fq.gz) 
-- [EMX1_tx_R2.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_tx_R2.fq.gz)
-- [EMX1_mock_R1.fq.gz](https://github.com/iamit87/crispector/raw/master/example/EMX1_mock_R1.fq.gz) 
-- [EMX1_mock_R2.fq.gz](https://github.com/iamit87/crispector/blob/master/example/EMX1_mock_R2.fq.gz)
-- [EMX1_config.csv](https://github.com/iamit87/crispector/blob/master/example/EMX1_config.csv)
+You can download data and configuration for EMX1 experiemt (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB)) . Experiment was designed with one on-target site and 10 off-target sites. The FASTQ files contain the first 50,000 reads of the expriment. 
+The compressed data can be found [here](https://github.com/iamit87/crispector/raw/master/example/EMX1_11_sites_50k_reads.zip), and it contain the following files: 
+- Files in   EMX1_config.csv
+- EMX1_tx_R1.fq.gz
+- EMX1_tx_R2.fq.gz
+- EMX1_mock_R1.fq.gz
+- EMX1_mock_R2.fq.gz
+
 ```
 crispector -t_r1 EMX1_tx_R1.fq.gz -t_r2 EMX1_tx_R2.fq.gz -m_r1 EMX1_mock_R1.fq.gz -m_r2 EMX1_mock_R2.fq.gz -c EMX1_config.csv
-```
- 
+``` 
 ## Usage - Reads are pre-demultiplexed 
 
 ## All options
