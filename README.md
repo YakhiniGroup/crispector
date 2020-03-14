@@ -1,10 +1,10 @@
-<img src="https://github.com/iamit87/crispector/blob/master/crispector/report/html_templates/crispector_logo.jpg" height="100" />
+<img src="https://github.com/iamit87/crispector/blob/master/crispector/report/html_templates/crispector_logo.png" height="100" />
 
 #
 CRISPECTOR is a software package designed to support the detection, evaluation, and quantification of on and off-target genome editing activity. CRISPECTOR accepts FASTQ files resulting from running treatment vs. mock experiments followed by multiplex-PCR and NGS. The tool analyzes the NGS input and applies statistical modeling to determine and quantify NHEJ edit activity at every interrogated locus as well as adverse translocation activity in all relevant pairs of loci.
 
 **Contents:**
-* [CRISPECTOR Workflow](#CRISPECTOR)
+* [CRISPECTOR Workflow](#CRISPECTOR-Workflow)
 * [Installation](#Installation)
 * [Usage](#Usage)
 * [Citation](#Citation)
