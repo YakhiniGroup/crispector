@@ -30,10 +30,16 @@
     integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" 
     crossorigin="anonymous"></script>
 
+    <style>
+			body {
+				font-family: 'Montserrat', sans-serif !important;
+			}
+    </style>
+
 </head>
 
 <body>
-   
+
   <!-- Navigation -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,7 +56,7 @@
           </li>
           <li class="nav-item">
             <li class="dropdown">
-              <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#Off-Target Sites">Off-Target Sites<span class="caret"></span></a>
+              <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#Target Sites">Target Sites<span class="caret"></span></a>
               <ul class="dropdown-menu">
                 {% block site_name_menu %}{% endblock %}           
               </ul>
@@ -65,23 +71,23 @@
   </nav>
 
   <!-- Page Content -->
-  <div class="container-fluid">
+  <div class="container">
     <div class="row justify-content-center">
       <div class="col-lg-12 text-center">
-        <img src="{% block crispector_logo %}{% endblock %}" width="30%">
+        <img src="{% block crispector_logo %}{% endblock %}" width="50%">
         <div class="hr-divider">
           <h5 class="hr-divider-content hr-divider-heading">
-            Accurate analysis of CRISPR-CAS9 Off-Target editing activity from NGS data
+            Accurate analysis of off-target editing activity from comparative NGS data
           </h5>
         </div>
       </div>
-      
-        <div class="container-fluid">
+      <div data-spy="scroll" data-target="#myScrollspy" data-offset="20">
+        <div class="container">
           <div class="row justify-content-center">         
-            <div class="col-sm-9 text-center">
+            <div class="lg-12 text-center">
               <div class="card text-center">
                 <div class="card-header" style="height:100%">
-                  <h5 class="text-center">{% block experiment_title %}{% endblock %}</h5>
+                  <h5 class="text-center"> </h5>
                 </div>
                 <ul class="list-group list-group-flush">
                   <li class="list-group-item">
@@ -97,8 +103,7 @@
                     </ul>
                     <div class="tab-content" id="edit_section">
                       <div class="tab-pane fade show active" id="edit_section_editing_activity" role="tabpanel" aria-labelledby="mapping_stats-tab">
-                        <a href="{% block edit_section_editing_activity_pdf_path %}{% endblock %}"><img src="{% block edit_section_editing_activity_plot_path %}{% endblock %}" width='95%' ></a>
-                        <p>{% block edit_section_editing_activity_edit_text %}{% endblock %}</p>
+                        <a href="{% block edit_section_editing_activity_pdf_path %}{% endblock %}"><img src="{% block edit_section_editing_activity_plot_path %}{% endblock %}" width={{exp_param_d.edit_section.editing_activity.width}}></a>
                       </div>
                       <div class="tab-pane fade" id="edit_section_result_table" role="tabpanel" aria-labelledby="edit_section_result_table">
                         <table class="table table-hover">
@@ -106,7 +111,7 @@
                         </table>
                       </div>
                     </div>
-                  </li>  
+                  </li>
                   {% block translocations %}{% endblock translocations %}
                   <li class="list-group-item">
                     <div id="Reading_Statistics">
@@ -123,6 +128,9 @@
                       <div class="tab-pane fade show active" id="mapping_stats" role="tabpanel" aria-labelledby="mapping_stats-tab">
                         <a href="{% block reading_stats_mapping_stats_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_stats_plot_path %}{% endblock %}" width='95%' ></a>
                         {% block reading_stats_fastp %}{% endblock reading_stats_fastp %}
+                        <p style="text-align: center;"><b> </b></p>
+                        {% block reading_stats_unassigned %}{% endblock reading_stats_unassigned %}
+                        <p style="text-align: center;"><b> </b></p>
                         <p style="text-align: center;"><b>Warnings</b></p>
                         {% block reading_stats_discarded_sites %}{% endblock reading_stats_discarded_sites %}
                         
@@ -130,6 +138,9 @@
                       <div class="tab-pane fade" id="mapping_per_site" role="tabpanel" aria-labelledby="mapping_per_site-tab">
                         <a href="{% block reading_stats_mapping_per_site_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_per_site_plot_path %}{% endblock %}" width='95%'></a>
                         {{ self.reading_stats_fastp() }}
+                        <p style="text-align: center;"><b> </b></p>
+                        {{ self.reading_stats_unassigned() }}
+                        <p style="text-align: center;"><b> </b></p>
                         <p style="text-align: center;"><b>Warnings</b></p>
                         {{ self.reading_stats_discarded_sites() }}
          
@@ -137,8 +148,8 @@
                     </div>
                     </div>
                   </li> 
-                  <li class="list-group-item" id="Off-Target Sites">        
-                      <h5>Off-Target Sites</h5>
+                  <li class="list-group-item" id="Target Sites">
+                      <h5>Target Sites</h5>
                   </li>
                   {% block site_name %}{% endblock %}
                   <li class="list-group-item">   
@@ -152,6 +163,7 @@
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
 </body>

@@ -1,13 +1,15 @@
+import gzip
 import os
 import subprocess
 from utils.exceptions import FastpRunTimeError, SgRNANotInReferenceSequence
-from utils.constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, IndelType, Path, DNASeq, FASTP_DIR, \
+from utils.constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, Path, DNASeq, FASTP_DIR, \
     READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, ALIGN_SCORE, FREQ, REFERENCE, SGRNA, SITE_NAME, CUT_SITE, REVERSED, \
     L_SITE, L_REV, R_SITE, R_REV, L_READ, R_READ, PRIMER_LEN, TransDf, TRANS_NAME, BAD_AMPLICON_THRESHOLD, CIGAR_LEN, \
     CIGAR_LEN_THRESHOLD, MAX_SCORE, F_PRIMER, R_PRIMER, SGRNA_REVERSED, \
-    NORM_SCORE, TX_IN2, TX_IN1, MOCK_IN1, TX_MERGED, MOCK_MERGED, MOCK_IN2, DONOR, ON_TARGET, ALIGNMENT_HUMAN
+    NORM_SCORE, TX_IN2, TX_IN1, MOCK_IN1, TX_MERGED, MOCK_MERGED, MOCK_IN2, DONOR, ON_TARGET, \
+    UNMATCHED_PATH
 from input_processing.alignment import Alignment
-from input_processing.utils import reverse_complement, parse_fastq_file, parse_cigar
+from input_processing.utils import reverse_complement, parse_fastq_file
 from utils.logger import LoggerWrapper
 from utils.configurator import Configurator
 from typing import List, Tuple, Dict
@@ -16,18 +18,19 @@ from collections import defaultdict
 import json
 import edlib
 
+
 class InputProcessing:
     """
     A helper class with all relevant functions to process crispector input.
     """
     def __init__(self, ref_df: AmpliconDf, output: Path, min_alignment_score: float, min_trans_alignment_score: float,
-                 min_read_length: int, cut_site_position: int, disable_translocations: bool, fastp_options_string: str,
-                 keep_intermediate_files: bool):
+                 min_read_length_without_primers: int, cut_site_position: int, disable_translocations: bool, fastp_options_string: str,
+                 keep_intermediate_files: bool, max_edit_distance_on_primers: int):
         """
         :param ref_df: AmpliconDf type
         :param output: output path
         :param min_alignment_score: user min alignment score (0-100)
-        :param min_read_length:  minimum read length
+        :param min_read_length_without_primers:  minimum read length without primers
         :param cut_site_position: position relative to the PAM
         :param disable_translocations : Flag
         :param fastp_options_string: string
@@ -37,10 +40,8 @@ class InputProcessing:
         self._output = output
         self._min_trans_score = min_trans_alignment_score
         self._cut_site_pos = cut_site_position
-        self._min_read_length = min_read_length
         self._fastp_options = fastp_options_string
         self._dis_trans = disable_translocations
-        self._debug_filtered_reads = keep_intermediate_files
         self._keep_fastp = keep_intermediate_files
 
         # Set logger
@@ -50,10 +51,11 @@ class InputProcessing:
         # Get config
         self._cfg = Configurator.get_cfg()
 
-        self._max_error_on_primer = self._cfg["max_edit_distance_on_primers"]
+        self._max_error_on_primer = max_edit_distance_on_primers
 
         # create alignment instance
-        self._aligner = Alignment(self._cfg["alignment"], min_alignment_score, self._cfg["window_size"])
+        self._aligner = Alignment(self._cfg["alignment"], min_alignment_score, min_read_length_without_primers,
+                                  self._cfg["NHEJ_inference"]["window_size"])
 
         # Add max_score column to ref_df
         max_score_list = []
@@ -117,8 +119,8 @@ class InputProcessing:
                 tx_merged, mock_merged = tx_in1, mock_in1
 
             # Demultiplexing reads
-            tx_reads, tx_filtered_df, tx_trans_df = self._demultiplex_reads(tx_merged, ExpType.TX)
-            mock_reads, mock_filtered_df, mock_trans_df = self._demultiplex_reads(mock_merged, ExpType.MOCK)
+            tx_reads, tx_trans_df = self._demultiplex_reads(tx_merged, ExpType.TX)
+            mock_reads, mock_trans_df = self._demultiplex_reads(mock_merged, ExpType.MOCK)
 
             # Split read_df to all the different sites
             tx_reads_d: ReadsDict = dict()
@@ -130,9 +132,9 @@ class InputProcessing:
                     mock_reads_d[site] = pd.DataFrame(columns=[READ, FREQ])
                     continue
                 tx_reads_d[site] = tx_reads.loc[tx_reads[SITE_NAME] == site].sort_values(by=[FREQ],
-                                                                             ascending=False).reset_index(drop=True)
+                                                                                         ascending=False).reset_index(drop=True)
                 mock_reads_d[site] = mock_reads.loc[mock_reads[SITE_NAME] == site].sort_values(by=[FREQ],
-                                                                             ascending=False).reset_index(drop=True)
+                                                                                               ascending=False).reset_index(drop=True)
                 tx_reads_d[site].drop(columns=[SITE_NAME], inplace=True)
                 mock_reads_d[site].drop(columns=[SITE_NAME], inplace=True)
 
@@ -142,6 +144,7 @@ class InputProcessing:
                     os.remove(tx_merged)
                 if os.path.exists(mock_merged):
                     os.remove(mock_merged)
+
         # Multiplexed input
         else:
             override_fastp = self._ref_df[TX_IN2].isna().all()
@@ -172,14 +175,15 @@ class InputProcessing:
                 self._ref_df[MOCK_MERGED] = self._ref_df[MOCK_IN1]
 
             # No demultiplexing
-            tx_filtered_df, tx_trans_df = pd.DataFrame(), pd.DataFrame()
-            mock_filtered_df, mock_trans_df = pd.DataFrame(), pd.DataFrame()
+            tx_trans_df, mock_trans_df = pd.DataFrame(), pd.DataFrame()
 
             # Split read_df to all the different sites
             tx_reads_d: ReadsDict = dict()
             mock_reads_d: ReadsDict = dict()
             for _, row in self._ref_df.iterrows():
-                for reads_d, merged_fastq in zip([tx_reads_d, mock_reads_d], [row[TX_MERGED], row[MOCK_MERGED]]):
+                for reads_d, merged_fastq, exp_type in zip([tx_reads_d, mock_reads_d],
+                                                           [row[TX_MERGED], row[MOCK_MERGED]],
+                                                           [ExpType.TX, ExpType.MOCK]):
                     if self._donor and row[ON_TARGET]:
                         reads_d[row[SITE_NAME]] = pd.DataFrame(columns=[READ, FREQ])
                         continue
@@ -188,6 +192,10 @@ class InputProcessing:
                     # Group identical reads together
                     reads_df = reads_df.groupby(READ).size().to_frame(FREQ).reset_index()
                     reads_d[row[SITE_NAME]] = reads_df
+
+                    if override_fastp:
+                        self._input_n[exp_type] += reads_df[FREQ].sum()
+                        self._merged_n[exp_type] += reads_df[FREQ].sum()
 
             # Remove fastp files
             if not override_fastp and not self._keep_fastp:
@@ -206,36 +214,23 @@ class InputProcessing:
             # Align Treatment
             reads_df = tx_reads_d[row[SITE_NAME]]
             exp_name = "{}_{}".format(row[SITE_NAME], ExpType.TX.name)
-            reads_df, unaligned_df = self._aligner.align_reads(reads_df, row[REFERENCE], row[CUT_SITE], primers_len,
-                                                               site_output, exp_name, ExpType.TX)
+            reads_df = self._aligner.align_reads(reads_df, row[REFERENCE], row[CUT_SITE], primers_len, site_output,
+                                                 exp_name, ExpType.TX)
             tx_reads_d[row[SITE_NAME]] = reads_df
             self._aligned_n[ExpType.TX] += reads_df[FREQ].sum()
-            tx_filtered_df = pd.concat([tx_filtered_df, unaligned_df], sort=False)
-            tx_filtered_df.reset_index(inplace=True, drop=True)
 
             # Align Mock
             reads_df = mock_reads_d[row[SITE_NAME]]
             exp_name = "{}_{}".format(row[SITE_NAME], ExpType.MOCK.name)
-            reads_df, unaligned_df = self._aligner.align_reads(reads_df, row[REFERENCE], row[CUT_SITE], primers_len, site_output,
-                                                     exp_name, ExpType.TX)
+            reads_df = self._aligner.align_reads(reads_df, row[REFERENCE], row[CUT_SITE], primers_len, site_output,
+                                                 exp_name, ExpType.MOCK)
             mock_reads_d[row[SITE_NAME]] = reads_df
             self._aligned_n[ExpType.MOCK] += reads_df[FREQ].sum()
-            mock_filtered_df = pd.concat([mock_filtered_df, unaligned_df], sort=True)
-            mock_filtered_df.reset_index(inplace=True, drop=True)
-
-        # create filtered reads table for debug purposes
-        if self._debug_filtered_reads:
-            # Only used in debug mode. Doesn't terminate program
-            try:
-                self._create_filtered_reads_debug_table(tx_filtered_df, ExpType.TX)
-                self._create_filtered_reads_debug_table(mock_filtered_df, ExpType.MOCK)
-            except: # catch *all* exceptions
-                pass
 
         # Warning if the number of reads isn't balanced
         if (self._aligned_n[ExpType.TX] > 3 * self._aligned_n[ExpType.MOCK]) or \
            (self._aligned_n[ExpType.MOCK] > 3 * self._aligned_n[ExpType.TX]):
-            self._logger.warning("Number of reads (Tx={:,}, Mock={:,}) is high unbalanced! CRISPECTOR wasn't tested"
+            self._logger.warning("Number of reads (Tx={:,}, Mock={:,}) is highly unbalanced! CRISPECTOR wasn't tested"
                                  "in these scenarios. Consider to retake the experiments")
 
         return tx_reads_d, mock_reads_d, tx_trans_df, mock_trans_df
@@ -266,7 +261,7 @@ class InputProcessing:
         command = ["fastp", "-i", in1, "-I", in2, "-o", os.path.join(fastp_output, "r1_filtered_reads.fastq"),
                    "-O", os.path.join(fastp_output, "r2_filtered_reads.fastq"), "-m", "--merged_out", merged_path,
                    "-j", os.path.join(fastp_output, "fastp.json"), "-h", os.path.join(fastp_output, "fastp.html"),
-                   "--length_required {}".format(self._min_read_length),
+                   "--length_required {}".format(2*PRIMER_LEN),
                    self._fastp_options, ">> {} 2>&1".format(LoggerWrapper.get_log_path())]
 
         command = " ".join(command)
@@ -294,13 +289,13 @@ class InputProcessing:
         return merged_path, reads_in_input_num, merged_reads_num
 
     ######### Demultiplex ###########
-    def _demultiplex_reads(self, merged_fastq: Path, exp_type: ExpType) -> Tuple[ReadsDf, ReadsDf, TransDf]:
+    def _demultiplex_reads(self, merged_fastq: Path, exp_type: ExpType) -> Tuple[ReadsDf, TransDf]:
         """
         Demultiplex reads using edit distance on primers.
         For ambiguous matching - search for correct matching or translocation by full alignment
         :param merged_fastq: fastp merged fastq file
         :param exp_type: ExpType
-        :return: Tuple ReadsDf, unmatched reads & translocation df
+        :return: Tuple ReadsDf & translocation df
         """
         reads = parse_fastq_file(merged_fastq)
         reads_df = pd.DataFrame(data=reads, columns=[READ])
@@ -314,16 +309,21 @@ class InputProcessing:
 
         # find donor reads in order to remove them
         if self._donor:
-            left_primers += list(self._donor_list[:PRIMER_LEN])
-            left_primers += [reverse_complement(ref) for ref in self._donor_list[-PRIMER_LEN:]]
-            right_primers += list(self._donor_list[-PRIMER_LEN:])
-            right_primers += [reverse_complement(ref) for ref in self._donor_list[:PRIMER_LEN]]
+            left_primers += [seq[:PRIMER_LEN] for seq in self._donor_list]
+            left_primers += [reverse_complement(ref[-PRIMER_LEN:]) for ref in self._donor_list]
+            right_primers += [seq[-PRIMER_LEN:] for seq in self._donor_list]
+            right_primers += [reverse_complement(ref[:PRIMER_LEN]) for ref in self._donor_list]
             primers_names += 2*list(self._donor_names)
             primers_rev += len(self._donor_names) * [False] + len(self._donor_names) * [True]
 
         # Group identical reads together
         reads_df = reads_df.groupby(READ).size().to_frame(FREQ).reset_index()
         total_read_n = reads_df[FREQ].sum()
+
+        # Update number of reads in input (relevant when input is already merged)
+        if self._input_n[exp_type] == 0:
+            self._input_n[exp_type] += total_read_n
+            self._merged_n[exp_type] += total_read_n
 
         # Create temporary columns for read start and end
         reads_df[L_READ] = reads_df[READ].str[0:PRIMER_LEN]
@@ -354,12 +354,21 @@ class InputProcessing:
         reads_df.drop(columns=[L_SITE, L_REV, R_SITE, R_REV, R_READ, L_READ], inplace=True)
         reads_df.reset_index(drop=True, inplace=True)
 
+        self._dump_unmatched_reads(unmatched_df, total_read_n, self._output, exp_type)
+
         # Detect bad amplicons (search for high frequency reads without a matched site)
-        self._detect_bad_amplicons(unmatched_df)
-        self._dump_unmatched_reads(unmatched_df, total_read_n, self._output, exp_type.name)
+        if self._donor:
+            sites = list(self._ref_df.loc[self._ref_df[ON_TARGET], SITE_NAME]) + list(self._donor_names)
+            # No on_target or donor
+            detect_unmatched_df = unmatched_df.loc[~unmatched_df[L_SITE].isin(sites) | ~unmatched_df[R_SITE].isin(sites)]
+        else:
+            detect_unmatched_df = unmatched_df
+
+        self._detect_bad_amplicons(detect_unmatched_df)
+
         self._logger.info("Demultiplexing for {} - Done".format(exp_type.name))
 
-        return reads_df, unmatched_df, trans_df
+        return reads_df, trans_df
 
     def _compute_read_primer_matching(self, reads: List[DNASeq], primers: List[DNASeq], primers_revered: List[bool],
                                           primers_names: List[str], max_edit_distance: int) -> Dict[DNASeq, Tuple[str, bool]]:
@@ -460,8 +469,8 @@ class InputProcessing:
         :return:
         """
         trans_d = defaultdict(list)
-        trans_idx_list = [] # list of matched translocation
-        re_matched_idx_list = [] # list of re matched indexes (initial bad demultiplexing)
+        trans_idx_list = []  # list of matched translocation
+        re_matched_idx_list = []  # list of re matched indexes (initial bad demultiplexing)
         # trans_ref dict - Key is translocation ID and value is reference, cut_site & max alignment score
         trans_ref_d: Dict[Tuple[str, bool, str, bool], Tuple[DNASeq, int, float]] = dict()
 
@@ -469,7 +478,7 @@ class InputProcessing:
         if self._donor:
             sites = list(self._ref_df.loc[self._ref_df[ON_TARGET], SITE_NAME]) + list(self._donor_names)
             # No on_target or donor
-            possible_trans_df = possible_trans_df.loc[~possible_trans_df[L_SITE].isin(sites) |
+            possible_trans_df = possible_trans_df.loc[~possible_trans_df[L_SITE].isin(sites) &
                                                       ~possible_trans_df[R_SITE].isin(sites)]
 
         def get_trans_name(name, rev, left):
@@ -582,101 +591,7 @@ class InputProcessing:
 
         return cut_site, reverse
 
-    def _create_filtered_reads_debug_table(self, filtered_df: ReadsDf, exp_type: ExpType):
-        """
-        This function should be used only oin debug mose- when someone wants to debug the alignment of all filtered
-        reads
-        :return:
-        """
-        READ_ID = "read_id"
-        L_ALIGN = "left_alignment"
-        R_ALIGN = "right_alignment"
-        CUTSITE_INDEL = "indel_on_cutsite"
-
-        # prepare reference list and names
-        self._logger.debug("Alignment for {} - debug start".format(exp_type.name))
-
-        references = list(self._ref_df[REFERENCE].values)
-        names = list(self._ref_df[SITE_NAME].values)
-        references += list(self._ref_df[REFERENCE].apply(reverse_complement))
-        names += names
-        ref_rev = self._ref_df.shape[0]*[False] + self._ref_df.shape[0]*[True]
-        ref_scores = list(self._ref_df[MAX_SCORE].values) + list(self._ref_df[MAX_SCORE].values)
-
-        # Full demultiplexing
-        filtered_df[[SITE_NAME, REVERSED, NORM_SCORE]] = filtered_df.apply((lambda row:
-            self._aligner.match_by_full_alignment(row[READ],references, names, ref_rev, ref_scores)), axis=1,
-                                                                               result_type='expand')
-
-        # Reverse all the reversed reads
-        rev_reads = filtered_df.loc[filtered_df[REVERSED], READ]
-        filtered_df.loc[rev_reads.index, READ] = rev_reads.apply(reverse_complement)
-
-        # full alignment
-        for _, site_row in self._ref_df.iterrows():
-            site_output = os.path.join(self._output, site_row[SITE_NAME])
-            site_df = filtered_df.loc[filtered_df[SITE_NAME] == site_row[SITE_NAME]].reset_index(drop=True)
-
-            self._aligner.needle_wunsch_align_debug(site_df, site_row[REFERENCE])
-            site_df.drop(inplace=True, columns=[L_READ, L_SITE, L_REV, R_READ, R_REV, R_SITE, REVERSED])
-
-            # draw alignment
-            site_df.reset_index(inplace=True, drop=True)
-            site_df[READ_ID] = site_df.index
-            site_df = pd.concat([site_df, site_df, site_df]).reset_index(drop=True)
-            site_df = site_df.sort_values(by=[READ_ID], ascending=False)
-
-            site_df[L_ALIGN] = None
-            site_df[R_ALIGN] = None
-            site_df[CUT_SITE] = None
-            site_df[CUTSITE_INDEL] = False
-            for read_id in site_df[READ_ID].unique():
-                site_read_df = site_df.loc[site_df[READ_ID] == read_id]
-                ref_cut_site = self._ref_df.at[site_read_df[SITE_NAME].values[0], CUT_SITE]
-                site_df.at[site_read_df.index, CUT_SITE] = ref_cut_site
-                # Find alignment
-                pos_idx = 0
-                align_idx = 0
-                aligned_cut_site = 0
-                for length, indel_type in parse_cigar(site_read_df[CIGAR].values[0]):
-                    if indel_type != IndelType.INS:
-                        if ref_cut_site in range(pos_idx, pos_idx + length + 1):
-                            aligned_cut_site = align_idx + (ref_cut_site - pos_idx)
-                        pos_idx += length
-                    align_idx += length
-
-                # Draw alignment
-                for idx, (read_idx, row) in enumerate(site_read_df.iterrows()):
-                    # draw ref
-                    if idx == 0:
-                        site_df.at[read_idx, L_ALIGN] = row[ALIGNMENT_W_INS][0:aligned_cut_site]
-                        site_df.at[read_idx, R_ALIGN] = row[ALIGNMENT_W_INS][aligned_cut_site:]
-                        if (row[ALIGNMENT_HUMAN][aligned_cut_site-5:aligned_cut_site] != "|||||") or\
-                           (row[ALIGNMENT_HUMAN][aligned_cut_site:aligned_cut_site+5]!= "|||||"):
-                            site_df.at[read_idx, CUTSITE_INDEL] = True
-                    # draw lines
-                    elif idx == 1:
-                        site_df.at[read_idx, L_ALIGN] = row[ALIGNMENT_HUMAN][0:aligned_cut_site]
-                        site_df.at[read_idx, R_ALIGN] = row[ALIGNMENT_HUMAN][aligned_cut_site:]
-                        site_df.at[read_idx, FREQ] = 0
-                        if (row[ALIGNMENT_HUMAN][aligned_cut_site-5:aligned_cut_site] != "|||||") or\
-                           (row[ALIGNMENT_HUMAN][aligned_cut_site:aligned_cut_site+5]!= "|||||"):
-                            site_df.at[read_idx, CUTSITE_INDEL] = True
-                    # draw read
-                    else:
-                        site_df.at[read_idx, L_ALIGN] = row[ALIGNMENT_W_DEL][0:aligned_cut_site]
-                        site_df.at[read_idx, R_ALIGN] = row[ALIGNMENT_W_DEL][aligned_cut_site:]
-                        site_df.at[read_idx, FREQ] = 0
-                        if (row[ALIGNMENT_HUMAN][aligned_cut_site-5:aligned_cut_site] != "|||||") or\
-                           (row[ALIGNMENT_HUMAN][aligned_cut_site:aligned_cut_site+5]!= "|||||"):
-                            site_df.at[read_idx, CUTSITE_INDEL] = True
-            site_df = site_df.reindex(columns=[READ_ID, FREQ, CIGAR_LEN, CIGAR, NORM_SCORE, ALIGN_SCORE, CUTSITE_INDEL,
-                                               L_ALIGN, R_ALIGN, CUT_SITE,READ, ALIGNMENT_HUMAN, ALIGNMENT_W_INS,
-                                               ALIGNMENT_W_DEL])
-            site_df.to_csv(os.path.join(site_output, "{}_filtered.csv".format(exp_type.name)), index=False)
-        self._logger.debug("Alignment for {} - debug done".format(exp_type.name))
-
-    def _dump_unmatched_reads(self, unmatched_df: ReadsDf, total_read_n: int, output: Path, exp_name: str):
+    def _dump_unmatched_reads(self, unmatched_df: ReadsDf, total_read_n: int, output: Path, exp_name: ExpType):
         """
         - Dump unmatched reads
         - Store all unaligned reads in a fasta format.
@@ -688,15 +603,16 @@ class InputProcessing:
         """
         unmatched_reads_num = unmatched_df[FREQ].sum()
 
-        self._logger.info("Demultiplexing for {} - {:,} reads weren't matched ({:.2f}% of all reads)".format(exp_name,
+        self._logger.info("Demultiplexing for {} - {:,} reads weren't matched ({:.2f}% of all reads)".format(exp_name.name,
                           unmatched_reads_num, 100*unmatched_reads_num/total_read_n))
 
-        with open(os.path.join(output, "{}_unmatched_reads.fasta".format(exp_name)), 'w') as file:
-            for _, row in unmatched_df.iterrows():
-                file.write("> unaligned read with {} copies in the original fastq file.\n".format(row[FREQ]))
-                file.write("{}\n".format(row[READ]))
+        file = gzip.open(os.path.join(output, UNMATCHED_PATH[exp_name]), 'wt')
+        for _, row in unmatched_df.iterrows():
+            file.write("> unaligned read with {} copies in the original fastq file.\n".format(row[FREQ]))
+            file.write("{}\n".format(row[READ]))
+        file.close()
 
-    ######### Getters #############
+    ######### Getters ###########
     def read_numbers(self, exp_type: ExpType) -> Tuple[int, int, int]:
         """
         return a tuple of number of input, merged & aligned

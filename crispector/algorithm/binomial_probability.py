@@ -19,32 +19,33 @@ def compute_binom_p(tables: Dict[str ,ModificationTables], modifications: Modifi
     :param donor: is donor experiment flag
     :return: Dict[SITE_NAME, LIST of probability for each modification type]
     """
+
     logger = LoggerWrapper.get_logger()
     cfg = Configurator.get_cfg()
     binom_p_d = dict()
-    default_p = cfg["default_binom_p"]
-
+    default_q = cfg["NHEJ_inference"]["default_q"]  # the probability of an indel to occur through an edit event
+    default_q_warning_text = "Will use default q parameter (= {}) from config file for the Bayesian NHEJ inference " \
+                             "(check CRISPECTOR paper for more details).".format(default_q)
     # Use default Binomial probability when can't estimate signal from on target.
-    if ref_df[ON_TARGET].sum() != 1:
+    if ref_df[ON_TARGET].sum() > 1:
         override_coin = True
-        logger.warning("Multiple or non on-targets detected. Noise estimation for Binomial probability will use "
-                       "probability from config file - default_binom_p")
+        logger.warning("Experiment has Multiple on-target sites. {}".format(default_q_warning_text))
+    elif ref_df[ON_TARGET].sum() == 0:
+        override_coin = True
+        logger.warning("Experiment doesn't have on-target site. {}".format(default_q_warning_text))
     else:
         on_site_name = ref_df.loc[ref_df[ON_TARGET], SITE_NAME].values[0]
-        if not on_site_name in tables:
+        if on_site_name not in tables:
             override_coin = True
-            logger.warning("On-target was Discarded from evaluation. Noise estimation for "
-                           "Binomial probability will use probability from config file - default_binom_p")
-
-    if ref_df.shape[0] == 1:
-        override_coin = True
-        logger.warning("No off-target experiments. Noise estimation for Binomial probability will use "
-                       "probability from config file - default_binom_p")
+            logger.warning("On-target site was discarded from evaluation. {}".format(default_q_warning_text))
+        elif ref_df.shape[0] == 1:
+            override_coin = True
+            logger.warning("Experiment doesn't have off-target sites. {}".format(default_q_warning_text))
 
     # Use default_p if override_coin is True
     if override_coin:
         for site_name in tables.keys():
-            binom_p_d[site_name] = modifications.size*[default_p]
+            binom_p_d[site_name] = modifications.size*[default_q]
         return binom_p_d
 
     n_on = tables[on_site_name].n_reads_tx
@@ -111,7 +112,7 @@ def compute_binom_p(tables: Dict[str ,ModificationTables], modifications: Modifi
                 binom_p_d[site_name].append((p_d[IndelType.DEL][site_name] + p_d[IndelType.INS][site_name]) / 2)
             # For substitutions - use the default coin
             elif indel_type == IndelType.SUB:
-                binom_p_d[site_name].append(default_p)
+                binom_p_d[site_name].append(default_q)
 
     return binom_p_d
 

@@ -11,7 +11,7 @@ from setuptools import setup, find_packages
 # TODO - conda install python-edlib
 requirements = ['Click>=6.0', 'matplotlib>=3.1.0', 'seaborn>=0.9.0','pyyaml>=5.1.2', 'plotly>=4.3.0'
                 'numpy>=1.12.1', 'pandas>=0.24.2', 'biopython==1.74', 'scipy>=1.2.1', 'statsmodels',
-                'jinja2']
+                'jinja2', 'binascii', 'gzip']
 
 setup_requirements = ['pytest-runner']
 
@@ -35,7 +35,7 @@ setup(
     description="CRISPECTOR - Genome Editing Analysis Tool",
     entry_points={
         'console_scripts': [
-            'crispector=crispector.arg_parser:main',
+            'crispector=crispector.arg_parser:cli',
         ],
     },
     install_requires=requirements,

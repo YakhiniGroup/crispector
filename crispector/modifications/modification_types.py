@@ -69,7 +69,7 @@ class ModificationTypes:
         :param enable_substitutions: Flag
         :return: ModificationTypes.
         """
-        cfg = Configurator.get_cfg()
+        cfg = Configurator.get_cfg()["NHEJ_inference"]
         indel_types_cfg = cfg["IndelTypes"]
         window_size = cfg["window_size"]
         m_list = []
@@ -114,11 +114,11 @@ class ModificationTypes:
         :return:
         """
         if self._max_indel_size == max(self._range[idx]):
-            return r"{} $\geq {}$".format(self._type[idx].plot_name, min(self._range[idx]))
+            return r"{} of len $\geq {}$".format(self._type[idx].plot_name, min(self._range[idx]))
         elif min(self._range[idx]) == max(self._range[idx]):
-            return r"{} ${}$".format(self._type[idx].plot_name, min(self._range[idx]))
+            return r"{} of len ${}$".format(self._type[idx].plot_name, min(self._range[idx]))
         else:
-            return r"{} ${}:{}$".format(self._type[idx].plot_name, min(self._range[idx]), max(self._range[idx]))
+            return r"{} of len ${}:{}$".format(self._type[idx].plot_name, min(self._range[idx]), max(self._range[idx]))
 
 
 

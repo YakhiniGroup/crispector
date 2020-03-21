@@ -24,10 +24,6 @@
 		{{exp_param_d.edit_section.editing_activity.pdf_path}}
 {% endblock %}
 
-{% block edit_section_editing_activity_edit_text %}
-		{{exp_param_d.edit_section.editing_activity.edit_text}}
-{% endblock %}
-
 {% block edit_section_result_table_title %}
 		{{exp_param_d.edit_section.result_table.title}}
 {% endblock %}
@@ -91,7 +87,7 @@
 
 			{% if exp_param_d.translocations.translocations_heatmap_tab != '' %}	
 					<div class="tab-pane fade show active" id="heatmap" role="tabpanel" aria-labelledby="mapping_stats-tab">
-				  		<a href="{{exp_param_d.translocations.translocations_heatmap_tab.pdf_path}}"><img src="{{exp_param_d.translocations.translocations_heatmap_tab.plot_path}}" width='95%' ></a>
+				  		<a href="{{exp_param_d.translocations.translocations_heatmap_tab.pdf_path}}"><img src="{{exp_param_d.translocations.translocations_heatmap_tab.plot_path}}" width="{{exp_param_d.translocations.translocations_heatmap_tab.width}}" ></a>
 						  <table style="width:100%">
 							<tr>
 							  <th><form method="get" action="{{exp_param_d.translocations.tx_translocations_path}}">
@@ -193,24 +189,49 @@
 			  <th>
 				{% if exp_param_d.reading_statistics.fastp_tx_path != '' %}
 				  <form method="get" action="{{exp_param_d.reading_statistics.fastp_tx_path}}">
-					<button type="submit" style="width:80%; height:20%" class="btn btn-primary">fastp report for treatment</button>
+					<button type="submit" style="width:50%; height:20%" class="btn btn-primary">Treatment fastp report</button>
 				  </form>
 				{% else %}
-				  <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">FASTP treatment report</button>
+				  <button type="button" style="width:50%; height:20%; color:gray" class="btn btn-light">Treatment fastp report</button>
 				{% endif %}
 			  </th>
 			  <th>
 				{% if exp_param_d.reading_statistics.fastp_mock_path != '' %}
 				  <form method="get" action="{{exp_param_d.reading_statistics.fastp_mock_path}}">
-					<button type="submit" style="width:80%; height:20%" class="btn btn-primary">fastp report for mock</button>
+					<button type="submit" style="width:50%; height:20%" class="btn btn-primary">Mock fastp report</button>
 				  </form>
 				{% else %}
-				  <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">FASTP treatment report</button>
+				  <button type="button" style="width:50%; height:20%; color:gray" class="btn btn-light">Mock fastp report</button>
 				{% endif %}
 				</th>
 			</tr>
 		</table>
 {% endblock reading_stats_fastp %}
+
+{% block reading_stats_unassigned %}
+		<table style="width:100%">
+			<tr>
+			  <th>
+				{% if exp_param_d.reading_statistics.unmatched_tx_path != '' %}
+				  <form method="get" action="{{exp_param_d.reading_statistics.unmatched_tx_path}}">
+					<button type="submit" style="width:50%; height:20%" class="btn btn-primary">Treatment unassigned reads</button>
+				  </form>
+				{% else %}
+				  <button type="button" style="width:50%; height:20%; color:gray" class="btn btn-light">Treatment unassigned reads</button>
+				{% endif %}
+			  </th>
+			  <th>
+				{% if exp_param_d.reading_statistics.unmatched_mock_path != '' %}
+				  <form method="get" action="{{exp_param_d.reading_statistics.unmatched_mock_path}}">
+					<button type="submit" style="width:50%; height:20%" class="btn btn-primary">Mock unassigned reads</button>
+				  </form>
+				{% else %}
+				  <button type="button" style="width:50%; height:20%; color:gray" class="btn btn-light">Mock unassigned reads</button>
+				{% endif %}
+				</th>
+			</tr>
+		</table>
+{% endblock reading_stats_unassigned %}
 
 {% block reading_stats_fastp_tx_text %}
 	{% if exp_param_d.reading_statistics.fastp_tx_text != '' %}

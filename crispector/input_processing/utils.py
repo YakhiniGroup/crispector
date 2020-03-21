@@ -5,6 +5,25 @@ import re
 from utils.exceptions import CantOpenMergedFastqFile, BadInputError, BadReferenceAmpliconChar, BadSgRNAChar
 import pandas as pd
 import os
+import binascii
+import gzip
+
+
+def is_gz_file(filepath):
+    with open(filepath, 'rb') as test_f:
+        return binascii.hexlify(test_f.read(2)) == b'1f8b'
+
+
+def read_DNA_lines(fastq_file) -> List[DNASeq]:
+    sequences = []
+    line = fastq_file.readline()
+
+    while line:
+        line = fastq_file.readline()
+        if re.match("[ACGT]+\Z", line[:-1]):
+            sequences.append(line[:-1])
+    return sequences
+
 
 def reverse_complement(seq: DNASeq) -> DNASeq:
     return "".join(COMPLEMENT.get(base, base) for base in reversed(seq))
@@ -16,19 +35,16 @@ def parse_fastq_file(file_name: Path) -> List[DNASeq]:
     :param file_name: fastq file name
     :return: list of DNA strings
     """
-    sequences = []
-    try:
-        with open(file_name) as fastq_file:
-            line = fastq_file.readline()
 
-            while line:
-                line = fastq_file.readline()
-                if re.match("[ACGT]+\Z", line[:-1]):
-                    sequences.append(line[:-1])
+    try:
+        if is_gz_file(file_name):
+            fastq_file = gzip.open(file_name, 'rt')
+            return read_DNA_lines(fastq_file)
+        else:
+            with open(file_name) as fastq_file:
+                return read_DNA_lines(fastq_file)
     except IOError:
         raise CantOpenMergedFastqFile(file_name)
-
-    return sequences
 
 
 def parse_cigar(cigar: str) -> Tuple[int, IndelType]:
@@ -77,8 +93,6 @@ def parse_cigar_with_mixed_indels(cigar: str) -> List[Tuple[int, int, IndelType,
         prev_length_wo_ins = length_wo_ins
 
     return indel_list
-
-
 
 def read_exp_config_and_check_input(experiment_config: Path, tx_in1: Path, tx_in2: Path, mock_in1: Path,
                                     mock_in2: Path) -> AmpliconDf:

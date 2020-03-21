@@ -133,8 +133,12 @@ FASTP_DIR[ExpType.MOCK] = "mock_fastp"
 
 # Filter constants
 FILTERED_PATH = dict()
-FILTERED_PATH[ExpType.TX] = "treatment_filtered_reads.fasta"
-FILTERED_PATH[ExpType.MOCK] = "mock_filtered_reads.fasta"
+FILTERED_PATH[ExpType.TX] = "treatment_filtered_reads.fa.gz"
+FILTERED_PATH[ExpType.MOCK] = "mock_filtered_reads.fa.gz"
+
+UNMATCHED_PATH = dict()
+UNMATCHED_PATH[ExpType.TX] = "treatment_unmatched_reads.fa.gz"
+UNMATCHED_PATH[ExpType.MOCK] = "mock_unmatched_reads.fa.gz"
 
 # AmpliconDf constants
 SITE_NAME, REFERENCE, SGRNA, ON_TARGET = 'Site Name', 'AmpliconReference', 'sgRNA', 'On Target'
@@ -201,10 +205,9 @@ PRIMER_LEN = 20
 COMPLEMENT = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
 BAD_AMPLICON_THRESHOLD = 500
 CIGAR_LEN_THRESHOLD = 8 # This threshold is applied only if alignment score is low
-MIN_PRIMER_DIMER_THRESH = 10
 READ_LEN_SIDE = 20
 OUTPUT_DIR = "crispector_output"
-UNBALANCED_READ_WARNING = 3 #if Tx vs M read numbers are high unbalanced, (*3 or /3), report to the user
+UNBALANCED_READ_WARNING = 3  #if Tx vs M read numbers are high unbalanced, (*3 or /3), report to the user
 
 # DEBUG purpose constant
 ALIGNMENT_HUMAN = 'alignment_human_readable'
@@ -255,6 +258,8 @@ MAPPING_STATS = "mapping_stats"
 MAPPING_PER_SITE = "mapping_per_site"
 FASTP_TX_PATH = "fastp_tx_path"
 FASTP_MOCK_PATH = "fastp_mock_path"
+UNMATCHED_TX_PATH = "unmatched_tx_path"
+UNMATCHED_MOCK_PATH = "unmatched_mock_path"
 RESULT_TABLE = "result_table"
 TAB_DATA = "tabular_data"
 HTML_SITES = "html_sites"

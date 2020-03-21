@@ -20,6 +20,10 @@
 		{{site_param_d.editing_activity.pdf_path}}
 {% endblock %}
 
+{% block edit_section_editing_activity_edit_text %}
+		{{site_param_d.editing_activity.edit_text}}
+{% endblock %}
+
 {% block modification_section_title %}
 		{{site_param_d.modification_section.title}}
 {% endblock %}
@@ -137,39 +141,39 @@
 {% block read_section_treatment_filtered_reads %}
         {% if site_param_d.read_section.treatment_filtered_reads != '' %}
                 <form method="get" action="{{site_param_d.read_section.treatment_filtered_reads}}">
-                        <button type="submit" style="width:70%; height:20%" class="btn btn-primary">Treatment Filtered reads FASTQ file</button>
+                        <button type="submit" style="width:70%; height:20%" class="btn btn-primary">Treatment Filtered reads</button>
                 </form>
         {% else %}
-                <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">Treatment Filtered reads FASTQ file</button>
+                <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">Treatment Filtered reads</button>
         {% endif %}
 {% endblock read_section_treatment_filtered_reads %}
 
 {% block read_section_mock_filtered_reads %}
         {% if site_param_d.read_section.mock_filtered_reads != "" %}
                 <form method="get" action="{{site_param_d.read_section.mock_filtered_reads}}">
-                        <button type="submit" style="width:70%; height:20%" class="btn btn-primary">Mock Filtered reads FASTQ file</button>
+                        <button type="submit" style="width:70%; height:20%" class="btn btn-primary">Mock Filtered reads</button>
                 </form>
         {% else %}
-                <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">Mock Filtered reads FASTQ file</button>      
+                <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">Mock Filtered reads</button>
         {% endif %}
 {% endblock read_section_mock_filtered_reads %}
 
 {% block read_section_fastp_tx_path %}
         {% if site_param_d.read_section.fastp_tx_path != '' %}
                 <form method="get" action="{{site_param_d.read_section.fastp_tx_path}}">
-                        <button type="submit" style="width:70%; height:20%" class="btn btn-primary">FASTP treatment report</button>
+                        <button type="submit" style="width:70%; height:20%" class="btn btn-primary">Treatment fastp report</button>
                 </form>
         {% else %}
-                <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">FASTP treatment report</button>
+                <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">Treatment fastp report</button>
         {% endif %}
 {% endblock read_section_fastp_tx_path %}
 
 {% block read_section_fastp_mock_path %}
         {% if site_param_d.read_section.fastp_mock_path != '' %}
                 <form method="get" action="{{site_param_d.read_section.fastp_mock_path}}">
-                        <button type="submit" style="width:70%; height:20%" class="btn btn-primary">FASTP mock report</button>
+                        <button type="submit" style="width:70%; height:20%" class="btn btn-primary">Mock fastp report</button>
                 </form>
         {% else %}
-                        <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">FASTP mock report</button>
+                        <button type="button" style="width:70%; height:20%; color:gray" class="btn btn-light">Mock fastp report</button>
         {% endif %}
 {% endblock read_section_fastp_mock_path %}

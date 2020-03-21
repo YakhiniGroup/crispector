@@ -23,13 +23,14 @@ from modifications.modification_tables import ModificationTables
 from typing import Dict
 from modifications.modification_types import ModificationTypes
 
-# TODO - handle only on-target experiments
+
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_output: Path, experiment_config: Path,
         fastp_options_string: str, verbose: bool, min_num_of_reads: int,
         cut_site_position: int, amplicon_min_score: float, translocation_amplicon_min_score: float,
-        min_read_length: int, crispector_config: Path, override_binomial_p: bool, confidence_interval: float,
-        editing_threshold: float, translocation_p_value: float, suppress_site_output: bool,
-        disable_translocations: bool, enable_substitutions: bool, keep_intermediate_files: bool, command_used: str):
+        min_read_length_without_primers: int, crispector_config: Path, override_noise_estimation: bool,
+        max_edit_distance_on_primers: int, confidence_interval: float, min_editing_activity: float,
+        translocation_p_value: float, suppress_site_output: bool, disable_translocations: bool,
+        enable_substitutions: bool, keep_intermediate_files: bool, command_used: str):
 
     try:
         # Create report output folder
@@ -59,9 +60,10 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
 
         ref_df = read_exp_config_and_check_input(experiment_config, tx_in1, tx_in2, mock_in1, mock_in2)
 
-        donor = ref_df[DONOR].notnull().any() # Donor experiment flag
+        donor = ref_df[DONOR].notnull().any()  # Donor experiment flag
         if donor:
-            logger.warning("Donor experiment (HDR). NHEJ activity or translocations won't be evaluated for on-target site.")
+            logger.warning("Donor experiment (HDR). NHEJ activity or translocations won't be evaluated "
+                           "for on-target site.")
 
         # Create site output folders
         for site, row in ref_df.iterrows():
@@ -71,8 +73,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
 
         # Create InputProcessing instance
         input_processing = InputProcessing(ref_df, output, amplicon_min_score, translocation_amplicon_min_score,
-                                           min_read_length, cut_site_position, disable_translocations,
-                                           fastp_options_string, keep_intermediate_files)
+                                           min_read_length_without_primers, cut_site_position, disable_translocations,
+                                           fastp_options_string, keep_intermediate_files, max_edit_distance_on_primers)
 
         # process input
         tx_reads_d, mock_reads_d, tx_trans_df, mock_trans_df = input_processing.run(tx_in1, tx_in2, mock_in1, mock_in2)
@@ -100,7 +102,7 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
                                                                                                     mock_reads_num))
 
         # Compute binomial coin for all modification types
-        binom_p_d = compute_binom_p(tables_d, modifications, override_binomial_p, ref_df)
+        binom_p_d = compute_binom_p(tables_d, modifications, override_noise_estimation, ref_df)
 
         # Run crispector core algorithm on all sites
         logger.info("Start Evaluating editing activity for all sites")
@@ -131,15 +133,15 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
 
         # Run translocations test and call translocations reads
         logger.info("Translocations - Run HG tests")
-        trans_result_df = translocations_test(summary_df, tx_trans_df , mock_trans_df, translocation_p_value,
-                                              editing_threshold)
+        trans_result_df = translocations_test(summary_df, tx_trans_df, mock_trans_df, translocation_p_value,
+                                              min_editing_activity)
         logger.debug("Translocations - HG test - Done!")
 
         # Create plots & tables for all sites
         logger.info("Start creating experiment plots and tables")
-        html_param_d = create_experiment_output(summary_df,  tx_trans_df, mock_trans_df, trans_result_df,
+        html_param_d = create_experiment_output(summary_df, tx_trans_df, mock_trans_df, trans_result_df,
                                                 input_processing, min_num_of_reads, confidence_interval,
-                                                editing_threshold, translocation_p_value, output)
+                                                min_editing_activity, translocation_p_value, output, donor)
 
         if not suppress_site_output:
             for site, algorithm in algorithm_d.items():
@@ -162,8 +164,8 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
                 pickle.dump(algorithm_d, file)
             with open(os.path.join(output, "ref_df.pkl"), "wb") as file:
                 pickle.dump(ref_df, file)
-        with open(os.path.join(output, "html_param_d.pkl"), "wb") as file: # TODO - move inside
-            pickle.dump(html_param_d, file)
+            with open(os.path.join(output, "html_param_d.pkl"), "wb") as file:
+                pickle.dump(html_param_d, file)
 
         # Create final HTML report
         create_final_html_report(html_param_d, report_output)

@@ -8,7 +8,7 @@ from utils.constants_and_types import SITE_NAME, IndelType, Path, FREQ, IS_EDIT,
     TRANS_RES_TAB, TRANS_HEATMAP_TAB, TRANS_RESULTS_TITLES, EDIT_SECTION, MOD_SECTION, CLS_RES_SECTION, CLS_RES_INS, \
     CLS_RES_DEL, CLS_RES_MIX, MOD_DIST, EDIT_DIST, EDIT_SIZE_DIST, READ_SECTION, READ_EDIT, READ_MOCK_ALL, READ_TX_ALL, \
     FILTERED_PATH, READ_TX_FILTER, READ_MOCK_FILTER, HTML_SITES, HTML_SITES_NAME_LIST, REPORT_PATH, LOGO_PATH, \
-    EDIT_TEXT, UNBALANCED_READ_WARNING
+    EDIT_TEXT, UNBALANCED_READ_WARNING, UNMATCHED_PATH, UNMATCHED_TX_PATH, UNMATCHED_MOCK_PATH
 import math
 import os
 import warnings
@@ -48,14 +48,14 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
 
     # Plot mutation distribution
     html_d[MOD_SECTION] = dict()
-    html_d[MOD_SECTION][TITLE] = "Modifications"
+    html_d[MOD_SECTION][TITLE] = "Indels Level Information"
     plot_distribution_of_edit_events(mod_table, cut_site, win_size, output, html_d, base_path)
     plot_distribution_of_all_modifications(mod_table, cut_site, win_size, output, html_d, base_path)
     plot_distribution_of_edit_event_sizes(mod_table, output, html_d, base_path)
 
     # plot modification table
     html_d[CLS_RES_SECTION] = dict()
-    html_d[CLS_RES_SECTION][TITLE] = "Classifier Results"
+    html_d[CLS_RES_SECTION][TITLE] = "Classifier Results for Every Indel Type and Reference Position"
     all_table_idx = list(range(modifications.size))
     del_table_idx = [i for i, x in enumerate(modifications.types) if x == IndelType.DEL]
     ins_table_idx = [i for i, x in enumerate(modifications.types) if x == IndelType.INS]
@@ -69,7 +69,7 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
 
     # Create edited read table
     html_d[READ_SECTION] = dict()
-    html_d[READ_SECTION][TITLE] = "Reads level information"
+    html_d[READ_SECTION][TITLE] = "Reads Level Information"
     plot_edited_reads_to_table(mod_table, cut_site, output, html_d, base_path)
 
     # Dump .csv file with all reads
@@ -104,7 +104,7 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
 def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_trans_df: TransDf,
                              trans_result_df: TransResultDf, input_processing: InputProcessing, min_num_of_reads: int,
                              confidence_interval: float, editing_threshold: float, translocation_p_value: float,
-                             output: Path):
+                             output: Path, donor: bool):
 
     html_d = dict()  # html parameters dict
 
@@ -124,21 +124,27 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
                                    mock_input_n, mock_merged_n, mock_aligned_n, html_d, output)
 
     # Create a text file with all discarded sites
-    warnings_and_discarded_sites_text(result_df, min_num_of_reads, html_d)
+    warnings_and_discarded_sites_text(result_df, min_num_of_reads, donor, html_d)
 
     html_d[TRANSLOCATIONS] = dict()
     html_d[TRANSLOCATIONS][TITLE] = "Translocations"
     # Dump all translocations reads
-    tx_trans_df.to_csv(os.path.join(output, "tx_reads_with_primer_inconsistency.csv"), index=False)
-    mock_trans_df.to_csv(os.path.join(output, "mock_reads_with_primer_inconsistency.csv"), index=False)
-    html_d[TRANSLOCATIONS][TX_TRANS_PATH] = os.path.join(OUTPUT_DIR, "tx_reads_with_primer_inconsistency.csv")
-    html_d[TRANSLOCATIONS][MOCK_TRANS_PATH] = os.path.join(OUTPUT_DIR, "mock_reads_with_primer_inconsistency.csv")
+    if tx_trans_df.shape[0] > 0:
+        tx_trans_df.to_csv(os.path.join(output, "tx_reads_with_primer_inconsistency.csv"), index=False)
+        html_d[TRANSLOCATIONS][TX_TRANS_PATH] = os.path.join(OUTPUT_DIR, "tx_reads_with_primer_inconsistency.csv")
+    else:
+        html_d[TRANSLOCATIONS][TX_TRANS_PATH] = ""
+    if mock_trans_df.shape[0] > 0:
+        mock_trans_df.to_csv(os.path.join(output, "mock_reads_with_primer_inconsistency.csv"), index=False)
+        html_d[TRANSLOCATIONS][MOCK_TRANS_PATH] = os.path.join(OUTPUT_DIR, "mock_reads_with_primer_inconsistency.csv")
+    else:
+        html_d[TRANSLOCATIONS][MOCK_TRANS_PATH] = ""
 
     # Save translocations results
     trans_result_df.to_csv(os.path.join(output, "translocations_results.csv"), index=False)
     if trans_result_df.shape[0] > 0:
         html_d[TRANSLOCATIONS][TRANS_RES_TAB] = dict()
-        html_d[TRANSLOCATIONS][TRANS_RES_TAB][TITLE] = "Translocations results sorted by FDR value"
+        html_d[TRANSLOCATIONS][TRANS_RES_TAB][TITLE] = "Translocations Results Sorted by FDR Value"
         html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA] = dict()
         html_d[TRANSLOCATIONS][TRANS_RES_TAB][TAB_DATA][0] = list(trans_result_df.columns.values)
         for row_idx, row in trans_result_df.iterrows():
@@ -172,7 +178,19 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
     else:
         html_d[READING_STATS][FASTP_MOCK_PATH] = ""
 
+    # Add unmacthed reads links
+    if os.path.exists(os.path.join(output, UNMATCHED_PATH[ExpType.TX])):
+        html_d[READING_STATS][UNMATCHED_TX_PATH] = os.path.join(OUTPUT_DIR, UNMATCHED_PATH[ExpType.TX])
+    else:
+        html_d[READING_STATS][UNMATCHED_TX_PATH] = ""
+
+    if os.path.exists(os.path.join(output, UNMATCHED_PATH[ExpType.MOCK])):
+        html_d[READING_STATS][UNMATCHED_MOCK_PATH] = os.path.join(OUTPUT_DIR, UNMATCHED_PATH[ExpType.MOCK])
+    else:
+        html_d[READING_STATS][UNMATCHED_MOCK_PATH] = ""
+
     html_d[LOG_PATH] = os.path.join(OUTPUT_DIR, LoggerWrapper.logger_name)
+
     # copy logo to user directory
     user_path = os.path.join(output, "crispector_logo.jpg")
     package_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'html_templates/crispector_logo.jpg')
@@ -186,7 +204,7 @@ def create_experiment_output(result_df: AlgResultDf, tx_trans_df: TransDf, mock_
 #####----------------------#####
 def plot_modification_tables(mod_table: ModificationTables, modifications: ModificationTypes, edit_table: IsEdit,
                              table_offset: int, table_indexes: List[int], output: Path, html_d: Dict, base_output: Path,
-                             name_suffix = "", figsize: Tuple = (20, 12)):
+                             name_suffix = ""):
     """
     Plot all modification tables around cut-site.
     Also display edit events.
@@ -202,23 +220,23 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
     """
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
-    mpl.rcParams['font.size'] = 20
-    mpl.rcParams['xtick.labelsize'] = 20
-    mpl.rcParams['ytick.labelsize'] = 20
-    mpl.rcParams['axes.labelsize'] = 24
-    mpl.rcParams['legend.fontsize'] = 24
-    mpl.rcParams['axes.titlesize'] = 26
-    indel_size = 20
+    mpl.rcParams['font.size'] = 9
+    mpl.rcParams['xtick.labelsize'] = 11
+    mpl.rcParams['ytick.labelsize'] = 11
+    mpl.rcParams['axes.labelsize'] = 11
+    mpl.rcParams['legend.fontsize'] = 11
+    mpl.rcParams['axes.titlesize'] = 11
+    indel_size = 8
     bar_width = 0.4
-    dpi = 200
+    dpi = 300
     mock_color = '#3690c0'  # blue
     tx_color = '#f16a13'  # orange
     edit_color = '#dcdcdc'  # light grey
     cut_site_color = "red"
     grid_color = 'grey'
     # Create axes
-    fig_w, fig_h = figsize
-    fig, axes = plt.subplots(nrows=len(table_indexes), ncols=1, figsize=figsize, sharex=True)
+    fig_w, fig_h = (8, 4.5)
+    fig, axes = plt.subplots(nrows=len(table_indexes), ncols=1, figsize=(fig_w, fig_h), sharex=True)
 
     for axes_idx, table_idx in enumerate(table_indexes):
 
@@ -242,7 +260,7 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
 
         # Set bp "grid"
         grid_positions = positions if is_ins else np.arange(len(edit) + 1)
-        axes[axes_idx].vlines(grid_positions, ymin=0, ymax=y_max, color=grid_color, lw=1)
+        axes[axes_idx].vlines(grid_positions, ymin=0, ymax=y_max, color=grid_color, lw=0.5)
         axes[axes_idx].spines['bottom'].set_color(grid_color)
         axes[axes_idx].spines['top'].set_color(grid_color)
         axes[axes_idx].spines['right'].set_color(grid_color)
@@ -250,16 +268,16 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
 
         # Set cut-site in red (Insertions cut site is a full bp cell)
         if is_ins:
-            axes[axes_idx].vlines([cut_site - 1, cut_site], ymin=0, ymax=y_max, color=cut_site_color, lw=2)
-            axes[axes_idx].hlines([0, y_max], xmin=cut_site - 1, xmax=cut_site, color=cut_site_color, lw=4)
+            axes[axes_idx].vlines([cut_site - 1, cut_site], ymin=0, ymax=y_max, color=cut_site_color, lw=1)
+            axes[axes_idx].hlines([0, y_max], xmin=cut_site - 1, xmax=cut_site, color=cut_site_color, lw=2)
         else:
-            axes[axes_idx].axvline(cut_site, ymin=0, ymax=y_max, color=cut_site_color, lw=2)
+            axes[axes_idx].axvline(cut_site, ymin=0, ymax=y_max, color=cut_site_color, lw=1)
 
         # Create bar plot
         axes[axes_idx].bar(bar_ind - bar_width / 2, tx, width=bar_width, color=tx_color,
-                           label="Tx ({:,} Reads)".format(mod_table.n_reads_tx))
+                           label="Tx indels (out of {:,} Reads)".format(mod_table.n_reads_tx))
         axes[axes_idx].bar(bar_ind + bar_width / 2, mock, width=bar_width, color=mock_color,
-                           label="Mock ({:,} Reads)".format(mod_table.n_reads_mock))
+                           label="Mock indels (out of {:,} Reads)".format(mod_table.n_reads_mock))
 
         # Set x, y lim & ticks
         axes[axes_idx].set_xlim(min(positions) - 0.5, max(positions) + 1.5)
@@ -268,7 +286,7 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
         axes[axes_idx].set_ylim(0, y_max)
 
         # Set y_label - Use text due to alignment issues
-        axes[axes_idx].text(x=positions[0] - 1 - 0.5 * (not is_ins), y=y_max / 2,
+        axes[axes_idx].text(x=positions[0] - 1, y=y_max / 2,
                              s=modifications.plot_name_at_idx(table_idx), ha="right", va="center")
 
         # Create legend at the bottom of the plot
@@ -278,16 +296,16 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
             handles, labels = axes[axes_idx].get_legend_handles_labels()
             order = [1, 2, 3, 0]
             axes[axes_idx].legend([handles[idx] for idx in order], [labels[idx] for idx in order],
-                                   bbox_to_anchor=(0.65, 0))
+                                   bbox_to_anchor=(0.75, 0))
 
         # Add the reference sequence in the position of the title
         if axes_idx == 0:
             ref = mod_table.amplicon[table_offset:table_offset + len(positions)]
             offset = 0.5 if name_suffix == "ins" else 0
             for pos_idx, ii in enumerate(bar_ind):
-                axes[axes_idx].text(ii+offset, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=30)
+                axes[axes_idx].text(ii+offset, y_max, ref[pos_idx], ha="center", va="bottom", weight='bold', size=15)
             # red cute-site
-            axes[axes_idx].text(cut_site-offset, 1.1 * y_max, "|", ha="center", va="bottom", weight='bold', size=20,
+            axes[axes_idx].text(cut_site-offset, 1.1 * y_max, "|", ha="center", va="bottom", weight='bold', size=10,
                                 color=cut_site_color)
 
         # Add bars values (numbers) as text
@@ -303,7 +321,7 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
         warnings.simplefilter("ignore", UserWarning)
         fig.savefig(os.path.join(output, 'classifier_results_by_position_{}.png'.format(name_suffix)),
                     bbox_inches='tight', dpi=dpi)
-        plt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.85)
+        plt.subplots_adjust(left=0.14, bottom=0.25, right=None, top=0.9)
         fig.savefig(os.path.join(output, 'classifier_results_by_position_{}.svg'.format(name_suffix)),
                     box_inches='tight')
 
@@ -337,7 +355,6 @@ def plot_modification_tables(mod_table: ModificationTables, modifications: Modif
 #####----------------------#####
 def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site: int, win_size: int,
                                            output: Path, html_d: Dict, base_path: Path):
-    dpi = 200
 
     tx_dist_d = dict()
     mock_dist_d = dict()
@@ -364,12 +381,12 @@ def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site:
 
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
-    mpl.rcParams['font.size'] = 18
-    mpl.rcParams['axes.labelsize'] = 22
-    mpl.rcParams['axes.titlesize'] = 24
+    mpl.rcParams['font.size'] = 9
+    mpl.rcParams['axes.labelsize'] = 11
+    dpi = 300
 
     # Create axes
-    fig_w, fig_h = 16, 9
+    fig_w, fig_h = 8, 4.5
     fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(fig_w, fig_h), sharex=True)
     plt.subplots_adjust(wspace=0, hspace=0)
 
@@ -378,15 +395,17 @@ def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site:
         dist_d = tx_dist_d if exp_type == ExpType.TX else mock_dist_d
         ax = axes[0] if exp_type == ExpType.TX else axes[1]
         positions = list(range(amplicon_length + 1))
-        ax.axvline(x=cut_site, linestyle='-', color="red", label='Expected cut-site', linewidth=2)
-        ax.axvline(x=cut_site - win_size, linestyle='--', color='k', label='Quantification window', linewidth=1)
+        ax.axvline(x=cut_site, linestyle='-', color="red", label='Expected cut-site', linewidth=1)
+        ax.axvline(x=cut_site - win_size, linestyle='--', color='k', label='Quantification window', linewidth=0.5)
         ax.axvline(x=cut_site + win_size, linestyle='--', color='k', linewidth=1)
-        ax.plot(positions, dist_d[IndelType.INS], color=IndelType.INS.color, label="Insertions", linewidth=3, alpha=0.9)
-        ax.plot(positions, dist_d[IndelType.SUB], color=IndelType.SUB.color, label="Substitutions", linewidth=3, alpha=0.9)
-        ax.plot(positions, dist_d[IndelType.DEL], color=IndelType.DEL.color, label="Deletions", linewidth=3, alpha=0.9)
+        ax.plot(positions, dist_d[IndelType.INS], color=IndelType.INS.color, label="Insertions", linewidth=1.5, alpha=0.9)
+        ax.plot(positions, dist_d[IndelType.SUB], color=IndelType.SUB.color, label="Substitutions", linewidth=1.5, alpha=0.9)
+        ax.plot(positions, dist_d[IndelType.DEL], color=IndelType.DEL.color, label="Deletions", linewidth=1.5, alpha=0.9)
         ax.set_ylim(bottom=0, top=max(int(1.1 * max_indels), 10))
         ax.set_xlim(left=0, right=amplicon_length)
         ax.set_ylabel("{}\nIndel count".format(exp_type.name))
+
+    plt.xlabel("Position")
 
     # Create legend, title and x-label
     axes[0].legend()
@@ -403,7 +422,7 @@ def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site:
     html_d[MOD_SECTION][MOD_DIST] = dict()
     html_d[MOD_SECTION][MOD_DIST][PLOT_PATH] = os.path.join(base_path, 'distribution_of_all_modifications.png')
     html_d[MOD_SECTION][MOD_DIST][PDF_PATH] = os.path.join(base_path, 'distribution_of_all_modifications.svg')
-    html_d[MOD_SECTION][MOD_DIST][TITLE] = "All Modifications Distribution"
+    html_d[MOD_SECTION][MOD_DIST][TITLE] = "All Indels Distribution"
     html_d[MOD_SECTION][MOD_DIST][W] = dpi*fig_w
     html_d[MOD_SECTION][MOD_DIST][H] = dpi*fig_h
 
@@ -422,23 +441,22 @@ def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, 
 
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
-    mpl.rcParams['font.size'] = 22
-    mpl.rcParams['axes.labelsize'] = 30
-    mpl.rcParams['axes.titlesize'] = 26
-    dpi = 100
-    fig_w, fig_h = 16, 9
+    mpl.rcParams['font.size'] = 9
+    mpl.rcParams['axes.labelsize'] = 11
+    dpi = 300
+    fig_w, fig_h = 8, 4.5
 
     # Create axes
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(fig_w, fig_h))
 
     positions = list(range(amplicon_length + 1))
-    ax.axvline(x=cut_site, linestyle='-', color="red", label='Expected cut-site', linewidth=2)
+    ax.axvline(x=cut_site, linestyle='-', color="red", label='Expected cut-site', linewidth=1)
     ax.axvline(x=cut_site - win_size, linestyle='--', color='k',
                label='Quantification window', linewidth=1)
     ax.axvline(x=cut_site + win_size, linestyle='--', color='k', linewidth=1)
 
     for indel_type in [IndelType.INS, IndelType.SUB, IndelType.DEL]:
-        ax.plot(positions, dist_d[indel_type], color=indel_type.color, label=indel_type.name, linewidth=3, alpha=0.9)
+        ax.plot(positions, dist_d[indel_type], color=indel_type.color, label=indel_type.name, linewidth=1.5, alpha=0.9)
 
     # Create legend, axes limit and labels
     ax.legend()
@@ -465,14 +483,14 @@ def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, 
 def plot_distribution_of_edit_event_sizes(tables: ModificationTables, output: Path, html_d: Dict, base_path: Path):
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
-    mpl.rcParams['font.size'] = 16
-    mpl.rcParams['xtick.labelsize'] = 16
-    mpl.rcParams['ytick.labelsize'] = 16
-    mpl.rcParams['axes.labelsize'] = 18
-    mpl.rcParams['axes.titlesize'] = 26
-    mpl.rcParams['legend.fontsize'] = 18
+    mpl.rcParams['font.size'] = 9
+    mpl.rcParams['xtick.labelsize'] = 9
+    mpl.rcParams['ytick.labelsize'] = 11
+    mpl.rcParams['axes.labelsize'] = 11
+    mpl.rcParams['axes.titlesize'] = 11
+    mpl.rcParams['legend.fontsize'] = 11
     bar_width = 1
-    dpi = 100
+    dpi = 300
     amplicon_length = len(tables.amplicon)
 
     # Create bin borders & names:
@@ -497,7 +515,7 @@ def plot_distribution_of_edit_event_sizes(tables: ModificationTables, output: Pa
     r = list(range(0, bin_num))
 
     # Create figure
-    fig_w, fig_h = 16, 6
+    fig_w, fig_h = 8, 3
     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(fig_w, fig_h), constrained_layout=True)
 
     # Create bar plot
@@ -510,9 +528,10 @@ def plot_distribution_of_edit_event_sizes(tables: ModificationTables, output: Pa
         axes[idx].spines['right'].set_visible(False)
 
         # Labels, ticks and title
-        axes[idx].set_xlabel('Edit event length')
-        axes[idx].set_ylabel('Number of modifications')
         axes[idx].legend(loc='upper right')
+
+    axes[0].set_ylabel('Number of modifications')
+    axes[1].set_xlabel('Edit event length')
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
@@ -681,12 +700,12 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
     sns.set(style="whitegrid")
-    mpl.rcParams['font.size'] = 14
-    mpl.rcParams['xtick.labelsize'] = 14
-    mpl.rcParams['ytick.labelsize'] = 14
-    mpl.rcParams['axes.labelsize'] = 16
-    mpl.rcParams['axes.titlesize'] = 16
-    dpi = 200
+    mpl.rcParams['font.size'] = 9
+    mpl.rcParams['xtick.labelsize'] = 11
+    mpl.rcParams['ytick.labelsize'] = 11
+    mpl.rcParams['axes.labelsize'] = 11
+    mpl.rcParams['axes.titlesize'] = 11
+    dpi = 300
     bar_width = 0.8
 
     if algorithm.is_on_target:
@@ -695,7 +714,7 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
         bar_color = OFF_TARGET_COLOR
 
     # Define fix and axes
-    fig_w, fig_h = 8, 6
+    fig_w, fig_h = 4, 3
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(fig_w, fig_h))
     plt.subplots_adjust(left=0.2)
 
@@ -706,7 +725,7 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
 
     # plot bar
     ax.bar([0], [result_d[EDIT_PERCENT]], color=bar_color, width=bar_width,
-           yerr=[[CI_low], [CI_high]], align='center', ecolor='black', capsize=15)
+           yerr=[[CI_low], [CI_high]], align='center', ecolor='black', capsize=7)
 
     # Set labels
     ax.set_ylabel("Editing Activity (%)")
@@ -726,8 +745,8 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
         fig.savefig(os.path.join(output, 'site_editing_activity.svg'), box_inches='tight')
         plt.close(fig)
 
-    edit_text = "Number of edited reads - {:,} (out of {:,} reads).\n".format(result_d[TX_EDIT], result_d[TX_READ_NUM])
-    edit_text += "Editing activity - {:.2f}%, CI=({:.2f}%$-${:.2f}%).\n".format(editing, result_d[CI_LOW], result_d[CI_HIGH])
+    edit_text = "<p style=\"text-align: center\"> Number of edited reads - {:,} (out of {:,} reads).<p>".format(result_d[TX_EDIT], result_d[TX_READ_NUM])
+    edit_text += "<p style=\"text-align: center\"> Editing activity - {:.2f}%, CI=({:.2f}% - {:.2f}%).<p>".format(editing, result_d[CI_LOW], result_d[CI_HIGH])
     html_d[EDITING_ACTIVITY] = dict()
     html_d[EDITING_ACTIVITY][PLOT_PATH] = os.path.join(base_path, 'site_editing_activity.png')
     html_d[EDITING_ACTIVITY][PDF_PATH] = os.path.join(base_path, 'site_editing_activity.svg')
@@ -735,6 +754,7 @@ def plot_site_editing_activity(algorithm: CoreAlgorithm, result_d: Dict, site_na
     html_d[EDITING_ACTIVITY][W] = dpi*fig_w
     html_d[EDITING_ACTIVITY][H] = dpi*fig_h
     html_d[EDITING_ACTIVITY][EDIT_TEXT] = edit_text
+
 
 #####----------------------#####
 #####------Experiment------#####
@@ -744,13 +764,13 @@ def plot_editing_activity(result_df: AlgResultDf, confidence_interval: float, ed
 
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
-    mpl.rcParams['font.size'] = 20
-    mpl.rcParams['xtick.labelsize'] = 20
-    mpl.rcParams['ytick.labelsize'] = 20
-    mpl.rcParams['axes.labelsize'] = 24
-    mpl.rcParams['axes.titlesize'] = 26
-    mpl.rcParams['legend.fontsize'] = 24
-    editing_bar_text_size = 18
+    mpl.rcParams['font.size'] = 9
+    mpl.rcParams['xtick.labelsize'] = 9
+    mpl.rcParams['ytick.labelsize'] = 9
+    mpl.rcParams['axes.labelsize'] = 11
+    mpl.rcParams['axes.titlesize'] = 11
+    mpl.rcParams['legend.fontsize'] = 11
+    editing_bar_text_size = 8
     dpi = 300
     title = ""
 
@@ -766,9 +786,10 @@ def plot_editing_activity(result_df: AlgResultDf, confidence_interval: float, ed
     bar_num = edit_df.shape[0]
     plot_num = math.ceil(bar_num / max_bars)
     # set dynamic bar_width - according to the number of bars
-    fig_w, fig_h = 20, plot_num * 6
-    bar_width = 0.9 if plot_num > 1 else 0.9 * (0.5 + 0.5 * bar_num / max_bars)
-    fig, axes = plt.subplots(nrows=plot_num, ncols=1, figsize=(fig_w, fig_h), constrained_layout=True)
+    fig_w = 4 + 4 * (bar_num / 20)
+    fig_h = plot_num * 3
+    bar_width = 0.9
+    fig, axes = plt.subplots(nrows=plot_num, ncols=1, figsize=(fig_w, fig_h), tight_layout=True)
 
     # Create bars and bar names
     editing = edit_df[EDIT_PERCENT].values
@@ -793,16 +814,16 @@ def plot_editing_activity(result_df: AlgResultDf, confidence_interval: float, ed
         bar_pos = list(range(1, number_of_bars + 1))
 
         # Bar plot
-        dynamic_capsize = 10 + 10 * (1 - number_of_bars / max_bars)
+        capsize = 2
         bar_plot = axes[idx].bar(bar_pos, plt_editing, width=bar_width, color=OFF_TARGET_COLOR,
                                  yerr=[plt_CI_low, plt_CI_high], align='center', ecolor='black',
-                                 capsize=dynamic_capsize)
+                                 capsize=capsize, error_kw={"elinewidth": 0.75})
         for site_idx, is_site_on_target in enumerate(plt_on_target):
             if is_site_on_target:
                 bar_plot[site_idx].set_color(ON_TARGET_COLOR)
 
         # Add horizontal line
-        axes[idx].axhline(y=editing_threshold, linewidth=1, color='k', linestyle="--", alpha=0.75)
+        axes[idx].axhline(y=editing_threshold, linewidth=1, color='k', linestyle="--", alpha=0.5)
 
         # Set labels
         axes[idx].set_xlabel("Site Name")
@@ -815,7 +836,7 @@ def plot_editing_activity(result_df: AlgResultDf, confidence_interval: float, ed
         if plot_num > 1:
             axes[idx].set_xlim(0, max_bars + 1)
         else:
-            axes[idx].set_xlim(0, number_of_bars + 1)
+            axes[idx].set_xlim(0, min(number_of_bars + 3, max_bars + 1))
 
         # Text below each bar plot + y ticks
         axes[idx].set_xticks([r + 1 for r in range(number_of_bars)])
@@ -865,7 +886,7 @@ def plot_editing_activity(result_df: AlgResultDf, confidence_interval: float, ed
     html_d[EDIT_SECTION][EDITING_ACTIVITY][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.png')
     html_d[EDIT_SECTION][EDITING_ACTIVITY][PDF_PATH] = os.path.join(OUTPUT_DIR, 'editing_activity.svg')
     html_d[EDIT_SECTION][EDITING_ACTIVITY][TITLE] = title
-    html_d[EDIT_SECTION][EDITING_ACTIVITY][W] = dpi*fig_w
+    html_d[EDIT_SECTION][EDITING_ACTIVITY][W] = "{}%".format(min(95, int(50 + 45 * (bar_num / 20))))
     html_d[EDIT_SECTION][EDITING_ACTIVITY][H] = dpi*fig_h
 
     plt.close(fig)
@@ -878,14 +899,14 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
     # Set font
     mpl.rcParams.update(mpl.rcParamsDefault)
     sns.set(style="whitegrid")
-    mpl.rcParams['font.size'] = 18
-    mpl.rcParams['ytick.labelsize'] = 16
-    mpl.rcParams['xtick.labelsize'] = 18
-    mpl.rcParams['axes.labelsize'] = 20
-    mpl.rcParams['axes.titlesize'] = 22
-    mpl.rcParams['legend.fontsize'] = 22
-    dpi = 200
-    fig_w, fig_h = 14, 8
+    mpl.rcParams['font.size'] = 9
+    mpl.rcParams['ytick.labelsize'] = 11
+    mpl.rcParams['xtick.labelsize'] = 11
+    mpl.rcParams['axes.labelsize'] = 11
+    mpl.rcParams['axes.titlesize'] = 11
+    mpl.rcParams['legend.fontsize'] = 1
+    dpi = 300
+    fig_w, fig_h = 8, 4.6
     bar_width = 0.4
     mock_color = '#3690c0'  # blue
     mock_color_lighter = '#72b1d2'
@@ -960,17 +981,17 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
     ax = fig.add_axes([0, 0, 1, 1])
 
     max_number_of_reads = max(result_df[TX_READ_NUM].max(), result_df[MOCK_READ_NUM].max())
-    sns.scatterplot(x=TX_READ_NUM, y=MOCK_READ_NUM, data=result_df, ax=ax, s=200)
+    sns.scatterplot(x=TX_READ_NUM, y=MOCK_READ_NUM, data=result_df, ax=ax, s=115)
     plt.plot([0, max_number_of_reads], [0, max_number_of_reads], c='k') # balance line
 
     unbalanced_df = result_df.loc[(result_df[TX_READ_NUM] > UNBALANCED_READ_WARNING * result_df[MOCK_READ_NUM]) |
                                   (result_df[MOCK_READ_NUM] > UNBALANCED_READ_WARNING * result_df[TX_READ_NUM])]
-    sns.scatterplot(x=TX_READ_NUM, y=MOCK_READ_NUM, data=unbalanced_df, ax=ax, s=200, color='r',
+    sns.scatterplot(x=TX_READ_NUM, y=MOCK_READ_NUM, data=unbalanced_df, ax=ax, s=115, color='r',
                     label="Unbalanced read numbers")
-
+    plt.legend()
     ax.set_ylabel("Number of reads in Mock")
     ax.set_xlabel("Number of reads in Treatment")
-    title = "Number Of Aligned Reads Per Site"
+    title = "Number of Aligned Reads per Site"
 
     logger = LoggerWrapper.get_logger()
     if unbalanced_df.shape[0] > 0:
@@ -998,6 +1019,15 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
 def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransResultDf, translocation_p_value: float,
                                 html_d: Dict, output: Path):
 
+    # Set font
+    mpl.rcParams.update(mpl.rcParamsDefault)
+    mpl.rcParams['font.size'] = 9
+    mpl.rcParams['xtick.labelsize'] = 9
+    mpl.rcParams['ytick.labelsize'] = 9
+    mpl.rcParams['axes.labelsize'] = 11
+    mpl.rcParams['axes.titlesize'] = 11
+    mpl.rcParams['legend.fontsize'] = 11
+
     # Prepare Heat Map
     trans_df = trans_result_df.loc[trans_result_df[TRANS_FDR] < translocation_p_value]
     if trans_df.shape[0] == 0:  # create only if there are translocations
@@ -1023,10 +1053,10 @@ def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransR
     annot_df = annot_df.astype(str)
     editing = []
     for site in heat_df.index:
-        editing.append("{:.2f}".format(result_df.loc[result_df[SITE_NAME] == site, EDIT_PERCENT].values[0]))
+        editing.append("{:.1f}".format(result_df.loc[result_df[SITE_NAME] == site, EDIT_PERCENT].values[0]))
     annot_df['NHEJ Activity (%)'] = editing
 
-    dpi = 200
+    dpi = 300
     grid_kws = {"height_ratios": (.9, .05), "hspace": .1}
 
     # create diagonal mask
@@ -1035,13 +1065,13 @@ def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransR
     mask[np.diag_indices(active_site_n)] = True
 
     # Create figure
-    fig_w = active_site_n + 3
-    fig_h = active_site_n + 1
+    fig_w = 3 + 5*(active_site_n/20)
+    fig_h = 2.5 + 5*(active_site_n/20)
     fig, (ax, cbar_ax) = plt.subplots(2, gridspec_kw=grid_kws, figsize=(fig_w, fig_h))
 
     # Create heat map
     sns.heatmap(heat_df, annot=annot_df.values, linewidths=0.05, linecolor='xkcd:light grey', fmt='s',
-                mask=mask, cmap="Reds", vmax=max_trans_n, annot_kws={"size": 18},
+                mask=mask, cmap="Reds", vmax=max_trans_n, annot_kws={"size": 9},
                 cbar_ax=cbar_ax, cbar_kws={"orientation": "horizontal"}, ax=ax)
 
     # make colors of the last two columns white
@@ -1053,7 +1083,7 @@ def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransR
     quadmesh.set_facecolors = facecolors
 
     # set marked area color
-    ax.set_facecolor('xkcd:light grey')
+    # ax.set_facecolor('xkcd:light grey')
 
     # move x ticks and label to the top
     ax.xaxis.tick_top()
@@ -1064,16 +1094,16 @@ def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransR
     ax.set_xlabel("")
 
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=-45, ha="right", rotation_mode="anchor", size=20)
-    plt.setp(ax.get_yticklabels(), rotation=0, ha="right", rotation_mode="anchor", size=20)
-    title = "Translocation Heatmap for FDR < {:.2e}".format(translocation_p_value)
+    plt.setp(ax.get_xticklabels(), rotation=-45, ha="right", rotation_mode="anchor", size=11)
+    plt.setp(ax.get_yticklabels(), rotation=0, ha="right", rotation_mode="anchor", size=11)
+    title = "Translocation Reads Heatmap for FDR < {:.2e}".format(translocation_p_value)
 
     # Add to final report
     html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB] = dict()
     html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][PLOT_PATH] = os.path.join(OUTPUT_DIR, 'translocations_heatmap.png')
     html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][PDF_PATH] = os.path.join(OUTPUT_DIR, 'translocations_heatmap.svg')
     html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][TITLE] = title
-    html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][W] = dpi*fig_w
+    html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][W] = "{}%".format(min(100, int(40 + 55 * (active_site_n/20))))
     html_d[TRANSLOCATIONS][TRANS_HEATMAP_TAB][H] = dpi*fig_h
 
     with warnings.catch_warnings():
@@ -1100,8 +1130,11 @@ def summary_result_to_excel(summary_result_df: pd.DataFrame, confidence_interval
     df.to_csv(os.path.join(output, "results_summary.csv"), index=False)
 
 
-def warnings_and_discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int, html_d: Dict):
+def warnings_and_discarded_sites_text(summary_result_df: pd.DataFrame, min_num_of_reads: int, donor: bool, html_d: Dict):
     # Print information on discarded reads
+    if donor:
+        summary_result_df = summary_result_df.loc[~summary_result_df[ON_TARGET]]
+
     discarded_df = summary_result_df.loc[summary_result_df[EDIT_PERCENT].isna()]
 
     html_d[READING_STATS][DISCARDED_SITES] = ""

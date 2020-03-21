@@ -28,7 +28,7 @@ class CoreAlgorithm:
         self._binom_p_l = binom_p_l
         self._confidence = confidence
         self._cfg = Configurator.get_cfg()
-        self._win_size = self._cfg["window_size"]
+        self._win_size = self._cfg["NHEJ_inference"]["window_size"]
         self._tables_offset = self._cut_site - self._win_size  # position offset
         self._n_reads_tx = 0
         self._n_reads_mock = 0
@@ -95,11 +95,11 @@ class CoreAlgorithm:
         # In extreme cases both posteriors are smaller than python minimum number (1e-325).
         # The heuristic to solve this rare event, is to divide by 10 both the treatment and the mock indels.
         for idx in range(5):
-            total_edit = tx_indels + mock_indels
+            total_indels = tx_indels + mock_indels
 
             # Likelihood function computation
-            no_edit_likelihood = hypergeom.pmf(tx_indels, total_reads, total_edit, self._n_reads_tx)
-            edit_likelihood = binom.pmf(k=tx_indels, n=total_edit, p=binom_p)
+            no_edit_likelihood = hypergeom.pmf(tx_indels, total_reads, total_indels, self._n_reads_tx)
+            edit_likelihood = binom.pmf(k=tx_indels, n=total_indels, p=binom_p)
 
             # Posterior probability computation
             no_edit_post = no_edit_prior * no_edit_likelihood

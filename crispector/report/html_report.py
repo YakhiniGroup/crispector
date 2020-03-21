@@ -85,8 +85,9 @@ def create_site_page(site: str, exp_param_d: Dict, site_param_d: Dict, report_ou
         file.write(output)
         file.close()
 
-#@click.command()
-#@click.option('--output_path', type=click.Path(), required=True, help="")
+
+@click.command()
+@click.option('--output_path', type=click.Path(), required=True, help="")
 def main(output_path):
     with open(os.path.join(output_path, "crispector_output/html_param_d.pkl"), "rb") as file:
         html_param_d = pickle.load(file)

@@ -1,8 +1,9 @@
+import gzip
 import os
 from utils.exceptions import AlignerSubstitutionDoesntExist
 from utils.constants_and_types import ReadsDf, IndelType, Path, DNASeq, CigarPath, \
     READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, ALIGN_SCORE, FREQ, INS_LEN, INS_POS, DEL_LEN, DEL_START, \
-    DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, CIGAR_D, CIGAR_I, MIN_PRIMER_DIMER_THRESH, \
+    DEL_END, SUB_CNT, SUB_POS, INDEL_COLS, CIGAR_D, CIGAR_I, \
     CIGAR_S, CIGAR_M, AlignedIndel, DEL_BASE, INS_BASE, SUB_BASE, REVERSED, CIGAR_LEN, CIGAR_LEN_THRESHOLD, \
     ALIGN_CUT_SITE, ALIGNMENT_HUMAN, FILTERED_PATH, ExpType
 from input_processing.utils import reverse_complement, parse_cigar
@@ -14,11 +15,13 @@ from Bio import Align
 from Bio.SubsMat import MatrixInfo
 from collections import defaultdict
 
+
 class Alignment:
     """
     All crispector alignment functionality - Needle-Wunsch, Shifting modification and so on.
     """
-    def __init__(self, align_cfg: Dict, min_score: float, window_size: int):
+    def __init__(self, align_cfg: Dict, min_score: float, min_read_length_without_primers: int,
+                 window_size: int):
         self._min_score = min_score
         self._window_size = window_size
 
@@ -26,7 +29,7 @@ class Alignment:
         logger = LoggerWrapper.get_logger()
         self._logger = logger
 
-        self._min_primer_dimer_thresh = align_cfg["min_primer_dimer_thresh"]
+        self._min_primer_dimer_thresh = min_read_length_without_primers
 
         # Create Aligner
         # Init biopython aligner
@@ -44,7 +47,7 @@ class Alignment:
                 raise AlignerSubstitutionDoesntExist(align_cfg["substitution_matrix"])
 
     def align_reads(self, reads_df: ReadsDf, reference: DNASeq, cut_site: int, primers_len: int,
-                    output: Path, exp_name: str, exp_type: ExpType) -> Tuple[ReadsDf, ReadsDf]:
+                    output: Path, exp_name: str, exp_type: ExpType) -> ReadsDf:
         """
         - Align each read to his reference and filter noisy alignments.
         - Function add columns to reads_df in place.
@@ -59,7 +62,7 @@ class Alignment:
         """
 
         if reads_df.shape[0] == 0:
-            return reads_df,  pd.DataFrame()
+            return reads_df
 
         # Align reads to their amplicon
         self._logger.debug("Alignment for {} - Start Needleman-Wunsch alignment for all reads.".format(exp_name))
@@ -67,7 +70,7 @@ class Alignment:
         self._align_reads_to_amplicon(reads_df, reference)
 
         # Filter reads with low alignment score
-        unaligned_df = self._filter_low_score_reads(reads_df, primers_len, output, exp_name, exp_type)
+        self._filter_low_score_reads(reads_df, primers_len, output, exp_name, exp_type)
 
         self._logger.debug("Alignment for {} - Needleman-Wunsch alignment done.".format(exp_name))
 
@@ -86,7 +89,7 @@ class Alignment:
         reads_df.drop(columns=[REVERSED], inplace=True)
         self._logger.info("Alignment for {} - Done.".format(exp_name))
 
-        return reads_df, unaligned_df
+        return reads_df
 
     def needle_wunsch_align(self, reference: DNASeq, read: DNASeq) -> Tuple[DNASeq, DNASeq, CigarPath, int, float]:
         """
@@ -194,14 +197,14 @@ class Alignment:
         self._logger.info("Alignment for {} - {:,} reads were filtered out ({:.2f}% of all reads)".format(exp_name,
                           unaligned_reads_num, 100*unaligned_reads_num/total_reads_num))
 
-        with open(os.path.join(output, FILTERED_PATH[exp_type]), 'w') as file:
-            for _, row in unaligned_df.iterrows():
-                file.write("> filtered read with {} copies in the original fastq file.".format(row[FREQ]))
-                file.write("{}\n".format(row[READ]))
+        file = gzip.open(os.path.join(output, FILTERED_PATH[exp_type]), 'wt')
+        for _, row in unaligned_df.iterrows():
+            file.write("> filtered read with {} copies in the original fastq file.".format(row[FREQ]))
+            file.write("{}\n".format(row[READ]))
+        file.close()
 
         # remove unaligned reads from reads_df
         reads_df.drop(unaligned_df.index, inplace=True)
-        return unaligned_df
 
     def _align_reads_to_amplicon(self, reads: ReadsDf, reference: DNASeq):
         """
