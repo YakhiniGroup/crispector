@@ -786,7 +786,7 @@ def plot_editing_activity(result_df: AlgResultDf, confidence_interval: float, ed
     bar_num = edit_df.shape[0]
     plot_num = math.ceil(bar_num / max_bars)
     # set dynamic bar_width - according to the number of bars
-    fig_w = 4 + 4 * (bar_num / 20)
+    fig_w = 4 + 4 * (min(bar_num, max_bars) / 20)
     fig_h = plot_num * 3
     bar_width = 0.9
     fig, axes = plt.subplots(nrows=plot_num, ncols=1, figsize=(fig_w, fig_h), tight_layout=True)
@@ -904,7 +904,7 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
     mpl.rcParams['xtick.labelsize'] = 11
     mpl.rcParams['axes.labelsize'] = 11
     mpl.rcParams['axes.titlesize'] = 11
-    mpl.rcParams['legend.fontsize'] = 1
+    mpl.rcParams['legend.fontsize'] = 11
     dpi = 300
     fig_w, fig_h = 8, 4.6
     bar_width = 0.4
@@ -987,7 +987,7 @@ def create_reads_statistics_report(result_df: AlgResultDf, tx_in: int, tx_merged
     unbalanced_df = result_df.loc[(result_df[TX_READ_NUM] > UNBALANCED_READ_WARNING * result_df[MOCK_READ_NUM]) |
                                   (result_df[MOCK_READ_NUM] > UNBALANCED_READ_WARNING * result_df[TX_READ_NUM])]
     sns.scatterplot(x=TX_READ_NUM, y=MOCK_READ_NUM, data=unbalanced_df, ax=ax, s=115, color='r',
-                    label="Unbalanced read numbers")
+                    label="Sites with unbalanced read numbers")
     plt.legend()
     ax.set_ylabel("Number of reads in Mock")
     ax.set_xlabel("Number of reads in Treatment")
