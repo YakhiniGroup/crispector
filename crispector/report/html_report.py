@@ -95,4 +95,4 @@ def main(output_path):
     create_final_html_report(html_param_d, output_path)
 
 if __name__ == '__main__':
-      sys.exit(main())  # pragma: no cover
+    sys.exit(main())  # pragma: no cover

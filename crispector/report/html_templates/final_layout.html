@@ -67,7 +67,6 @@
           </li>
         </ul>
       </div>
-    </div>
   </nav>
 
   <!-- Page Content -->
@@ -109,10 +108,10 @@
                           <table class="table table-hover">
                             {% block edit_section_result_table %}{% endblock %}
                           </table>
-                          <br>>
+                          <br>
                         </div>
                       </div>
-                  </div>
+                    </div>
                   </li>
                   {% block translocations %}{% endblock translocations %}
                   <li class="list-group-item">
@@ -129,30 +128,33 @@
                         </li>
                       </ul>
                     
-                    <div class="tab-content" id="myTabContent">
-                      <div class="tab-pane fade show active" id="mapping_stats" role="tabpanel" aria-labelledby="mapping_stats-tab">
-                        <a href="{% block reading_stats_mapping_stats_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_stats_plot_path %}{% endblock %}" width='95%' ></a>
-                        <br>
-                        <br>
-                        {% block reading_stats_fastp %}{% endblock reading_stats_fastp %}
-                        <br>
-                        <br>
-                        <p style="text-align: center;"><b> </b></p>
-                        <p style="text-align: center;"><b>Warnings</b></p>
-                        {% block reading_stats_discarded_sites %}{% endblock reading_stats_discarded_sites %}
-                        <br>
-                      </div>
-                      <div class="tab-pane fade" id="mapping_per_site" role="tabpanel" aria-labelledby="mapping_per_site-tab">
-                        <a href="{% block reading_stats_mapping_per_site_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_per_site_plot_path %}{% endblock %}" width='95%'></a>
-                        <br>
-                        <br>
-                        {{ self.reading_stats_fastp() }}
-                        <br>
-                        <br>
-                        <p style="text-align: center;"><b> </b></p>
-                        <p style="text-align: center;"><b>Warnings</b></p>
-                        {{ self.reading_stats_discarded_sites() }}
-                        <br>
+                      <div class="tab-content" id="myTabContent">
+                        <div class="tab-pane fade show active" id="mapping_stats" role="tabpanel" aria-labelledby="mapping_stats-tab">
+                          <a href="{% block reading_stats_mapping_stats_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_stats_plot_path %}{% endblock %}" width='95%' ></a>
+                          <br>
+                          <br>
+                          <br>
+                          {% block reading_stats_fastp %}{% endblock reading_stats_fastp %}
+                          <br>
+                          <br>
+                          <p style="text-align: center;"><b> </b></p>
+                          <p style="text-align: center;"><b>Warnings</b></p>
+                          {% block reading_stats_discarded_sites %}{% endblock reading_stats_discarded_sites %}
+                          <br>
+                        </div>
+                        <div class="tab-pane fade" id="mapping_per_site" role="tabpanel" aria-labelledby="mapping_per_site-tab">
+                          <a href="{% block reading_stats_mapping_per_site_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_per_site_plot_path %}{% endblock %}" width='95%'></a>
+                          <br>
+                          <br>
+                          <br>
+                          {{ self.reading_stats_fastp() }}
+                          <br>
+                          <br>
+                          <p style="text-align: center;"><b> </b></p>
+                          <p style="text-align: center;"><b>Warnings</b></p>
+                          {{ self.reading_stats_discarded_sites() }}
+                          <br>
+                        </div>
                       </div>
                     </div>
                   </li> 
@@ -172,13 +174,12 @@
                     <br>
                   </div>
                   </li>   
-                </div>
+                </ul>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      </div>
+        </div>      
     </div>
+  </div>
 </body>
 </html>
