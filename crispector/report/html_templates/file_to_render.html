@@ -47,35 +47,38 @@
 			<h5 style="text-align:center">{{exp_param_d.translocations.title}}</h5>
 		</div>
 		<div class="card-body">
-			<ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
+			
 	{% endif %}	
 
 			{% if exp_param_d.translocations.translocations_heatmap_tab != '' and exp_param_d.translocations.translocations_results_tab != ''%}
+				<ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
 					<li class="nav-item">
 				  	<a class="nav-link active" id="heatmap_tab" data-toggle="tab" href="#heatmap" role="tab" aria-controls="" aria-selected="true">{{exp_param_d.translocations.translocations_heatmap_tab.title}}</a>
 					</li>
 					<li class="nav-item">
 						<a class="nav-link" id="mapping_stats-tab" data-toggle="tab" href="#result_table" role="tab" aria-controls="" aria-selected="true">{{exp_param_d.translocations.translocations_results_tab.title}}</a>
 						</li>
-					</ul>
+				</ul>
 			{% endif %}
 
 			{% if exp_param_d.translocations.translocations_heatmap_tab != '' and exp_param_d.translocations.translocations_results_tab == ''%}
+				<ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">		
 					<li class="nav-item">
 				  	<a class="nav-link active" id="heatmap_tab" data-toggle="tab" href="#heatmap" role="tab" aria-controls="" aria-selected="true">{{exp_param_d.translocations.translocations_heatmap_tab.title}}</a>
 					</li>
-					</ul>
+				</ul>
 			{% endif %}
 
 			{% if exp_param_d.translocations.translocations_heatmap_tab == '' and exp_param_d.translocations.translocations_results_tab != ''%}
+				<ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">		
 					<li class="nav-item">
 						<a class="nav-link active" id="mapping_stats-tab" data-toggle="tab" href="#result_table" role="tab" aria-controls="" aria-selected="true">{{exp_param_d.translocations.translocations_results_tab.title}}</a>
 						</li>
-					</ul>
+				</ul>
 			{% endif %}
 
 			{% if exp_param_d.translocations.translocations_heatmap_tab == '' and exp_param_d.translocations.translocations_results_tab == ''%}
-					</ul>
+				
 			{% endif %}
 
 				<div class="tab-content" id="myTabContent">
@@ -341,9 +344,9 @@
 
 {% block site_name %}
 	{% for site in exp_param_d.html_sites.sites_name_list -%}
-            <li class="list-group-item">
+            <li class="list-group-item" style="text-align: center;">
             <div id="{{ site }}">         
-                    <a href="{{exp_param_d['html_sites'][site]['report_path']}}">{{ site }}</a>
+                    <a href="{{exp_param_d['html_sites'][site]['report_path']}}" style="text-align: center;">{{ site }}</a>
             </div>
             </li>
 	{% endfor %}
