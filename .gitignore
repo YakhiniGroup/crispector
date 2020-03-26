@@ -1,5 +1,9 @@
 # User-specific stuff
 .idea/**/workspace.xml
+.idea/**/crispector.iml
+.idea/**/encodings.xml
+.idea/**/misc.xml
+.idea/**/modules.xml
 .idea/**/tasks.xml
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
