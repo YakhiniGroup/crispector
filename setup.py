@@ -31,8 +31,12 @@ setup(
     keywords='crispector',
     name='crispector',
     package_dir={'crispector': 'crispector'},
-    packages=['crispector'],
+    packages=['crispector', 'crispector.algorithm', 'crispector.config', 'crispector.input_processing',
+              'crispector.modifications', 'crispector.report', 'crispector.utils'],
     url='https://github.com/YakhiniGroup/crispector',
     version='1.0.3b',
     zip_safe=False,
 )
+
+if __name__ == "__main__":
+    print("Ido")
