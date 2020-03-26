@@ -1,4 +1,4 @@
-<img src="https://github.com/iamit87/crispector/blob/master/crispector/report/html_templates/crispector_logo.png" height="100" />
+<img src="https://github.com/YakhiniGroup/crispector/blob/master/crispector/report/html_templates/crispector_logo.png" height="100" />
 
 #
 CRISPECTOR is a software package designed to support the detection, evaluation, and quantification of on and off-target genome editing activity. CRISPECTOR accepts FASTQ files resulting from running treatment vs. mock experiments followed by multiplex-PCR and NGS. The tool analyzes the NGS input and applies statistical modeling to determine and quantify NHEJ edit activity at every interrogated locus as well as adverse translocation activity in all relevant pairs of loci.
@@ -12,7 +12,7 @@ CRISPECTOR is a software package designed to support the detection, evaluation, 
 # CRISPECTOR Workflow  
 Briefly,  CRISPECTOR assigns each read in the treatment and mock FASTQ files to a specific locus of interest or a putative translocation. Then, a Bayesian inference classifier accurately estimates the NHEJ editing activity, and a hypergeometric test is performed to detect translocation reads.
 
-  <img src="https://github.com/iamit87/crispector/blob/master/CRISPECTOR_workflow.png" />
+  <img src="https://github.com/YakhiniGroup/crispector/blob/master/CRISPECTOR_workflow.png" />
 
 # Installation
 
@@ -49,7 +49,7 @@ crispector -t_r1 tx_R1.fq.gz -t_r2 tx_R2.fq.gz -m_r1 mock_R1.fq.gz -mock_r2 m_R2
 ```
 **Exmaple:**
 You can download data and configuration for EMX1 experiemt (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB)) . Experiment was designed with one on-target site and 10 off-target sites. The FASTQ files contain the first 50,000 reads of the expriment. 
-The compressed experiment files can be found [here](https://github.com/iamit87/crispector/raw/master/example/EMX1_11_sites_50k_reads.zip), and it contains the following files: 
+The compressed experiment files can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/EMX1_11_sites_50k_reads.zip), and it contains the following files: 
 - Files in   EMX1_config.csv
 - EMX1_tx_R1.fq.gz
 - EMX1_tx_R2.fq.gz
@@ -69,7 +69,8 @@ Usage with demultiplexed input (FASTQ file for each locus site) is identical to 
 crispector -c exp_config.csv
 ```
 **Example:**
-You can download data and configuration for EMX1 experiment (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB))). Experiment was designed with one on-target site and 10 off-target sites. The FASTQ files contain the first 5,000 reads for each target locus. Loci Sites were demultiplexed to separated FASTQ files using bowtie2.   The compressed experiment files can be found [here](https://github.com/iamit87/crispector/raw/master/example/EMX1_11_sites_demultiplexed_input_500k_reads.zip). Make sure you change "PATH_TO_DIRECTORY" in EMX1_config.csv to your local directory path. 
+You can download data and configuration for EMX1 experiment (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB))). Experiment was designed with one on-target site and 10 off-target sites. The FASTQ files contain the first 5,000 reads for each target locus. Loci Sites were demultiplexed to separated FASTQ files using bowtie2.   The compressed experiment files can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/EMX1_11_sites_demultiplexed_input_500k_reads.zip). Make sure you change "PATH_TO_DIRECTORY" in EMX1_config.csv to your local directory path. 
+
 ```
 crispector -c EMX1_config.csv
 ``` 
@@ -135,7 +136,7 @@ Options:
   --help                          Show this message and exit.
 ````
 ## Advanced usage - CRISPECTOR configuarion file
-Advanced users can further tune CRISPECTOR parameters using the configuration file. A path to an alternative configuartion can be given by (`--crispector_config`). The  [default configuartion file](https://github.com/iamit87/crispector/blob/master/crispector/config/default_config.yml) can be copied and replaced with alternative values. 
+Advanced users can further tune CRISPECTOR parameters using the configuration file. A path to an alternative configuartion can be given by (`--crispector_config`). The  [default configuartion file](https://github.com/YakhiniGroup/crispector/blob/master/crispector/config/default_config.yml) can be copied and replaced with alternative values. 
 Two main parameter types can be tuned in the configuration file:
 1. Alignment
 2. NHEJ inference
@@ -169,5 +170,3 @@ The report contains plots and tables. For example: multiple off-target editing a
 
 # Citation
 ########################################.
-
-
