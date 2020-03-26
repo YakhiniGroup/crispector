@@ -34,8 +34,9 @@ setup(
     include_package_data=True,
     keywords='crispector',
     name='crispector',
-    packages=find_packages(include=['crispector']),
+    package_dir={'crispector': 'crispector'},
+    packages=['crispector'],
     url='https://github.com/YakhiniGroup/crispector',
-    version='1.0.1b',
+    version='1.0.2b',
     zip_safe=False,
 )
