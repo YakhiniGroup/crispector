@@ -34,7 +34,7 @@ setup(
     packages=['crispector', 'crispector.algorithm', 'crispector.config', 'crispector.input_processing',
               'crispector.modifications', 'crispector.report', 'crispector.utils'],
     url='https://github.com/YakhiniGroup/crispector',
-    version='1.0.3b',
+    version='1.0.2b2',
     zip_safe=False,
 )
 
