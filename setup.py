@@ -36,6 +36,6 @@ setup(
     name='crispector',
     packages=find_packages(include=['crispector']),
     url='https://github.com/YakhiniGroup/crispector',
-    version='1.0.0b',
+    version='1.0.1b',
     zip_safe=False,
 )
