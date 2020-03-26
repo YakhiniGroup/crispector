@@ -37,6 +37,3 @@ setup(
     version='1.0.2b2',
     zip_safe=False,
 )
-
-if __name__ == "__main__":
-    print("Ido")
