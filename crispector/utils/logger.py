@@ -1,7 +1,7 @@
 import logging
 import os
 from logging import Logger
-from utils.constants_and_types import Path
+from crispector.utils.constants_and_types import Path
 
 class CrispectorLogger(Logger):
 

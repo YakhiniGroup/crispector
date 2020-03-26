@@ -1,11 +1,12 @@
 """Console script for crispector."""
 import sys
 import click
-from crispector_main import run
+from crispector.crispector_main import run
 import os
 
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'], max_content_width=120)
 
-@click.command(context_settings=dict(max_content_width=120))
+@click.command(context_settings=CONTEXT_SETTINGS)
 @click.option('--tx_in1', '-t_r1', type=click.Path(exists=True),
               help="Tx read 1 input path or Tx merged FASTQ file")
 @click.option('--tx_in2', '-t_r2', type=click.Path(exists=True),
@@ -68,7 +69,7 @@ import os
               help="Keep intermediate files for debug purposes")
 @click.option('--verbose', is_flag=True, default=False, show_default=True,
               help="Higher verbosity")
-def cli(**kwargs):
+def main(**kwargs):
     """Accurate estimation of off-target editing activity from comparative NGS data"""
     kwargs["command_used"] = ' '.join(sys.argv)
     if kwargs["report_output"] is None:
@@ -79,4 +80,4 @@ def cli(**kwargs):
 
 
 if __name__ == "__main__":
-    sys.exit(cli())
+    sys.exit(main())

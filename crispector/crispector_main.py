@@ -1,27 +1,27 @@
 import pickle
 import click
 import logging
-from algorithm.binomial_probability import compute_binom_p
-from algorithm.core_algorithm import CoreAlgorithm
-from input_processing.utils import read_exp_config_and_check_input
-from utils.exceptions import FastpRunTimeError, SgRNANotInReferenceSequence, ConfiguratorIsCalledBeforeInitConfigPath, \
+from crispector.algorithm.binomial_probability import compute_binom_p
+from crispector.algorithm.core_algorithm import CoreAlgorithm
+from crispector.input_processing.utils import read_exp_config_and_check_input
+from crispector.utils.exceptions import FastpRunTimeError, SgRNANotInReferenceSequence, ConfiguratorIsCalledBeforeInitConfigPath, \
     PriorPositionHasWrongLength, UnknownAlignmentChar, \
     AlignerSubstitutionDoesntExist, ClassificationFailed, BadSgRNAChar, BadReferenceAmpliconChar, BadInputError
-from utils.constants_and_types import Path, welcome_msg, FREQ, TX_READ_NUM, MOCK_READ_NUM, EDIT_PERCENT, \
+from crispector.utils.constants_and_types import Path, welcome_msg, FREQ, TX_READ_NUM, MOCK_READ_NUM, EDIT_PERCENT, \
     SITE_NAME, ON_TARGET, CUT_SITE, AlgResult, OUTPUT_DIR, SUMMARY_RESULTS_TITLES, \
     AlgResultDf, DONOR
-from report.html_report import create_final_html_report
-from input_processing.input_processing import InputProcessing
+from crispector.report.html_report import create_final_html_report
+from crispector.input_processing.input_processing import InputProcessing
 import traceback
-from algorithm.translocations import translocations_test
-from utils.logger import LoggerWrapper
-from utils.configurator import Configurator
-from report.visualization_and_output import create_site_output, create_experiment_output
+from crispector.algorithm.translocations import translocations_test
+from crispector.utils.logger import LoggerWrapper
+from crispector.utils.configurator import Configurator
+from crispector.report.visualization_and_output import create_site_output, create_experiment_output
 import os
 import pandas as pd
-from modifications.modification_tables import ModificationTables
+from crispector.modifications.modification_tables import ModificationTables
 from typing import Dict
-from modifications.modification_types import ModificationTypes
+from crispector.modifications.modification_types import ModificationTypes
 
 
 def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_output: Path, experiment_config: Path,

@@ -1,8 +1,8 @@
-from utils.exceptions import PriorPositionHasWrongLength
-from utils.constants_and_types import IndelType
+from crispector.utils.exceptions import PriorPositionHasWrongLength
+from crispector.utils.constants_and_types import IndelType
 from typing import List
 from collections import defaultdict
-from utils.configurator import Configurator
+from crispector.utils.configurator import Configurator
 
 
 

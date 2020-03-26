@@ -1,8 +1,8 @@
-from input_processing.utils import parse_cigar_with_mixed_indels
-from utils.constants_and_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, IsEdit, CIGAR, FREQ, \
+from crispector.input_processing.utils import parse_cigar_with_mixed_indels
+from crispector.utils.constants_and_types import ReadsDf, DNASeq, IndelType, ExpType, ModTables, ModTablesP, IsEdit, CIGAR, FREQ, \
     C_TX, C_MOCK, REFERENCE, CS_SHIFT_R, CS_SHIFT_L, ModDist, MOD_TABLE_IDX, INDEL_TYPE, INDEL_LEN, IS_EDIT, \
     POS_IDX_S, POS_IDX_E
-from modifications.modification_types import ModificationTypes
+from crispector.modifications.modification_types import ModificationTypes
 import numpy as np
 from collections import defaultdict
 import pandas as pd

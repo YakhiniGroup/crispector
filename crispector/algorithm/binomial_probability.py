@@ -1,10 +1,10 @@
-from utils.constants_and_types import Pr, IndelType, C_TX, C_MOCK, ON_TARGET, CUT_SITE, SITE_NAME, R_PRIMER, F_PRIMER, \
+from crispector.utils.constants_and_types import Pr, IndelType, C_TX, C_MOCK, ON_TARGET, CUT_SITE, SITE_NAME, R_PRIMER, F_PRIMER, \
     BINOM_PERCENTILE, BINOM_AVERAGE_P, AmpliconDf
-from utils.logger import LoggerWrapper
-from utils.configurator import Configurator
+from crispector.utils.logger import LoggerWrapper
+from crispector.utils.configurator import Configurator
 from typing import Dict, List
-from modifications.modification_tables import ModificationTables
-from modifications.modification_types import ModificationTypes
+from crispector.modifications.modification_tables import ModificationTables
+from crispector.modifications.modification_types import ModificationTypes
 import numpy as np
 
 

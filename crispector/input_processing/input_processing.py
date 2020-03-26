@@ -1,17 +1,17 @@
 import gzip
 import os
 import subprocess
-from utils.exceptions import FastpRunTimeError, SgRNANotInReferenceSequence
-from utils.constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, Path, DNASeq, FASTP_DIR, \
+from crispector.utils.exceptions import FastpRunTimeError, SgRNANotInReferenceSequence
+from crispector.utils.constants_and_types import AmpliconDf, ReadsDict, ExpType, ReadsDf, Path, DNASeq, FASTP_DIR, \
     READ, ALIGNMENT_W_INS, ALIGNMENT_W_DEL, CIGAR, ALIGN_SCORE, FREQ, REFERENCE, SGRNA, SITE_NAME, CUT_SITE, REVERSED, \
     L_SITE, L_REV, R_SITE, R_REV, L_READ, R_READ, PRIMER_LEN, TransDf, TRANS_NAME, BAD_AMPLICON_THRESHOLD, CIGAR_LEN, \
     CIGAR_LEN_THRESHOLD, MAX_SCORE, F_PRIMER, R_PRIMER, SGRNA_REVERSED, \
     NORM_SCORE, TX_IN2, TX_IN1, MOCK_IN1, TX_MERGED, MOCK_MERGED, MOCK_IN2, DONOR, ON_TARGET, \
     UNMATCHED_PATH
-from input_processing.alignment import Alignment
-from input_processing.utils import reverse_complement, parse_fastq_file
-from utils.logger import LoggerWrapper
-from utils.configurator import Configurator
+from crispector.input_processing.alignment import Alignment
+from crispector.input_processing.utils import reverse_complement, parse_fastq_file
+from crispector.utils.logger import LoggerWrapper
+from crispector.utils.configurator import Configurator
 from typing import List, Tuple, Dict
 import pandas as pd
 from collections import defaultdict

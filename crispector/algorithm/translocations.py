@@ -6,7 +6,7 @@ from scipy.special import logsumexp
 from scipy import stats
 from statsmodels.stats.multitest import fdrcorrection
 import pandas as pd
-from utils.constants_and_types import TransDf, AlgResultDf, EDIT_PERCENT, TransResultDf, SITE_NAME, R_SITE, L_SITE, \
+from crispector.utils.constants_and_types import TransDf, AlgResultDf, EDIT_PERCENT, TransResultDf, SITE_NAME, R_SITE, L_SITE, \
     FREQ, \
     TX_READ_NUM, MOCK_READ_NUM, SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR, IS_TRANS, \
     TX_TRANS_BACKGROUND_READ, MOCK_TRANS_BACKGROUND_READ

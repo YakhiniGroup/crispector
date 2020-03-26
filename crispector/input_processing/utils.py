@@ -1,8 +1,8 @@
-from utils.constants_and_types import COMPLEMENT, IndelType, Path, DNASeq, CIGAR_D, CIGAR_I, CIGAR_S, CIGAR_M, \
+from crispector.utils.constants_and_types import COMPLEMENT, IndelType, Path, DNASeq, CIGAR_D, CIGAR_I, CIGAR_S, CIGAR_M, \
     AmpliconDf, SITE_NAME, REFERENCE, SGRNA, ON_TARGET, F_PRIMER, R_PRIMER, TX_IN1, TX_IN2, MOCK_IN1, MOCK_IN2, DONOR
 from typing import List, Tuple
 import re
-from utils.exceptions import CantOpenMergedFastqFile, BadInputError, BadReferenceAmpliconChar, BadSgRNAChar
+from crispector.utils.exceptions import CantOpenMergedFastqFile, BadInputError, BadReferenceAmpliconChar, BadSgRNAChar
 import pandas as pd
 import os
 import binascii
