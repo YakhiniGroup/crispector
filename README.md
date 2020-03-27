@@ -170,3 +170,6 @@ The report contains plots and tables. For example: multiple off-target editing a
 
 # Citation
 ########################################.
+
+# Permissions
+Permission has been granted to Bioconda to distribute CRISPECTOR under the end user license agreement at [URL](https://github.com/bioconda/bioconda-recipes/pull/21129)
