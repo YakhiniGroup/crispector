@@ -4,8 +4,8 @@ import logging
 from crispector.algorithm.binomial_probability import compute_binom_p
 from crispector.algorithm.core_algorithm import CoreAlgorithm
 from crispector.input_processing.utils import read_exp_config_and_check_input
-from crispector.utils.exceptions import FastpRunTimeError, SgRNANotInReferenceSequence, ConfiguratorIsCalledBeforeInitConfigPath, \
-    PriorPositionHasWrongLength, UnknownAlignmentChar, \
+from crispector.utils.exceptions import FastpRunTimeError, SgRNANotInReferenceSequence, \
+    ConfiguratorIsCalledBeforeInitConfigPath, PriorPositionHasWrongLength, UnknownAlignmentChar, \
     AlignerSubstitutionDoesntExist, ClassificationFailed, BadSgRNAChar, BadReferenceAmpliconChar, BadInputError
 from crispector.utils.constants_and_types import Path, welcome_msg, FREQ, TX_READ_NUM, MOCK_READ_NUM, EDIT_PERCENT, \
     SITE_NAME, ON_TARGET, CUT_SITE, AlgResult, OUTPUT_DIR, SUMMARY_RESULTS_TITLES, \
@@ -115,10 +115,12 @@ def run(tx_in1: Path, tx_in2: Path, mock_in1: Path, mock_in2: Path, report_outpu
                 # Log the following in the result dict
                 tx_reads_num = tx_reads_d[site][FREQ].sum().astype(int)
                 mock_reads_num = mock_reads_d[site][FREQ].sum().astype(int)
-                result_summary_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num, ON_TARGET: row[ON_TARGET]}
+                result_summary_d[site] = {TX_READ_NUM: tx_reads_num, MOCK_READ_NUM: mock_reads_num,
+                                          ON_TARGET: row[ON_TARGET]}
                 continue
 
-            algorithm_d[site] = CoreAlgorithm(cut_site, modifications, binom_p_d[site], confidence_interval, row[ON_TARGET])
+            algorithm_d[site] = CoreAlgorithm(cut_site, modifications, binom_p_d[site], confidence_interval,
+                                              row[ON_TARGET])
             result_summary_d[site] = algorithm_d[site].evaluate(tables_d[site])
             result_summary_d[site][ON_TARGET] = row[ON_TARGET]
             logger.debug("Site {} - Editing activity is {:.2f}".format(site, result_summary_d[site][EDIT_PERCENT]))

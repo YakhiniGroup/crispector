@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """Console script for crispector."""
 import sys
 import click
@@ -5,6 +8,7 @@ from crispector.crispector_main import run
 import os
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'], max_content_width=120)
+
 
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.option('--tx_in1', '-t_r1', type=click.Path(exists=True),
