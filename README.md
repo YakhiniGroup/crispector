@@ -1,4 +1,5 @@
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/crispector/README.html)
+
 <img src="https://github.com/YakhiniGroup/crispector/blob/master/crispector/report/html_templates/crispector_logo.png" height="100" />
 
 #
@@ -194,8 +195,8 @@ Options:
 ## Advanced usage - CRISPECTOR configuarion file
 Advanced users can further tune CRISPECTOR parameters using CRISPECTOR's configuration file. A path to an alternative configuartion file can be given to CRISPECTOR with (`--crispector_config <configuration_file_path>`). The default configuration file (which can be found [here](https://github.com/YakhiniGroup/crispector/blob/master/crispector/config/default_config.yml)) can be copied and replaced with alternative values. 
 Two main parameter types can be tuned in the configuration file:
-1. [Alignment](#CRISPECTOR-Workflow##Advanced-usage---CRISPECTO-configuarion-file###Alignment)
-2. [NHEJ inference](#CRISPECTOR-Workflow##Advanced-usage---CRISPECTO-configuarion-file###NHEJ-inference)
+1. Alignment
+2. NHEJ inference
 
 ### Alignment
 Parameters for Needleman-Wunch algorithm:
