@@ -1,3 +1,4 @@
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/crispector/README.html)
 <img src="https://github.com/YakhiniGroup/crispector/blob/master/crispector/report/html_templates/crispector_logo.png" height="100" />
 
 #
@@ -16,11 +17,66 @@ Briefly,  CRISPECTOR assigns each read in the treatment and mock FASTQ files to 
 
 # Installation
 
+CRISPECTOR can be installed using the [conda](http://conda.pydata.org/docs/intro.html) package manager [Bioconda](https://bioconda.github.io/), or it can be run using the [Docker](https://www.docker.com/) containerization system.
 
+### Bioconda
+To install CRISPECTOR using Bioconda, download and install Anaconda Python 3.7, following the instructions at: https://www.anaconda.com/distribution/.
+
+Open a terminal and type:
+
+```
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+```
+
+To install CRISPECTOR into the current conda environment, type:
+
+```
+conda install crispector
+```
+
+Alternately, to create a new environment named `crispector_env` with CRISPECTOR, type:
+
+```
+conda create -n crispector_env -c bioconda crispector python=3.7
+```
+
+
+Verify that CRISPECTOR is installed using the command:
+
+```
+crispector --help
+```
+
+### Docker
+CRISPECTOR can be used via the Docker containerization system. This system allows CRISPECTOR to run on your system without configuring and installing additional packages. To run CRISPECTOR, first download and install docker: https://docs.docker.com/engine/installation/
+
+Next, Docker must be configured to access your hard drive and to run with sufficient memory. These parameters can be found in the Docker settings menu. To allow Docker to access your hard drive, select 'Shared Drives' and make sure your drive name is selected. To adjust the memory allocation, select the 'Advanced' tab and allocate at least 4G of memory.
+
+To run CRISPECTOR, make sure Docker is running, then open a terminal (Linux), command prompt (Mac) or Powershell (Windows) and download the Docker image with: 
+
+```
+docker pull quay.io/biocontainers/crispector:<tag>
+```
+See [crispector/tags](https://quay.io/repository/biocontainers/crispector?tab=tags) for valid tags. For exmaple, 
+```
+docker pull quay.io/biocontainers/crispector:1.0.2b7--py_0
+```
+When done, you can run CRISPECTOR from docker with: 
+```
+run -v ${PWD}:/DATA -w /DATA quay.io/biocontainers/crispector:<tag> <crispector_command>
+```
+
+The `-v` parameter mounts the current directory to be accessible by CRISPECTOR, and the `-w` parameter sets the CRISPECTOR working directory. As long as you are running the command from the directory containing your data, you should not change the Docker `-v` or `-w` parameters. `<tag>` should be the image tag and `<crispector_command>` can be any valid crispector command. For exmaple:  
+
+```
+run -v ${PWD}:/DATA -w /DATA quay.io/biocontainers/crispector:1.0.2b7--py_0 crispector --help
+```
 # Usage
 
 CRISPECTOR is designed to run on two multiplex-PCR experiments, treatment and mock. In default, CRISPECTOR demultiplexes the treatment and mock reads. Namely, CRISPECTOR assigns each read to its locus. 
-There is also an option to run CRISPECTOR on an already demultiplexed data (where each locus has a FASTQ file that contains all its reads).  
+There is also an option to run CRISPECTOR on an already demultiplexed data (where each locus has a FASTQ file that contains all the locus reads).  
 Please note that in both modes, adapters need to be trimmed in a pre-processing step. 
 
 ## Usage - Default mode (multiplexed input)
@@ -69,7 +125,7 @@ Usage with demultiplexed input (FASTQ file for each locus site) is identical to 
 crispector -c exp_config.csv
 ```
 **Example:**
-You can download data and configuration for EMX1 experiment (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB))). Experiment was designed with one on-target site and 10 off-target sites. The FASTQ files contain the first 5,000 reads for each target locus. Loci Sites were demultiplexed to separated FASTQ files using bowtie2.   The compressed experiment files can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/EMX1_11_sites_demultiplexed_input_500k_reads.zip). Make sure you change "PATH_TO_DIRECTORY" in EMX1_config.csv to your local directory path. 
+You can download data and configuration for EMX1 experiment (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB)). Experiment was designed with one on-target site and 10 off-target sites. The FASTQ files contain the first 5,000 reads for each target locus. Loci Sites were demultiplexed to separated FASTQ files using bowtie2.   The compressed experiment files can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/EMX1_11_sites_demultiplexed_input_500k_reads.zip). Make sure you change "PATH_TO_DIRECTORY" in the "EMX1_config.csv" file to your local directory path. 
 
 ```
 crispector -c EMX1_config.csv
@@ -133,13 +189,13 @@ Options:
   --suppress_site_output          Do not create plots for sites (save memory and runtime)  [default: False]
   --keep_intermediate_files       Keep intermediate files for debug purposes  [default: False; required]
   --verbose                       Higher verbosity  [default: False]
-  --help                          Show this message and exit.
+  -h, --help                          Show this message and exit.
 ````
 ## Advanced usage - CRISPECTOR configuarion file
-Advanced users can further tune CRISPECTOR parameters using the configuration file. A path to an alternative configuartion can be given by (`--crispector_config`). The  [default configuartion file](https://github.com/YakhiniGroup/crispector/blob/master/crispector/config/default_config.yml) can be copied and replaced with alternative values. 
+Advanced users can further tune CRISPECTOR parameters using CRISPECTOR's configuration file. A path to an alternative configuartion file can be given to CRISPECTOR with (`--crispector_config <configuration_file_path>`). The default configuration file (which can be found [here](https://github.com/YakhiniGroup/crispector/blob/master/crispector/config/default_config.yml)) can be copied and replaced with alternative values. 
 Two main parameter types can be tuned in the configuration file:
-1. Alignment
-2. NHEJ inference
+1. [Alignment](#CRISPECTOR-Workflow##Advanced-usage---CRISPECTO-configuarion-file###Alignment)
+2. [NHEJ inference](#CRISPECTOR-Workflow##Advanced-usage---CRISPECTO-configuarion-file###NHEJ-inference)
 
 ### Alignment
 Parameters for Needleman-Wunch algorithm:
@@ -147,7 +203,7 @@ Parameters for Needleman-Wunch algorithm:
 - mismatch_score [int]: Mismatch option for Needleman-Wunsch alignment (default: -4) 
 - open_gap_score [int]: Gap open option for Needleman-Wunsch alignment (default: -25) 
 - extend_gap_score [int]: Gap extend option for Needleman-Wunsch alignment (default: 0)   
-- substitution_matrix [string]: Replace mismatch_score option with a matrix score. Any substitution matrix name from [BioPython](http://biopython.org/DIST/docs/tutorial/Tutorial.html)  (Bio.SubsMat.MatrixInfo) can be used. E.g.  "blosum62".  (default: "" (no substitution matrix))
+- substitution_matrix [string]: Replace mismatch_score option with a matrix score. Any substitution matrix name from [BioPython](http://biopython.org/DIST/docs/tutorial/Tutorial.html)  (Bio.SubsMat.MatrixInfo) can be used. E.g.  "blosum62".  (default: "", meaning no substitution matrix)
 ### NHEJ inference
 Parameters for NHEJ inference. This option is advisable only for users that read CRISPECTOR paper (see [Citation](#Citation)):
 - default_q  [int] - The probability of an indel to occur through an edit event. Used when `--override_noise_estimation` is set. (default: -3).
@@ -161,7 +217,7 @@ Parameters for NHEJ inference. This option is advisable only for users that read
 	        pos_prior: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.001, 0.1, 0.5,  
 	                    0.5, 0.1, 0.001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
 	````
-	The user defind indel type for deletion of length 1 (because only length 1 $\in [$`min`, `max`$]$). The user also defined the *prior probablity* (`pos_prior`) for every bp in the window around the expected cut-site. The expected cut-site is located right after the middle index. In the above exmaple, window size is 10, therefore the expected cut-site is between index 10 and 11 (between `0.5, 0.5`).  The *prior probablity*  is symetrical around the expected cut-site. Thus, the length of the `pos_prior` list is 2*`window_size`, except for `Insertions` where it's 2*`window_size` + 1. That's because Insertions are defined between reference sequence bases, and not "on" them. Please note that `del_len_1` is just  the name of the indel type, and it doesn't effect anything else.  
+	The user defind indel type for deletion of length 1 (because only length 1 $\in [$`min`, `max`$]$). The user also defined the *prior probablity* (`pos_prior`) for every bp in the window around the expected cut-site. The expected cut-site is located right to the middle index. In the above exmaple, window size is 10, therefore the expected cut-site is between index 10 and 11 (between `0.5, 0.5`).  The *prior probablity*  is symetrical around the expected cut-site. Thus, the length of the `pos_prior` list is 2*`window_size`, except for `Insertions` where it's 2*`window_size` + 1. That's because Insertions are defined between reference sequence bases, and not "on" them. Please note that `del_len_1` is just  the name of the indel type, and it doesn't effect anything else.  
 	
 ## CRISPECTOR output
 CRISPECTOR generates an HTML-based report to support user interpretation and further analysis of the outcomes. An example can be found in ##########.
