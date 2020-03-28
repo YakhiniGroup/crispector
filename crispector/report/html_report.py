@@ -47,6 +47,9 @@ def create_final_html_report(html_param_d: Dict, report_output: Path):
             file.write(output)
             file.close()
 
+    if os.path.exists(os.path.join(report_output, "._report.html")):
+        os.remove(os.path.join(report_output, "._report.html"))
+
 
 def create_edit_section_result_table(exp_param_d):
     df_edit_section_result_table = pd.DataFrame.from_dict(exp_param_d[EDIT_SECTION][RESULT_TABLE][TAB_DATA])
