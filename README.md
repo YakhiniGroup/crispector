@@ -37,10 +37,10 @@ To install CRISPECTOR into the current conda environment, type:
 conda install crispector
 ```
 
-Alternately, to create a new environment named `crispector_env` with CRISPECTOR, type:
+If you don't already have an exisitng envioment with Python 3.7, you can create one first (e.g. named `crispector_env`) with:
 
 ```
-conda create -n crispector_env -c bioconda crispector python=3.7
+conda create -n crispector_env python=3.7
 ```
 
 
