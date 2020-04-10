@@ -1,3 +1,4 @@
+
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/crispector/README.html)
 
 <img src="https://github.com/YakhiniGroup/crispector/blob/master/crispector/report/html_templates/crispector_logo.png" height="100" />
@@ -82,7 +83,7 @@ Please note that in both modes, adapters need to be trimmed in a pre-processing 
 CRISPECTOR requires three parameters: 
 1. **Treatment input sequences** in the form of FASTQ files. Given by the  `-t_r1`  and  `-t_r2` arguments.  If the input is already pair-end merged or is a single-end, then omit `-t_r2`. FASTQ files can be gzip-compressed.
 2. **Mock input sequences** in the form of FASTQ files. Given by the  `-m_r1`  and  `-m_r2`  arguments.  If the input is already pair-end merged, then omit `-m_r2`.  FASTQ files can be gzip-compressed.
-3.  An **experiment config file** (given by the `-c` argument). The experiment description in a CSV (Comma Separated Values‏) format. Template can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/experiment_config_template.zip). The table has 11 columns:
+3.  An **experiment config file** (given by the `-c` argument). The experiment description in a CSV (Comma Separated Values‏) format. Template can be found [here](https://github.com/YakhiniGroup/crispector/blob/master/example/experiment_config_template.csv). The table has 11 columns:
 	-  **SiteName** [REQUIRED] - an identifier for the reference locus. 
 	- **AmpliconReference**  [REQUIRED] - amplicon sequence used for the experiment (5'->3').
 	- **gRNA** [REQUIRED] - gRNA sequence for each locus site. sequence should be supplied without the PAM sequence and without insertions or deletions.
@@ -240,7 +241,7 @@ Parameters for NHEJ inference. This option is advisable only for users that read
 	The user defined indel type for deletion of length 1 (because only length 1 $\in [$`min`, `max`$]$). The user also defined the *prior probability* (`pos_prior`) for every bp in the window around the expected cut-site. The expected cut-site is located right to the middle index. In the above exmaple, window size is 10, therefore the expected cut-site is between index 10 and 11 (between `0.5, 0.5`).  The *prior probability*  is symmetrical around the expected cut-site. Thus, the length of the `pos_prior` list is 2*`window_size`, except for `Insertions` where it's 2*`window_size` + 1. That's because Insertions are defined between reference sequence bases, and not "on" them. Please note that `del_len_1` is just  the name of the indel type, and it doesn't effect anything else.  
 	
 ## CRISPECTOR output - HTML-based report
-CRISPECTOR generates an HTML-based report to support user interpretation and further analysis of the outcomes. A compressed output directory example can be found here. Once downloaded, apply "Extract all" or "Unzip here" with a zip application (such as Winzip) and open "report.html". The report is best viewed through Google Chrome. 
+CRISPECTOR generates an HTML-based report to support user interpretation and further analysis of the outcomes. A compressed output directory example can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/EMX1_11_sites_50k_reads_output.zip). Once downloaded, apply "Extract all" or "Unzip here" with a zip application (such as Winzip) and open "report.html". The report is best viewed through Google Chrome. 
 
 The report contains plots and tables that summarize the experiment results. For example multiple off-target editing activity including statistical confidence indicators and translocation results. The report also contains read statistics, such as the number of assigned and aligned reads in each processing step in the different loci. 
 In addition, plots are generated for each individual locus: distribution of edit events, classifier results for each modification type and reference position, and alignments of all edited reads, in a graphical format.
