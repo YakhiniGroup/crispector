@@ -21,7 +21,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'], max_content_width=12
               help="Mock read read 2 input path, if FASTQ files aren't merged [OPTIONAL] ")
 @click.option("--experiment_config", '-c', type=click.Path(exists=True), required=True,
               help="A CSV (Comma Separated Values‏) file with the experiment data. Table has 11 columns: "
-                   "SiteName, AmpliconReference, sgRNA, OnTarget, ForwardPrimer, ReversePrimer,"
+                   "SiteName, AmpliconReference, gRNA, OnTarget, ForwardPrimer, ReversePrimer,"
                    "TxInput1Path TxInput2Path, MockInput1Path, MockInput2Path, DonorReference. "
                    "The first 4 columns are required, the rest are optional. "
                    "Header should be specified by the above order. "
@@ -74,7 +74,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'], max_content_width=12
 @click.option('--verbose', is_flag=True, default=False, show_default=True,
               help="Higher verbosity")
 def main(**kwargs):
-    """Accurate estimation of off-target editing activity from comparative NGS data"""
+    """Accurate estimation of genome editing translocation and NHEJ off-target activity from comparative NGS data"""
     kwargs["command_used"] = ' '.join(sys.argv)
     if kwargs["report_output"] is None:
         kwargs["report_output"] = os.path.abspath(os.getcwd())

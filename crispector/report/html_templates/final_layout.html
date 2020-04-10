@@ -30,11 +30,13 @@
     integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" 
     crossorigin="anonymous"></script>
 
-    <style>
-			body {
-				font-family: 'Montserrat', sans-serif !important;
-			}
-    </style>
+  <style>
+    body {
+      font-family: 'Montserrat', sans-serif !important;
+    }
+  </style>
+
+    
 
 </head>
 
@@ -80,105 +82,130 @@
           </h5>
         </div>
       </div>
+    </div>
       
-        <div class="container"> 
-          <div class="row justify-content-center">
-            <div class="col-lg-12">
-              <div class="card text-center">
-                <ul class="list-group list-group-flush">
-                  <li class="list-group-item">
-                    <div id="edit_section" class="card-header" style="height:100%">
-                      <h5 style="text-align:center">{{ self.edit_section_title() }}</h5>
-                    </div>
-                    <div class="card-body">
-                      <ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
-                        <li class="nav-item">
-                          <a class="nav-link active" id="edit_section_editing_activity_tab" data-toggle="tab" href="#edit_section_editing_activity" role="tab" aria-controls="" aria-selected="true">{% block edit_section_editing_activity_title %}{% endblock %}</a>
-                        </li>
-                        <li class="nav-item">
-                          <a class="nav-link" id="edit_section_result_table_tab" data-toggle="tab" href="#edit_section_result_table" role="tab" aria-controls="mapping_per_site" aria-selected="false">{% block edit_section_result_table_title %}{% endblock %}</a>
-                        </li>
-                      </ul>
-                      <div class="tab-content" id="edit_section">
-                        <div class="tab-pane fade show active" id="edit_section_editing_activity" role="tabpanel" aria-labelledby="mapping_stats-tab">
-                          <a href="{% block edit_section_editing_activity_pdf_path %}{% endblock %}"><img src="{% block edit_section_editing_activity_plot_path %}{% endblock %}" width={{exp_param_d.edit_section.editing_activity.width}}></a>
-                          <br>
-                        </div>
-                        <div class="tab-pane fade" id="edit_section_result_table" role="tabpanel" aria-labelledby="edit_section_result_table">
-                          <table class="table table-hover">
-                            {% block edit_section_result_table %}{% endblock %}
-                          </table>
-                          <br>
-                        </div>
-                      </div>
-                    </div>
+  <ul class="list-group list-group-flush">
+    
+      <div class="row justify-content-center">
+        <div class="col-lg-12">
+          <div class="card text-center">
+            <li class="list-group-item">
+              <div id="edit_section" class="card-header">
+                <h5 style="text-align:center">{{ self.edit_section_title() }}</h5>
+              </div>
+              <div class="card-body">
+                <ul class="nav nav-tabs justify-content-center" id="myTab" role="tablist">
+                  <li class="nav-item">
+                    <a class="nav-link active" id="edit_section_editing_activity_tab" data-toggle="tab" href="#edit_section_editing_activity" role="tab" aria-controls="" aria-selected="true">{% block edit_section_editing_activity_title %}{% endblock %}</a>
                   </li>
-                  {% block translocations %}{% endblock translocations %}
-                  <li class="list-group-item">
-                    <div id="Reading_Statistics" class="card-header" style="height:100%">
-                      <h5 style="text-align:center">{{ self.reading_stats_title() }}</h5>
+                  <li class="nav-item">
+                    <a class="nav-link" id="edit_section_result_table_tab" data-toggle="tab" href="#edit_section_result_table" role="tab" aria-controls="mapping_per_site" aria-selected="false">{% block edit_section_result_table_title %}{% endblock %}</a>
+                  </li>
+                </ul>
+                <div class="tab-content" id="edit_section">
+                  <div class="tab-pane fade show active" id="edit_section_editing_activity" role="tabpanel" aria-labelledby="mapping_stats-tab">
+                    <a href="{% block edit_section_editing_activity_pdf_path %}{% endblock %}"><img src="{% block edit_section_editing_activity_plot_path %}{% endblock %}" width={{exp_param_d.edit_section.editing_activity.width}}></a>
+                  </div>
+                  <div class="tab-pane fade" id="edit_section_result_table" role="tabpanel" aria-labelledby="edit_section_result_table">
+                    <table class="table table-hover">
+                      {% block edit_section_result_table %}{% endblock %}
+                    </table>
+                    <br></br>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </div>
+        </div>
+      </div>
+      {% block translocations %}{% endblock translocations %}
+      <div>
+        <br></br>
+      </div>
+        <div class="row justify-content-center">
+          <div class="col-lg-12">
+            <div class="card text-center">
+              <li class="list-group-item">
+                <div id="Reading_Statistics" class="card-header">
+                  <h5 style="text-align:center">{{ self.reading_stats_title() }}</h5>
+                </div>
+                <div class="card-body">
+                  <ul class="nav nav-tabs justify-content-center" id="Reading_Statistics" role="tablist">
+                    <li class="nav-item">
+                      <a class="nav-link active" id="mapping_stats-tab" data-toggle="tab" href="#mapping_stats" role="tab" aria-controls="" aria-selected="true">{% block reading_stats_mapping_stats_title %}{% endblock %}</a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link" id="mapping_per_site-tab" data-toggle="tab" href="#mapping_per_site" role="tab" aria-controls="mapping_per_site" aria-selected="false">{% block reading_stats_mapping_per_site_title %}{% endblock %}</a>
+                    </li>
+                  </ul>
+                  <div class="tab-content" id="myTabContent">
+                    <div class="tab-pane fade show active" id="mapping_stats" role="tabpanel" aria-labelledby="mapping_stats-tab">
+                      <a href="{% block reading_stats_mapping_stats_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_stats_plot_path %}{% endblock %}" width='95%' ></a>
+                      <br>
+                      <br>
+                      <br>
+                      {% block reading_stats_fastp %}{% endblock reading_stats_fastp %}
+                      <br>
+                      <br>
+                      <p style="text-align: center;"><b> </b></p>
+                      <p style="text-align: center;"><b>Warnings</b></p>
+                      {% block reading_stats_discarded_sites %}{% endblock reading_stats_discarded_sites %}
+                      <br>
                     </div>
-                    <div class="card-body">
-                      <ul class="nav nav-tabs justify-content-center" id="Reading_Statistics" role="tablist">
-                        <li class="nav-item">
-                          <a class="nav-link active" id="mapping_stats-tab" data-toggle="tab" href="#mapping_stats" role="tab" aria-controls="" aria-selected="true">{% block reading_stats_mapping_stats_title %}{% endblock %}</a>
-                        </li>
-                        <li class="nav-item">
-                          <a class="nav-link" id="mapping_per_site-tab" data-toggle="tab" href="#mapping_per_site" role="tab" aria-controls="mapping_per_site" aria-selected="false">{% block reading_stats_mapping_per_site_title %}{% endblock %}</a>
-                        </li>
-                      </ul>
-                    
-                      <div class="tab-content" id="myTabContent">
-                        <div class="tab-pane fade show active" id="mapping_stats" role="tabpanel" aria-labelledby="mapping_stats-tab">
-                          <a href="{% block reading_stats_mapping_stats_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_stats_plot_path %}{% endblock %}" width='95%' ></a>
-                          <br>
-                          <br>
-                          <br>
-                          {% block reading_stats_fastp %}{% endblock reading_stats_fastp %}
-                          <br>
-                          <br>
-                          <p style="text-align: center;"><b> </b></p>
-                          <p style="text-align: center;"><b>Warnings</b></p>
-                          {% block reading_stats_discarded_sites %}{% endblock reading_stats_discarded_sites %}
-                          <br>
-                        </div>
-                        <div class="tab-pane fade" id="mapping_per_site" role="tabpanel" aria-labelledby="mapping_per_site-tab">
-                          <a href="{% block reading_stats_mapping_per_site_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_per_site_plot_path %}{% endblock %}" width='95%'></a>
-                          <br>
-                          <br>
-                          <br>
-                          {{ self.reading_stats_fastp() }}
-                          <br>
-                          <br>
-                          <p style="text-align: center;"><b> </b></p>
-                          <p style="text-align: center;"><b>Warnings</b></p>
-                          {{ self.reading_stats_discarded_sites() }}
-                          <br>
-                        </div>
-                      </div>
+                    <div class="tab-pane fade" id="mapping_per_site" role="tabpanel" aria-labelledby="mapping_per_site-tab">
+                      <a href="{% block reading_stats_mapping_per_site_pdf_path %}{% endblock %}"><img src="{% block reading_stats_mapping_per_site_plot_path %}{% endblock %}" width='95%'></a>
+                      <br>
+                      <br>
+                      <br>
+                      {{ self.reading_stats_fastp() }}
+                      <br>
+                      <br>
+                      <p style="text-align: center;"><b> </b></p>
+                      <p style="text-align: center;"><b>Warnings</b></p>
+                      {{ self.reading_stats_discarded_sites() }}
+                      <br>
                     </div>
-                  </li> 
+                  </div>
+                </div>
+              </li>
+            </div>
+          </div>
+        </div> 
+        <div>
+          <br></br>
+        </div>
+        <div class="row justify-content-center">
+          <div class="col-lg-12">
+            <div class="card text-center">
                   <li class="list-group-item" id="Target Sites">
-                    <div class="card-header" style="height:100%">
+                    <div class="card-header">
                       <h5 style="text-align:center">Target Sites</h5>
                     </div>
                   </li>
                   {% block site_name %}{% endblock %}
-                  <li class="list-group-item" style="text-align: center;">   
+            </div>
+          </div>
+        </div> 
+        <div>
+          <br></br>
+        </div>
+        <div class="row justify-content-center">
+          <div class="col-lg-12">
+            <div class="card text-center">
+                <li class="list-group-item" style="text-align: center;">   
                   <div id="Crispector_Main_Log">    
-                    <div class="card-header" style="height:100%">
+                    <div class="card-header">
                       <h5 style="text-align:center">Log</h5>
                     </div>
                     <a href="{% block log_path %}{% endblock %}" style="text-align: center;">Crispector Log</a>
                     <br>
                   </div>
-                  </li>   
-                </ul>
-              </div>
+                </li> 
             </div>
           </div>
-        </div>      
-    </div>
-  </div>
+        </div> 
+  </ul>
+</div>
+            
 </body>
 </html>

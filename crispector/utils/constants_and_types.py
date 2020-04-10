@@ -141,7 +141,7 @@ UNMATCHED_PATH[ExpType.TX] = "treatment_unmatched_reads.fa.gz"
 UNMATCHED_PATH[ExpType.MOCK] = "mock_unmatched_reads.fa.gz"
 
 # AmpliconDf constants
-SITE_NAME, REFERENCE, SGRNA, ON_TARGET = 'Site Name', 'AmpliconReference', 'sgRNA', 'On Target'
+SITE_NAME, REFERENCE, SGRNA, ON_TARGET = 'Site Name', 'AmpliconReference', 'gRNA', 'On Target'
 F_PRIMER = 'ForwardPrimer'
 R_PRIMER = 'ReversePrimer'
 TX_IN1, TX_IN2, MOCK_IN1, MOCK_IN2 = "TxInput1Path", "TxInput2Path", "MockInput1Path", "MockInput2Path"

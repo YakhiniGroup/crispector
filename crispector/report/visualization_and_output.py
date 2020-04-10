@@ -397,7 +397,7 @@ def plot_distribution_of_all_modifications(tables: ModificationTables, cut_site:
         positions = list(range(amplicon_length + 1))
         ax.axvline(x=cut_site, linestyle='-', color="red", label='Expected cut-site', linewidth=1)
         ax.axvline(x=cut_site - win_size, linestyle='--', color='k', label='Quantification window', linewidth=0.5)
-        ax.axvline(x=cut_site + win_size, linestyle='--', color='k', linewidth=1)
+        ax.axvline(x=cut_site + win_size, linestyle='--', color='k', linewidth=0.5)
         ax.plot(positions, dist_d[IndelType.INS], color=IndelType.INS.color, label="Insertions", linewidth=1.5, alpha=0.9)
         ax.plot(positions, dist_d[IndelType.SUB], color=IndelType.SUB.color, label="Substitutions", linewidth=1.5, alpha=0.9)
         ax.plot(positions, dist_d[IndelType.DEL], color=IndelType.DEL.color, label="Deletions", linewidth=1.5, alpha=0.9)
@@ -451,9 +451,8 @@ def plot_distribution_of_edit_events(tables: ModificationTables, cut_site: int, 
 
     positions = list(range(amplicon_length + 1))
     ax.axvline(x=cut_site, linestyle='-', color="red", label='Expected cut-site', linewidth=1)
-    ax.axvline(x=cut_site - win_size, linestyle='--', color='k',
-               label='Quantification window', linewidth=1)
-    ax.axvline(x=cut_site + win_size, linestyle='--', color='k', linewidth=1)
+    ax.axvline(x=cut_site - win_size, linestyle='--', color='k', label='Quantification window', linewidth=0.5)
+    ax.axvline(x=cut_site + win_size, linestyle='--', color='k', linewidth=0.5)
 
     for indel_type in [IndelType.INS, IndelType.SUB, IndelType.DEL]:
         ax.plot(positions, dist_d[indel_type], color=indel_type.color, label=indel_type.name, linewidth=1.5, alpha=0.9)
