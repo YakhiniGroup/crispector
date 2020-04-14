@@ -56,7 +56,6 @@ def create_site_output(algorithm: CoreAlgorithm, modifications: ModificationType
     # plot modification table
     html_d[CLS_RES_SECTION] = dict()
     html_d[CLS_RES_SECTION][TITLE] = "Classifier Results for Every Indel Type and Reference Position"
-    all_table_idx = list(range(modifications.size))
     del_table_idx = [i for i, x in enumerate(modifications.types) if x == IndelType.DEL]
     ins_table_idx = [i for i, x in enumerate(modifications.types) if x == IndelType.INS]
     mix_table_idx = [i for i, x in enumerate(modifications.types) if x in [IndelType.MIXED, IndelType.SUB]]
