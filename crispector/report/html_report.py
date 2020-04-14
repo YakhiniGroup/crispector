@@ -1,6 +1,6 @@
 from typing import Dict
-from utils.constants_and_types import Path, EDIT_SECTION, RESULT_TABLE, TAB_DATA, TRANSLOCATIONS, TRANS_RES_TAB, \
-    HTML_SITES, REPORT_PATH, HTML_SITES_NAME_LIST
+from crispector.utils.constants_and_types import Path, EDIT_SECTION, RESULT_TABLE, TAB_DATA, TRANSLOCATIONS, \
+    TRANS_RES_TAB, HTML_SITES, REPORT_PATH, HTML_SITES_NAME_LIST
 import click
 import os
 import sys
