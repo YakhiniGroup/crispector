@@ -61,12 +61,16 @@ Next, Docker must be configured to access your hard drive and to run with suffic
 To run CRISPECTOR, make sure Docker is running, then open a terminal (Linux), command prompt (macOS) or PowerShell (Windows 10) and download the Docker image with: 
 
 ```
-docker pull quay.io/biocontainers/crispector:1.0.2b7--py_0
+docker pull quay.io/biocontainers/crispector:1.0.2b9--py_0
+```
+Rename CRISPECTOR docker image name:
+```
+docker image tag quay.io/biocontainers/crispector:1.0.2b9--py_0 crispector_image:latest
 ```
 
-When done, verify that CRISPECTOR is installed using the command: 
+When done, verify that CRISPECTOR is installed using the command (help screen should show up): 
 ```
-docker run -v ${PWD}:/DATA -w /DATA quay.io/biocontainers/crispector:1.0.2b7--py_0 crispector -h
+docker run -v ${PWD}:/DATA -w /DATA crispector_image crispector -h
 ```
 
 The `-v` parameter mounts the current directory to be accessible by CRISPECTOR, and the `-w` parameter sets the CRISPECTOR working directory. As long as you are running the command from the directory containing your data, you should not change the Docker `-v` or `-w` parameters.
@@ -123,7 +127,7 @@ crispector -t_r1 EMX1_tx_R1.fq.gz -t_r2 EMX1_tx_R2.fq.gz -m_r1 EMX1_mock_R1.fq.g
 
 With Docker:
 ```
-docker run -v ${PWD}:/DATA -w /DATA quay.io/biocontainers/crispector:1.0.2b7--py_0 crispector -t_r1 EMX1_tx_R1.fq.gz -t_r2 EMX1_tx_R2.fq.gz -m_r1 EMX1_mock_R1.fq.gz -m_r2 EMX1_mock_R2.fq.gz -c EMX1_config.csv
+docker run -v ${PWD}:/DATA -w /DATA crispector_image crispector -t_r1 EMX1_tx_R1.fq.gz -t_r2 EMX1_tx_R2.fq.gz -m_r1 EMX1_mock_R1.fq.gz -m_r2 EMX1_mock_R2.fq.gz -c EMX1_config.csv
 ``` 
 
 ## Singleplex-PCR input 
@@ -148,7 +152,7 @@ crispector -c EMX1_config.csv
 
 With Docker:
 ```
-docker run -v ${PWD}:/DATA -w /DATA quay.io/biocontainers/crispector:1.0.2b7--py_0 crispector -c EMX1_config.csv
+docker run -v ${PWD}:/DATA -w /DATA crispector_image crispector -c EMX1_config.csv
 ``` 
 
 ## All optional parameters 
