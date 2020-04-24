@@ -46,7 +46,7 @@ conda activate crispector_env
 conda install crispector
 ```
 
-Verify that CRISPECTOR is installed using the command:
+Check that CRISPECTOR is installed using the help command:
 
 ```
 crispector --help
@@ -78,7 +78,7 @@ The `-v` parameter mounts the current directory to be accessible by CRISPECTOR, 
 # Usage
 
 CRISPECTOR is designed to run on two comparative NGS experiments - Treatment and Mock (control). CRISPECTOR has two running modes:
-- **Multiplex-PCR input** (default mode) - CRISPECTOR will demultiplex the Treatment and the Mock FASTQ files as a pre-processing step.
+- **Multiplex-PCR input** (default mode) - CRISPECTOR assigns reads from the FASTQ filter to target amplicons, as a pre-processing step.
 - **Singleplex-PCR input** - In this mode, the input can be multiple singleplex-PCR for loci of the same experiment. Note, in this mode, CRISPECTOR won't detect translocations (translocation reads are only amplified in a multiplex-PCR reaction).  Also, do not mix singleplex FASTQ files from different experiments. CRISPECTOR evaluates NHEJ editing activity with respect to the experiment background noise. Thus, mixing experiments will cause wrong background noise estimation. 
 
 Please note that in both modes, adapters need to be trimmed in a pre-processing step. 
@@ -143,7 +143,7 @@ All other columns of   **experiment config file** (`-c`) should be specified as 
 crispector -c exp_config.csv
 ```
 **Example:**
-You can download data and configuration for EMX1 experiment (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB)). Experiment was designed with one on-target site and 10 off-target sites. The FASTQ files contain the first 5,000 reads for each target locus. Loci Sites were demultiplexed to separated FASTQ files using bowtie2.   The compressed experiment files can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/EMX1_11_sites_singleplex_input_500k_reads.zip). Make sure you change "PATH_TO_DIRECTORY" in the "EMX1_config.csv" file to your local directory path. 
+You can download data and configuration for EMX1 experiment (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB)). Experiment was designed with one on-target site and 10 off-target sites. The FASTQ files contain the first 5,000 reads for each target locus. Loci Sites were binned to separated FASTQ files using bowtie2. The compressed experiment files can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/EMX1_11_sites_singleplex_input_500k_reads.zip). Make sure you change "PATH_TO_DIRECTORY" in the "EMX1_config.csv" file to your local directory path. 
 
 With Conda:
 ```

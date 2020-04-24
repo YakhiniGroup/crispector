@@ -329,8 +329,8 @@ class InputProcessing:
         reads_df[L_READ] = reads_df[READ].str[0:PRIMER_LEN]
         reads_df[R_READ] = reads_df[READ].str[-PRIMER_LEN:]
 
-        self._logger.info("Demultiplexing for {} - Start Demultiplexing {:,} reads - May take a few minutes"
-                          .format(exp_type.name, total_read_n))
+        self._logger.info("Assigning reads to target amplicons for {} - Start assigning {:,} reads - May take a few "
+                          "minutes".format(exp_type.name, total_read_n))
 
         # Find a match for left and right parts of the read
         l_match = self._compute_read_primer_matching(reads_df[L_READ].unique(), left_primers, primers_rev,
@@ -366,7 +366,7 @@ class InputProcessing:
 
         self._detect_bad_amplicons(detect_unmatched_df)
 
-        self._logger.info("Demultiplexing for {} - Done".format(exp_type.name))
+        self._logger.info("Assigning reads to target amplicons for {} - Done".format(exp_type.name))
 
         return reads_df, trans_df
 
@@ -603,8 +603,8 @@ class InputProcessing:
         """
         unmatched_reads_num = unmatched_df[FREQ].sum()
 
-        self._logger.info("Demultiplexing for {} - {:,} reads weren't matched ({:.2f}% of all reads)".format(exp_name.name,
-                          unmatched_reads_num, 100*unmatched_reads_num/total_read_n))
+        self._logger.info("Assigning reads to target amplicons for {} - {:,} reads weren't matched ({:.2f}% of all"
+                          " reads)".format(exp_name.name, unmatched_reads_num, 100*unmatched_reads_num/total_read_n))
 
         file = gzip.open(os.path.join(output, UNMATCHED_PATH[exp_name]), 'wt')
         for _, row in unmatched_df.iterrows():
