@@ -33,7 +33,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'], max_content_width=12
 @click.option("--crispector_config", type=click.Path(),
               help="Path to crispector configuration in YAML format."
                    "See \"Advanced usage\" section in README on GitHub for further.")
-@click.option('--fastp_options_string', type=click.STRING, default="-w 2",
+@click.option('--fastp_options_string', type=click.STRING, default="-w 2 "
+              "--adapter_sequence=AGATCGGAAGAGCACACGTCTGAACTCCAGTCA "
+              "--adapter_sequence_r2=AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT",
               help="Try \"fastp --help\" for more details")
 @click.option("--min_num_of_reads", type=click.INT, default=500, show_default=True,
               help="Minimum number of reads (per locus site) to evaluate edit events")

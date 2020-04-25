@@ -81,8 +81,6 @@ CRISPECTOR is designed to run on two comparative NGS experiments - Treatment and
 - **Multiplex-PCR input** (default mode) - CRISPECTOR assigns reads from the FASTQ filter to target amplicons, as a pre-processing step.
 - **Singleplex-PCR input** - In this mode, the input can be multiple singleplex-PCR for loci of the same experiment. Note, in this mode, CRISPECTOR won't detect translocations (translocation reads are only amplified in a multiplex-PCR reaction).  Also, do not mix singleplex FASTQ files from different experiments. CRISPECTOR evaluates NHEJ editing activity with respect to the experiment background noise. Thus, mixing experiments will cause wrong background noise estimation. 
 
-Please note that in both modes, adapters need to be trimmed in a pre-processing step. 
-
 ## Multiplex-PCR input
 CRISPECTOR requires three parameters: 
 1. **Treatment input sequences** in the form of FASTQ files. Given by the  `-t_r1`  and  `-t_r2` arguments.  If the input is already pair-end merged or is a single-end, then omit `-t_r2`. FASTQ files can be gzip-compressed.
