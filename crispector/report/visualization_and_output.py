@@ -1069,6 +1069,8 @@ def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransR
     fig, (ax, cbar_ax) = plt.subplots(2, gridspec_kw=grid_kws, figsize=(fig_w, fig_h))
 
     # Create heat map
+    heat_df.fillna(value=0, inplace=True)
+    annot_df.fillna(value='0', inplace=True)
     sns.heatmap(heat_df, annot=annot_df.values, linewidths=0.05, linecolor='xkcd:light grey', fmt='s',
                 mask=mask, cmap="Reds", vmax=max_trans_n, annot_kws={"size": 9},
                 cbar_ax=cbar_ax, cbar_kws={"orientation": "horizontal"}, ax=ax)
