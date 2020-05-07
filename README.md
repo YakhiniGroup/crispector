@@ -77,7 +77,7 @@ The `-v` parameter mounts the current directory to be accessible by CRISPECTOR, 
 # Usage
 
 CRISPECTOR is designed to run on two comparative NGS experiments - Treatment and Mock (control). CRISPECTOR has two running modes:
-- **Multiplex-PCR input** (default mode) - CRISPECTOR assigns reads from the FASTQ filter to target amplicons, as a pre-processing step.
+- **Multiplex-PCR input** (default mode) - CRISPECTOR assigns reads from the FASTQ files to target amplicons, as a pre-processing step.
 - **Singleplex-PCR input** - In this mode, the input can be multiple singleplex-PCR for loci of the same experiment. Note, in this mode, CRISPECTOR won't detect translocations (translocation reads are only amplified in a multiplex-PCR reaction).  Also, do not mix singleplex FASTQ files from different experiments. CRISPECTOR evaluates NHEJ editing activity with respect to the experiment background noise. Thus, mixing experiments will cause wrong background noise estimation. 
 
 ## Multiplex-PCR input
@@ -114,7 +114,7 @@ The compressed experiment files can be found [here](https://github.com/YakhiniGr
 - EMX1_mock_R1.fq.gz
 - EMX1_mock_R2.fq.gz
 
-The FASTQ files contain the first 50,000 reads of the experiment. Full sequencing can be found in [NCBI](https://www.ncbi.nlm.nih.gov/sra) as SRAXXXXXX. 
+The FASTQ files contain the first 50,000 reads of the experiment. Full sequencing can be found in [NCBI](https://www.ncbi.nlm.nih.gov/sra) as SRA accession: PRJNA630002. 
 
 
 With Conda:
