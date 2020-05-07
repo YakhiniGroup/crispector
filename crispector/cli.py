@@ -51,7 +51,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'], max_content_width=12
 @click.option('--translocation_amplicon_min_score', type=click.FloatRange(min=0, max=100), default=80, show_default=True,
               help="Minimum alignment score to consider a read with primer inconsistency as a possible translocation. "
                    "Should be higher than --amplicon_min_score, because translocations reads are noisier."
-                   "Score is normalized between 0 (not even one bp match) to 100 (read is identical to")
+                   "Score is normalized between 0 (not even one bp match) to 100 (read is identical to the reference)")
 @click.option("--min_editing_activity", type=click.FloatRange(), default=0.1, show_default=True,
               help="Minimum editing activity (%). Sites with editing activity lower than the minimum, "
                    "will be discarded from the translocation detection.")

@@ -19,7 +19,7 @@ Briefly,  CRISPECTOR assigns each read in the treatment and mock FASTQ files to 
 
 # Installation
 
-CRISPECTOR can be installed using the [conda](http://conda.pydata.org/docs/intro.html) package manager [Bioconda](https://bioconda.github.io/) (for Linux & macOS), or it can be run using the [Docker](https://www.docker.com/) containerization system (for Linux, macOS & Windows 10 Professional or Enterprise).
+CRISPECTOR can be installed using the [conda](http://conda.pydata.org/docs/intro.html) package manager [Bioconda](https://bioconda.github.io/) (for Linux & macOS), or it can be run using the [Docker](https://www.docker.com/) containerization system (for Linux & macOS).
 
 ### Bioconda
 To install CRISPECTOR using Bioconda, download and install Anaconda Python 3.7, following the instructions at: https://www.anaconda.com/distribution/.
@@ -54,11 +54,10 @@ crispector --help
 
 ### Docker
 CRISPECTOR can be used via the Docker containerization system. This system allows CRISPECTOR to run on your system without configuring and installing additional packages. To run CRISPECTOR, first download and install docker: https://docs.docker.com/engine/installation/
-Windows 10 users - note that you need to enabled virtualization in  the BIOS settings. For more information, see  [Virtualization](https://docs.docker.com/docker-for-windows/troubleshoot/#virtualization-must-be-enabled).
 
 Next, Docker must be configured to access your hard drive and to run with sufficient memory. These parameters can be found in the Docker settings menu. To allow Docker to access your hard drive, select 'Shared Drives' and make sure your drive name is selected. To adjust the memory allocation, select the 'Advanced' tab and allocate at least 4G of memory.
 
-To run CRISPECTOR, make sure Docker is running, then open a terminal (Linux), command prompt (macOS) or PowerShell (Windows 10) and download the Docker image with: 
+To run CRISPECTOR, make sure Docker is running, then open a terminal (Linux) or command prompt (macOS) and download the Docker image with: 
 
 ```
 docker pull quay.io/biocontainers/crispector:1.0.2b9--py_0
@@ -141,7 +140,7 @@ All other columns of   **experiment config file** (`-c`) should be specified as 
 crispector -c exp_config.csv
 ```
 **Example:**
-You can download data and configuration for EMX1 experiment (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB)). Experiment was designed with one on-target site and 10 off-target sites. The FASTQ files contain the first 5,000 reads for each target locus. Loci Sites were binned to separated FASTQ files using bowtie2. The compressed experiment files can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/EMX1_11_sites_singleplex_input_500k_reads.zip). Make sure you change "PATH_TO_DIRECTORY" in the "EMX1_config.csv" file to your local directory path. 
+You can download data and configuration for EMX1 experiment (performed with [rhAmpSeq](https://eu.idtdna.com/pages/products/next-generation-sequencing/amplicon-sequencing?utm_source=google&utm_medium=cpc&utm_campaign=ga_rhampseq&utm_content=ad_group_rhampseq&gclid=Cj0KCQjw3qzzBRDnARIsAECmryqo5fO62fqk95a4PfkqES-9G07br5kdtTpjJInnYFjqYw2OxYI2gRwaAmTQEALw_wcB)). Experiment was designed with one on-target site and 10 off-target sites. The FASTQ files contain the first 5,000 reads for each target locus. Loci Sites were binned into separated FASTQ files using bowtie2. The compressed experiment files can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/EMX1_11_sites_singleplex_input_500k_reads.zip). Make sure you change "PATH_TO_DIRECTORY" in the "EMX1_config.csv" file to your local directory path. 
 
 With Conda:
 ```
@@ -194,7 +193,7 @@ Options:
                                   Minimum alignment score to consider a read with primer inconsistency as a possible
                                   translocation. Should be higher than --amplicon_min_score, because translocations
                                   reads are noisier.Score is normalized between 0 (not even one bp match) to 100 (read
-                                  is identical to  [default: 80]
+                                  is identical to the refernce) [default: 80]
   --min_editing_activity FLOAT RANGE
                                   Minimum editing activity (%). Sites with editing activity lower than the minimum,
                                   will be discarded from the translocation detection.  [default: 0.1]
@@ -231,7 +230,7 @@ Parameters for Needleman-Wunch algorithm:
 Parameters for NHEJ inference. This option is advisable only for users that read CRISPECTOR paper (see [Citation](#Citation)):
 - default_q  [int] - The probability of an indel to occur through an edit event. Used when `--override_noise_estimation` is set. (default: -3).
 - window_size [int] - Defines the size (in bp) of the window extending from the position of the expected cut-site. Outside this window, indels won't be accounted as edits. Changing this field requries changing the *prior probability* for each indel type as well (default: 10)
-- IndelType: An hierarchical bundle of parameters that defines the indel types and their *prior probabilities* (as defined in CRISPECTOR paper). For each indel type (Deletion, Insertions, Substitutions or Mixed) user can defined the aggregation level for different indel lengths and the indel type *prior probability*. For example, consider the following:  
+- IndelType: An hierarchical bundle of parameters that defines the indel types and their *prior probabilities* (as defined in CRISPECTOR paper). For each indel type (Deletion, Insertions, Substitutions or Mixed) user can define the aggregation level for different indel lengths and the indel type *prior probability*. For example, consider the following:  
 	 ```` 
 	 Deletions:  
 	    del_len_1:  
@@ -240,7 +239,7 @@ Parameters for NHEJ inference. This option is advisable only for users that read
 	        pos_prior: [0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.001, 0.1, 0.5,  
 	                    0.5, 0.1, 0.001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001]
 	````
-	The user defined indel type for deletion of length 1 (because only length 1  belongs to  [`min`, `max`]). The user also defined the *prior probability* (`pos_prior`) for every bp in the window around the expected cut-site. The expected cut-site is located right to the middle index. In the above exmaple, window size is 10, therefore the expected cut-site is between index 10 and 11 (between `0.5, 0.5`).  The *prior probability*  is symmetrical around the expected cut-site. Thus, the length of the `pos_prior` list is 2*`window_size`, except for `Insertions` where it's 2*`window_size` + 1. That's because Insertions are defined between reference sequence bases, and not "on" them. Please note that `del_len_1` is just  the name of the indel type, and it doesn't effect anything else.  
+	The user defined indel type for deletion of length 1 (because only length 1  belongs to  [`min`, `max`]). The user also defined the *prior probability* (`pos_prior`) for every bp in the window around the expected cut-site. The expected cut-site is located right to the middle index. In the above example, window size is 10, therefore the expected cut-site is between index 10 and 11 (between `0.5, 0.5`).  The *prior probability*  is symmetrical around the expected cut-site. Thus, the length of the `pos_prior` list is 2*`window_size`, except for `Insertions` where it's 2*`window_size` + 1. That's because Insertions are defined between reference sequence bases, and not "on" them. Please note that `del_len_1` is just  the name of the indel type, and it doesn't affect anything else.  
 	
 ## CRISPECTOR output - HTML-based report
 CRISPECTOR generates an HTML-based report to support user interpretation and further analysis of the outcomes. A compressed output directory example can be found [here](https://github.com/YakhiniGroup/crispector/raw/master/example/EMX1_11_sites_50k_reads_output.zip). Once downloaded, apply "Extract all" or "Unzip here" with a zip application (such as Winzip) and open "report.html". The report is best viewed through Google Chrome. 
