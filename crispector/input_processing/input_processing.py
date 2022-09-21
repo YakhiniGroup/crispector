@@ -348,7 +348,7 @@ class InputProcessing:
         trans_df, re_matched_df = self._find_translocations_or_new_matching(unmatched_df)
 
         # Add re matched reads to reads pool
-        reads_df = pd.concat([reads_df, re_matched_df])
+        # reads_df = pd.concat([reads_df, re_matched_df])
         reads_df[SITE_NAME] = reads_df[L_SITE]
         reads_df[REVERSED] = reads_df[L_REV]
         reads_df.drop(columns=[L_SITE, L_REV, R_SITE, R_REV, R_READ, L_READ], inplace=True)
