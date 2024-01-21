@@ -2,7 +2,7 @@ from collections import defaultdict
 import numpy as np
 from math import exp
 from numpy import exp, log1p
-from scipy.special import logsumexp
+#from scipy.special import logsumexp
 from scipy import stats
 from statsmodels.stats.multitest import fdrcorrection
 import pandas as pd
@@ -11,9 +11,11 @@ from crispector.utils.constants_and_types import TransDf, AlgResultDf, EDIT_PERC
     TX_READ_NUM, MOCK_READ_NUM, SITE_A, SITE_B, TX_TRANS_READ, MOCK_TRANS_READ, TRANS_PVAL, TRANS_FDR, IS_TRANS, \
     TX_TRANS_BACKGROUND_READ, MOCK_TRANS_BACKGROUND_READ
 
+import mpmath 
+from mpmath import exp
 
-def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf, FDR_thresh: float,
-                        edit_thresh: float) -> TransResultDf:
+def translocations_test(result_df, tx_df, mock_df, FDR_thresh: float,
+                        edit_thresh: float):
     """
 
     :param result_df: NHEJ activity results
@@ -29,10 +31,11 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
     trans_d = defaultdict(list)
 
     # Check translocation only for active editing site.
-    active_df = result_df.loc[result_df[EDIT_PERCENT] >= edit_thresh]
-
+    active_df_t = result_df.loc[result_df[EDIT_PERCENT] >= edit_thresh]
+    active_df = active_df_t.reset_index(drop=True)
     # Run HG test for all translocations
     for row_idx, row_a in active_df.iterrows():
+        #print(row_a)
         for _, row_b in active_df.iloc[row_idx+1:].iterrows():
             site_a = row_a[SITE_NAME]
             site_b = row_b[SITE_NAME]
@@ -70,8 +73,8 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
             if B == 0:
                 continue
 
-            p_val = hypergeometric_cdf(b - 1, N, B, n)
-
+            #p_val = hypergeometric_cdf(b - 1, N, B, n)
+            p_val=hypergeometric_cdf_log(b - 1, N, B, n) #changed tp mpmath implementation
             # Store values
             trans_d[SITE_A].append(site_a)
             trans_d[SITE_B].append(site_b)
@@ -104,17 +107,29 @@ def translocations_test(result_df: AlgResultDf, tx_df: TransDf, mock_df: TransDf
     return trans_df
 
 
-def hypergeometric_cdf(k, M, n, N):
+def hypergeom_pmf(k, M, n, N):
+    '''
+    implementing the probability mass function using mpmath package
+    '''
+    
+    #k = number of translocations in Tx sample
+    #M = total reads (Mock+Tx)
+    #n = Total number of translocations (Tx + M)
+    #N = total number of Tx reads 
+
+    mock_n = M - n #number of mock reads 
+    pmf = (mpmath.beta(n+1, 1) * mpmath.beta(mock_n +1,1) * mpmath.beta(M-N+1, N+1) /
+          (mpmath.beta(k+1, n-k+1) * mpmath.beta(N-k+1,mock_n-N+k+1) * mpmath.beta(M+1, 1)))
+    
+    return pmf
+
+def hypergeometric_cdf_log(k, M, n, N):
     """
-    Stabler version than the original scipy implementation.
-    Original version minimum return value is around 1e-10. This version minimum return value is 1e-310.
+      log pmf calculation using mpmath
     """
-    # if k < 0.5 * n:
-    if (k + 0.5) * (M + 0.5) < (n - 0.5) * (N - 0.5):
-        # Less terms to sum if we calculate log(1-cdf)
-        log_res = log1p(-exp(stats.hypergeom.logcdf(k, M, n, N)))
-    else:
-        # Integration over probability mass function using logsumexp
-        k2 = np.arange(k + 1, N + 1)
-        log_res = logsumexp(stats.hypergeom.logpmf(k2, M, n, N))
+    max_val=min(N+1, n+1) #hypergemotric test upper limit
+    k2 = np.arange(k + 1, max_val) 
+    all_pmfs=[mpmath.log(hypergeom_pmf(k_ind,M,n,N)) for k_ind in k2] #calclulate the logpmf
+ 
+    log_res = mpmath.log(mpmath.fsum(mpmath.exp(val) for val in all_pmfs)) #log sum all distribution values
     return exp(log_res)
