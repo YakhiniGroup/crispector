@@ -1043,8 +1043,12 @@ def plot_translocations_heatmap(result_df: pd.DataFrame, trans_result_df: TransR
     max_trans_n = heat_df.max().max()
     active_site_n = heat_df.shape[0]
     heat_df['Total'] = np.zeros(active_site_n, dtype=np.int)
-    heat_df['NHEJ Activity (%)'] = np.zeros(active_site_n, dtype=np.int)
-    total_trans = heat_df.sum()
+    #heat_df['NHEJ Activity (%)'] = np.zeros(active_site_n, dtype=np.int)
+    heat_df['NHEJ Activity (%)'] = np.zeros(active_site_n, dtype=np.float) #NK 251223 changed int to float to prevent error
+
+    #total_trans = heat_df.sum()
+    total_trans = heat_df.sum().astype(int) #NK 251223 change trans sum to integer
+    
 
     # Prepare Heatmap annotations
     annot_df = deepcopy(heat_df)
