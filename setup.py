@@ -5,7 +5,7 @@
 
 from setuptools import setup
 
-requirements = ['Click>=7.0', 'matplotlib >= 3.1.2', 'seaborn>=0.9.0','pyyaml>=5.1.2', 'plotly>=4.3.0'
+requirements = ['Click>=7.0', 'matplotlib >= 3.1.2', 'seaborn>=0.9.0','pyyaml>=5.1.2', 'plotly>=4.3.0',
                 'numpy>=1.12.1', 'pandas>=0.24.2', 'biopython>=1.74', 'scipy>=1.2.1', 'statsmodels',
                 'jinja2', 'mpmath>=1.3.0']
 
@@ -36,6 +36,6 @@ setup(
     packages=['crispector', 'crispector.algorithm', 'crispector.config', 'crispector.input_processing',
               'crispector.modifications', 'crispector.report', 'crispector.utils'],
     url='https://github.com/YakhiniGroup/crispector',
-    version='1.0.6',
+    version='1.0.7',
     zip_safe=False,
 )
